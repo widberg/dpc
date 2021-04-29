@@ -126,6 +126,7 @@ dependencies = [
  "clap",
  "indicatif",
  "nom",
+ "nom-derive",
  "serde_json",
 ]
 
@@ -295,6 +296,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "nom-derive"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16ec3c862bb3a3c70001ec0db2089281071af26ee79b7d82b65c119d660b063b"
+dependencies = [
+ "nom",
+ "nom-derive-impl",
+ "rustversion",
+]
+
+[[package]]
+name = "nom-derive-impl"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad25f1c4f0153f5747523edcce85ec6c503316a684c3593e3fa3881e48294547"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "number_prefix"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -350,6 +373,12 @@ name = "regex-syntax"
 version = "0.6.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
+
+[[package]]
+name = "rustversion"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb5d2a036dc6d2d8fd16fde3498b04306e29bd193bf306a57427019b823d5acd"
 
 [[package]]
 name = "ryu"

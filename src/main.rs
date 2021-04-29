@@ -9,6 +9,9 @@ use serde_json::json;
 use std::io::Read;
 use std::io::Write;
 use nom::*;
+use nom::number::complete::*;
+use nom_derive::{NomLE, Parse};
+use std::mem;
 
 #[allow(dead_code)]
 mod built_info {
@@ -134,7 +137,7 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 	let mut manifest_file = File::create(manifest_path).unwrap_or_else(|why| {
         panic!("Problem creating the manifest file: {:?}", why.kind());
     });
-
+/*
 	if !is_quiet {
 		let pb = ProgressBar::new(100);
 
@@ -145,29 +148,92 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 
 		pb.finish_and_clear();
 	}
-
-	#[derive(Clone,Copy,Debug,PartialEq,Eq)]
-	struct Header<'a> {
-		version_string: &'a str,
+*/
+	#[derive(NomLE,Clone,Copy,Debug,PartialEq,Eq)]
+	struct BlockDescription {
+		block_type: u32,
+		object_count: u32,
+		padded_size: u32,
+		data_size: u32,
+		working_buffer_offset: u32,
+		crc32: u32,
 	}
 
-	named!(parse_version_string<Header>,
+	#[derive(Clone,Debug,PartialEq,Eq)]
+	struct Header<'a> {
+		version_string: &'a str,
+		is_not_rtc: u32,
+		block_count: u32,
+		block_working_buffer_capacity_even: u32,
+		block_working_buffer_capacity_odd: u32,
+		padded_size: u32,
+		version_patch: u32,
+		version_minor: u32,
+		block_descriptions: Vec<BlockDescription>,
+		pool_manifest_padded_size: u32,
+		pool_manifest_offset: u32,
+		pool_manifest_unused0: u32,
+		pool_manifest_unused1: u32,
+		pool_object_decompression_buffer_capacity: u32,
+		block_sector_padding_size: u32,
+		pool_sector_padding_size: u32,
+		file_size: u32,
+		incredi_builder_string: &'a str,
+	}
+
+	named!(parse_primary_header<Header>,
 		do_parse!(
-			version_string: take_str!(255) >>
+			version_string: take_str!(256) >>
+			is_not_rtc: le_u32 >>
+			block_count: le_u32 >>
+			block_working_buffer_capacity_even: le_u32 >>
+			block_working_buffer_capacity_odd: le_u32 >>
+			padded_size: le_u32 >>
+			version_patch: le_u32 >>
+			version_minor: le_u32 >>
+			block_descriptions: count!(BlockDescription::parse, block_count as usize) >>
+			take!(mem::size_of::<BlockDescription>() * ((64u32 - block_count) as usize) + mem::size_of::<u32>()) >>
+			pool_manifest_padded_size: le_u32 >>
+			pool_manifest_offset: le_u32 >>
+			pool_manifest_unused0: le_u32 >>
+			pool_manifest_unused1: le_u32 >>
+			pool_object_decompression_buffer_capacity: le_u32 >>
+			block_sector_padding_size: le_u32 >>
+			pool_sector_padding_size: le_u32 >>
+			file_size: le_u32 >>
+			incredi_builder_string: take_str!(128) >>
+			take!(64) >>
 			(Header {
-				version_string: version_string,
+				version_string: version_string.trim_end_matches('\0'),
+				is_not_rtc: is_not_rtc,
+				block_count: block_count,
+				block_working_buffer_capacity_even: block_working_buffer_capacity_even,
+				block_working_buffer_capacity_odd: block_working_buffer_capacity_odd,
+				padded_size: padded_size,
+				version_patch: version_patch,
+				version_minor: version_minor,
+				block_descriptions: block_descriptions,
+				pool_manifest_padded_size: pool_manifest_padded_size,
+				pool_manifest_offset: pool_manifest_offset,
+				pool_manifest_unused0: pool_manifest_unused0,
+				pool_manifest_unused1: pool_manifest_unused1,
+				pool_object_decompression_buffer_capacity: pool_object_decompression_buffer_capacity,
+				block_sector_padding_size: block_sector_padding_size,
+				pool_sector_padding_size: pool_sector_padding_size,
+				file_size: file_size,
+				incredi_builder_string: incredi_builder_string.trim_end_matches('\0'),
 			})
 		)
 	);
 
-	let mut buffer = [0; 255];
+	let mut buffer = [0; 2048];
 	input_file.read(&mut buffer)?;
-	let header = match parse_version_string(&buffer) {
+	let header = match parse_primary_header(&buffer) {
 		Ok((_, h)) => h,
-		Err(_) => panic!(),
+		Err(error) => panic!("{}", error),
 	};
 
-	println!("{}", header.version_string);
+	println!("{:#?}", header);
 
 	// ...
 
