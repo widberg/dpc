@@ -149,6 +149,11 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 		pb.finish_and_clear();
 	}
 */
+	named_args!(take_c_string_as_str(size: usize)<&str>, do_parse!(
+		s: take_str!(size) >>
+		(s.trim_end_matches('\0'))
+	));
+
 	#[derive(NomLE,Clone,Copy,Debug,PartialEq,Eq)]
 	struct BlockDescription {
 		block_type: u32,
@@ -159,8 +164,9 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 		crc32: u32,
 	}
 
-	#[derive(Clone,Debug,PartialEq,Eq)]
+	#[derive(NomLE,Clone,Debug,PartialEq,Eq)]
 	struct Header<'a> {
+		#[nom(Parse = "{ |i| take_c_string_as_str(i, 256) }")]
 		version_string: &'a str,
 		is_not_rtc: u32,
 		block_count: u32,
@@ -169,7 +175,9 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 		padded_size: u32,
 		version_patch: u32,
 		version_minor: u32,
+		#[nom(Count = "block_count", Parse = "BlockDescription::parse")]
 		block_descriptions: Vec<BlockDescription>,
+		#[nom(MoveAbs(0x720))]
 		pool_manifest_padded_size: u32,
 		pool_manifest_offset: u32,
 		pool_manifest_unused0: u32,
@@ -178,62 +186,24 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 		block_sector_padding_size: u32,
 		pool_sector_padding_size: u32,
 		file_size: u32,
+		#[nom(Parse = "{ |i| take_c_string_as_str(i, 128) }")]
 		incredi_builder_string: &'a str,
 	}
-
-	named!(parse_primary_header<Header>,
-		do_parse!(
-			version_string: take_str!(256) >>
-			is_not_rtc: le_u32 >>
-			block_count: le_u32 >>
-			block_working_buffer_capacity_even: le_u32 >>
-			block_working_buffer_capacity_odd: le_u32 >>
-			padded_size: le_u32 >>
-			version_patch: le_u32 >>
-			version_minor: le_u32 >>
-			block_descriptions: count!(BlockDescription::parse, block_count as usize) >>
-			take!(mem::size_of::<BlockDescription>() * ((64u32 - block_count) as usize) + mem::size_of::<u32>()) >>
-			pool_manifest_padded_size: le_u32 >>
-			pool_manifest_offset: le_u32 >>
-			pool_manifest_unused0: le_u32 >>
-			pool_manifest_unused1: le_u32 >>
-			pool_object_decompression_buffer_capacity: le_u32 >>
-			block_sector_padding_size: le_u32 >>
-			pool_sector_padding_size: le_u32 >>
-			file_size: le_u32 >>
-			incredi_builder_string: take_str!(128) >>
-			take!(64) >>
-			(Header {
-				version_string: version_string.trim_end_matches('\0'),
-				is_not_rtc: is_not_rtc,
-				block_count: block_count,
-				block_working_buffer_capacity_even: block_working_buffer_capacity_even,
-				block_working_buffer_capacity_odd: block_working_buffer_capacity_odd,
-				padded_size: padded_size,
-				version_patch: version_patch,
-				version_minor: version_minor,
-				block_descriptions: block_descriptions,
-				pool_manifest_padded_size: pool_manifest_padded_size,
-				pool_manifest_offset: pool_manifest_offset,
-				pool_manifest_unused0: pool_manifest_unused0,
-				pool_manifest_unused1: pool_manifest_unused1,
-				pool_object_decompression_buffer_capacity: pool_object_decompression_buffer_capacity,
-				block_sector_padding_size: block_sector_padding_size,
-				pool_sector_padding_size: pool_sector_padding_size,
-				file_size: file_size,
-				incredi_builder_string: incredi_builder_string.trim_end_matches('\0'),
-			})
-		)
-	);
-
+	
 	let mut buffer = [0; 2048];
 	input_file.read(&mut buffer)?;
-	let header = match parse_primary_header(&buffer) {
+	let header = match Header::parse(&buffer) {
 		Ok((_, h)) => h,
 		Err(error) => panic!("{}", error),
 	};
 
 	println!("{:#?}", header);
+
+	for x in 0..header.block_descriptions.len() {	
+		fs::create_dir_all(output_path.as_ref().join(format!("block_{}", x))).unwrap_or_else(|why| {
+			panic!("Problem creating a block directory: {:?}", why.kind());
+		});
+	}
 
 	// ...
 
