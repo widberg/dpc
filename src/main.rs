@@ -169,6 +169,7 @@ pub fn extract<P: AsRef<Path>>(input_path: &P, output_path: &P, is_quiet: bool, 
 		#[nom(Parse = "{ |i| take_c_string_as_str(i, 256) }")]
 		version_string: &'a str,
 		is_not_rtc: u32,
+		#[nom(Verify = "*block_count <= 64")]
 		block_count: u32,
 		block_working_buffer_capacity_even: u32,
 		block_working_buffer_capacity_odd: u32,
