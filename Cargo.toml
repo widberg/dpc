@@ -6,14 +6,17 @@ build = "build.rs"
 edition = "2018"
 
 [dependencies]
-bimap = "0.6.1"
 binwrite = "0.2.1"
-built = { version = "0.4.4", features = ["git2"] }
+built = { version = "0.5.0", features = ["git2"] }
+checksums = "0.7.1"
 clap = "2.33.3"
 indicatif = "0.16.0"
 nom = "6.1.2"
 nom-derive = "0.8.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+test-generator = "0.3.0"
+wild = "2.0.4"
 
 [build-dependencies]
-built = "0.4.4"
+built = "0.5.0"

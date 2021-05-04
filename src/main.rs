@@ -37,7 +37,6 @@ fn main() -> Result<()> {
                  .short("o")
                  .long("output")
                  .takes_value(true)
-				 .required(true)
                  .help("The output directory"))
 		.arg(Arg::with_name("GAME")
 				.short("g")
@@ -69,7 +68,7 @@ fn main() -> Result<()> {
 				.short("l")
 				.long("lz")
 				.help("Apply Asobo LZ compression/deflation when appropriate"))
-        .get_matches();
+        .get_matches_from(wild::args());
 
 	if matches.is_present("EXTRACT") == matches.is_present("CREATE") {
 		panic!("Exactly one of -e/-c must be present.");
@@ -86,15 +85,19 @@ fn main() -> Result<()> {
 	};
 
 	let input_path = Path::new(matches.value_of("INPUT").unwrap());
-	let output_path = Path::new(matches.value_of("OUTPUT").unwrap());
+	// doesnt work for creation because no .DPC ext
+	let output_path = Path::new(matches.value_of("OUTPUT").unwrap_or(input_path.file_stem().unwrap().to_str().unwrap()));
 
-	if options.is_extract {
+	if matches.is_present("EXTRACT") {
 		match dpc.extract(&input_path, &output_path) {
 			Ok(_) => (),
 			Err(error) => panic!("Extraction error: {:?}", error),
 		};
 	} else {
-		panic!("DPC creation not supported.");
+		match dpc.create(&input_path, &output_path) {
+			Ok(_) => (),
+			Err(error) => panic!("Creation error: {:?}", error),
+		};
 	}
 
 	Ok(())

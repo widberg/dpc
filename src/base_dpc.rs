@@ -7,7 +7,6 @@ use std::convert::From;
 pub struct Options {
 	pub is_quiet: bool,
 	pub is_force: bool,
-	pub is_extract: bool,
 	pub is_unsafe: bool,
 	pub is_lz: bool,
 }
@@ -17,7 +16,6 @@ impl From<&ArgMatches<'_>> for Options {
 		Options {
 			is_quiet: arg_matches.is_present("QUIET"),
 			is_force: arg_matches.is_present("FORCE"),
-			is_extract: arg_matches.is_present("EXTRACT"),
 			is_unsafe: arg_matches.is_present("UNSAFE"),
 			is_lz: arg_matches.is_present("LZ"),
 		}
