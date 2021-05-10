@@ -20,6 +20,16 @@ use serde::Serialize;
 use serde::Deserialize;
 use std::cmp::max;
 
+fn calculate_padded_size(unpadded_size: u32) -> u32
+{
+    return (unpadded_size + 0x7ff) & 0xfffff800;
+}
+
+fn calculate_padding_size(unpadded_size: u32) -> u32
+{
+    return calculate_padded_size(unpadded_size) - unpadded_size;
+}
+
 #[derive(Serialize, Deserialize)]
 struct Header {
 	version_string: String,
@@ -32,12 +42,10 @@ struct Header {
 struct ObjectDescription {
 	crc32: u32,
 	compress: bool,
-	depends: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct Block {
-	block_type: u32,
 	offset: u32,
 	objects: Vec<ObjectDescription>,
 }
@@ -46,7 +54,27 @@ struct Block {
 struct Manifest {
 	header: Header,
 	blocks: Vec<Block>,
-	pool: Vec<u32>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pool: Option<Pool>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PoolObjectEntry {
+	crc32: u32,
+	reference_record_index: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct JsonReferenceRecord {
+	object_entries_starting_index: u32,
+	object_entries_count: u16,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Pool {
+	object_entry_indices: Vec<u32>,
+	object_entries: Vec<PoolObjectEntry>,
+	reference_records: Vec<JsonReferenceRecord>,
 }
 
 impl Manifest {
@@ -59,7 +87,7 @@ impl Manifest {
 				incredi_builder_string: String::from(""),
 			},
 			blocks: vec![],
-			pool: vec![],
+			pool: None,
 		}
 	}
 }
@@ -76,6 +104,7 @@ struct ObjectHeader {
 }
 
 #[derive(NomLE,BinWrite,Clone,Copy,Debug,PartialEq,Eq)]
+#[binwrite(little)]
 struct PoolManifestHeader
 {
 	equals524288: u32,
@@ -84,16 +113,20 @@ struct PoolManifestHeader
 }
 
 #[derive(NomLE,BinWrite,Clone,Copy,Debug,PartialEq,Eq)]
+#[binwrite(little)]
 struct ReferenceRecord {
 	start_chunk_index: u32,
 	end_chunk_index: u32,
 	objects_crc32_starting_index: u32,
-	#[nom(SkipBefore(2), SkipAfter(12))]
+	placeholder_dpc_index: u16,
 	objects_crc32_count: u16,
+	placeholder_times_referenced: u32,
+	placeholder_current_references_shared: u32,
+	placeholder_current_references_weak: u32,
 }
 
-
 #[derive(NomLE,BinWrite,Clone,Copy,Debug,PartialEq,Eq)]
+#[binwrite(little)]
 struct BlockDescription {
 	block_type: u32,
 	object_count: u32,
@@ -179,6 +212,10 @@ impl DPC for FuelDPC {
 			(s.trim_end_matches('\0'))
 		));
 
+		named!(take_nothing_as_str<&str>, do_parse!(
+			("")
+		));
+
 		#[derive(NomLE,Clone,Debug,PartialEq,Eq)]
 		struct PrimaryHeader<'a> {
 			#[nom(Parse = "{ |i| take_c_string_as_str(i, 256) }")]
@@ -204,7 +241,7 @@ impl DPC for FuelDPC {
 			block_sector_padding_size: u32,
 			pool_sector_padding_size: u32,
 			file_size: u32,
-			#[nom(Parse = "{ |i| take_c_string_as_str(i, 128) }")]
+			#[nom(Parse = "{ |i| { if file_size != 0xFFFFFFFF { take_c_string_as_str(i, 128) } else { take_nothing_as_str(i) } } }")]
 			incredi_builder_string: &'a str,
 		}
 
@@ -258,7 +295,7 @@ impl DPC for FuelDPC {
 			manifest_json.header.incredi_builder_string = String::from(header.incredi_builder_string);
 		}
 
-		println!("{:#?}", header);
+		//println!("{:#?}", header);
 
 		let mut object_count = 0;
 
@@ -266,10 +303,10 @@ impl DPC for FuelDPC {
 			object_count += block_description.object_count;
 		}
 
-		let pb = ProgressBar::new(object_count as u64);
-		if !self.options.is_quiet {
-
-		}
+		let pb = match self.options.is_quiet {
+			false => ProgressBar::new(object_count as u64),
+			true => ProgressBar::hidden(),
+		};
 
 		let mut crc32s = HashSet::new();
 
@@ -292,7 +329,6 @@ impl DPC for FuelDPC {
 				v.push(ObjectDescription {
 					crc32: object.header.crc32,
 					compress: object.header.compressed_size != 0,
-					depends: vec![],
 				});
 
 				if !crc32s.contains(&object.header.crc32) {
@@ -306,14 +342,12 @@ impl DPC for FuelDPC {
 					global_objects.insert(object.header.crc32, ObjectDescription {
 						crc32: object.header.crc32,
 						compress: object.header.compressed_size != 0,
-						depends: vec![],
 					});
 				}
 				pb.inc(1);
 			}
 
 			manifest_json.blocks.push(Block {
-				block_type: block_description.block_type,
 				offset: block_description.working_buffer_offset,
 				objects: v,
 			});
@@ -324,60 +358,70 @@ impl DPC for FuelDPC {
 
 		pb.finish_and_clear();
 
-		let mut buf: Vec<u8> = vec![0; header.pool_manifest_padded_size as usize];
-		input_file.read(&mut buf)?;
+		if header.pool_manifest_offset != 0 {
 
-		let pool_manifest = match PoolManifest::parse(&buf) {
-			Ok((_, h)) => h,
-			Err(error) => panic!("{}", error),
-		};
+			let mut buf: Vec<u8> = vec![0; header.pool_manifest_padded_size as usize];
+			input_file.read(&mut buf)?;
 
-		for i in pool_manifest.objects_crc32s.iter() {
-			let crc32 = pool_manifest.crc32s[*i as usize];
-			let reference_record = pool_manifest.reference_records[pool_manifest.reference_records_indices[*i as usize] as usize - 1];
-			let depends_indices = &pool_manifest.objects_crc32s[(reference_record.objects_crc32_starting_index as usize)..(reference_record.objects_crc32_starting_index as usize + reference_record.objects_crc32_count as usize)];
-			let mut depends = vec![];
-			for index in depends_indices.iter() {
-				depends.push(pool_manifest.crc32s[*index as usize]);
+			let pool_manifest = match PoolManifest::parse(&buf) {
+				Ok((_, h)) => h,
+				Err(error) => panic!("{}", error),
+			};
+
+			let mut object_entries = vec![];
+			for i in 0..pool_manifest.crc32s.len() {
+				object_entries.push(PoolObjectEntry {
+					crc32: pool_manifest.crc32s[i],
+					reference_record_index: pool_manifest.reference_records_indices[i],
+				})
 			}
 
-			let od = global_objects.get_mut(&crc32).unwrap();
-			od.depends = depends;
-		}
+			let mut json_reference_records = vec![];
+			for reference_record in pool_manifest.reference_records.iter() {
+				json_reference_records.push(JsonReferenceRecord {
+					object_entries_starting_index: reference_record.objects_crc32_starting_index,
+					object_entries_count: reference_record.objects_crc32_count,
+				})
+			}
 
-		//println!("{:#?}", pool_manifest);
+			manifest_json.pool = Some(Pool {
+				object_entry_indices: pool_manifest.objects_crc32s.clone(),
+				object_entries: object_entries,
+				reference_records: json_reference_records,
+			});
 
-		let cur = input_file.seek(SeekFrom::Current(0)).unwrap();
-		let end = input_file.seek(SeekFrom::End(0)).unwrap();
-		input_file.seek(SeekFrom::Start(cur))?;
+			//println!("{:#?}", pool_manifest);
 
-		let mut bufff: Vec<u8> = vec![0; (end - cur) as usize];
-		input_file.read(&mut bufff)?;
+			let cur = input_file.seek(SeekFrom::Current(0)).unwrap();
+			let end = input_file.seek(SeekFrom::End(0)).unwrap();
+			input_file.seek(SeekFrom::Start(cur))?;
 
-		let pool_objects = match count!(bufff.as_bytes(), PoolObject::parse, pool_manifest.objects_crc32s.len() as usize) {
-			Ok((_, h)) => h,
-			Err(error) => panic!("{}", error),
-		};
+			let mut bufff: Vec<u8> = vec![0; (end - cur) as usize];
+			input_file.read(&mut bufff)?;
 
-		for pool_object in pool_objects.iter() {
-			let mut object_file = std::fs::OpenOptions::new()
-				.read(true)
-				.write(true)
-				.open(objects_path.join(format!("{}.{}", pool_object.header.crc32, class_names.get(&pool_object.header.class_crc32).unwrap())))?;
-			
-			object_file.seek(SeekFrom::End(0))?;
-			object_file.write(pool_object.data.as_bytes())?;
-			global_objects.get_mut(&pool_object.header.crc32).unwrap().compress = pool_object.header.compressed_size != 0;
+			let pool_objects = match count!(bufff.as_bytes(), PoolObject::parse, pool_manifest.objects_crc32s.len() as usize) {
+				Ok((_, h)) => h,
+				Err(error) => panic!("{}", error),
+			};
 
-			let mut oh = global_object_headers.get(&pool_object.header.crc32).unwrap().clone();
-			oh.data_size += pool_object.header.data_size;
-			oh.compressed_size = pool_object.header.compressed_size;
-			oh.decompressed_size = pool_object.header.decompressed_size;
+			for pool_object in pool_objects.iter() {
+				let mut object_file = std::fs::OpenOptions::new()
+					.read(true)
+					.write(true)
+					.open(objects_path.join(format!("{}.{}", pool_object.header.crc32, class_names.get(&pool_object.header.class_crc32).unwrap())))?;
+				
+				object_file.seek(SeekFrom::End(0))?;
+				object_file.write(pool_object.data.as_bytes())?;
+				global_objects.get_mut(&pool_object.header.crc32).unwrap().compress = pool_object.header.compressed_size != 0;
 
-			object_file.seek(SeekFrom::Start(0))?;
-			oh.write(&mut object_file)?;
+				let mut oh = global_object_headers.get(&pool_object.header.crc32).unwrap().clone();
+				oh.data_size += pool_object.header.data_size;
+				oh.compressed_size = pool_object.header.compressed_size;
+				oh.decompressed_size = pool_object.header.decompressed_size;
 
-			manifest_json.pool.push(pool_object.header.crc32);
+				object_file.seek(SeekFrom::Start(0))?;
+				oh.write(&mut object_file)?;
+			}
 		}
 
 		// ...
@@ -386,7 +430,6 @@ impl DPC for FuelDPC {
 			for object in block.objects.iter_mut() {
 				let od: &ObjectDescription = global_objects.get(&object.crc32).unwrap();
 				object.compress = od.compress;
-				object.depends = od.depends.clone();
 			}
 		}
 
@@ -426,6 +469,31 @@ impl DPC for FuelDPC {
 
 		let mut block_descriptions: Vec<BlockDescription> = Vec::new();
 
+		
+
+		let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
+		version_lookup.insert(String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 253));
+		version_lookup.insert(String::from("v1.381.66.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 252));
+		version_lookup.insert(String::from("v1.381.65.09 - Asobo Studio - Internal Cross Technology"), (271, 380, 249));
+		version_lookup.insert(String::from("v1.381.64.09 - Asobo Studio - Internal Cross Technology"), (271, 380, 249));
+		version_lookup.insert(String::from("v1.379.60.09 - Asobo Studio - Internal Cross Technology"), (269, 380, 211));
+		version_lookup.insert(String::from("v1.325.50.07 - Asobo Studio - Internal Cross Technology"), (262, 326, 146));
+		version_lookup.insert(String::from("v1.220.50.07 - Asobo Studio - Internal Cross Technology"), (262, 221, 144));
+
+		let (version_patch, version_minor, mut block_type) = version_lookup.get(&manifest_json.header.version_string).unwrap();
+
+		let mut pool_object_crc32s: HashSet<u32> = HashSet::new();
+
+		if let Some(pool) = &manifest_json.pool {
+			for entry in pool.object_entries.iter() {
+				pool_object_crc32s.insert(entry.crc32);
+			}
+		}
+
+
+		let mut object_padded_size_map: HashMap<u32, u32> = HashMap::new();
+
+
 		for block in manifest_json.blocks.iter() {
 			let start_pos = dpc_file.stream_position()?;
 
@@ -438,12 +506,16 @@ impl DPC for FuelDPC {
 				
 				let (_, mut oh) = ObjectHeader::parse(&buffer).unwrap();
 
-				if object.depends.len() == 0 {
+				if !pool_object_crc32s.contains(&oh.crc32) {
 					oh.write(&mut dpc_file)?;
 					let mut data = vec![0; oh.data_size as usize];
 					object_file.read(&mut data)?;
 					dpc_file.write(&data)?;
 				} else {
+					if !object_padded_size_map.contains_key(&oh.crc32) {
+						object_padded_size_map.insert(oh.crc32, calculate_padded_size(24 + oh.data_size - oh.class_object_size) >> 11);
+					}
+
 					oh.data_size = oh.class_object_size;
 					oh.compressed_size = 0;
 					oh.decompressed_size = 0;
@@ -458,76 +530,223 @@ impl DPC for FuelDPC {
 			let len = (end_pos - start_pos) as u32;
 
 			let block_description = BlockDescription {
-				block_type: block.block_type,
+				block_type: block_type,
 				object_count: block.objects.len() as u32,
 				crc32: block.objects[0].crc32,
 				data_size: len,
-				padded_size: len + (2048 - len % 2048),
+				padded_size: calculate_padded_size(len),
 				working_buffer_offset: block.offset,
 			};
 
+			block_type = 0;
+
 			block_descriptions.push(block_description);
 
-			let pos: i64 = dpc_file.stream_position()? as i64;
-			block_sector_padding_size += (2048 - pos % 2048) as u32;
-			dpc_file.seek(SeekFrom::Current(2048 - pos % 2048))?;
-		}
-
-		let pool_manifest_offset: u32 = dpc_file.stream_position()? as u32;
-
-		let pool_header = PoolManifestHeader {
-			equals524288: 524288,
-			equals2048: 2048,
-			objects_crc32_count_sum: 0,
-		};
-
-		pool_header.write(&mut dpc_file)?;
-
-		let pos: i64 = dpc_file.stream_position()? as i64;
-		let mut pool_sector_padding_size: u32 = 0;
-		let lll = vec![0xff;(2048 - pos % 2048) as usize];
-		dpc_file.write(&lll)?;
-		pool_sector_padding_size += lll.len() as u32;
-
-		let pool_manifest_padded_size: u32 = dpc_file.stream_position()? as u32 - pool_manifest_offset;
-
-		let mut max_pool_decompressed_size = 0;
-
-		for crc32 in manifest_json.pool.iter() {
-			let mut object_file = File::open(index.get(&crc32).unwrap().as_path())?;
-			let mut buffer: [u8; 24] = [0; 24];
-			object_file.read(&mut buffer)?;
-
-			let (_, mut oh) = ObjectHeader::parse(&buffer).unwrap();
-
-			if oh.compressed_size != 0 {
-				max_pool_decompressed_size = max(max_pool_decompressed_size, (oh.decompressed_size + 2047) / 2048);
-			}
-
-			oh.data_size = oh.data_size - oh.class_object_size;
-			let mut buffer = vec![0;oh.data_size as usize];
-
-			object_file.seek(SeekFrom::Current(oh.class_object_size as i64))?;
-			object_file.read(&mut buffer)?;
-
-			oh.class_object_size = 0;
-			oh.write(&mut dpc_file)?;
-			dpc_file.write(&buffer)?;
-			
-			let pos: i64 = dpc_file.stream_position()? as i64;
-			let lll = vec![0xff;(2048 - pos % 2048) as usize];
+			let pos = dpc_file.stream_position()?;
+			let lll = vec![0x00;calculate_padding_size(pos as u32) as usize];
 			dpc_file.write(&lll)?;
 
-			pool_sector_padding_size += lll.len() as u32;
+			block_sector_padding_size += lll.len() as u32;
 		}
 
-		let file_padded_size = dpc_file.stream_position()? as u32;
+		let blocks_padded_size = dpc_file.stream_position()? as u32 - 2048;
+
+		let mut pool_manifest_offset: u32 = 0;
+		let mut pool_manifest_padded_size: u32 = 0;
+		let mut pool_sector_padding_size: u32 = 0;
+		let mut max_pool_decompressed_size = 0;
+		
+		if let Some(pool) = &manifest_json.pool {
+
+			pool_manifest_offset = dpc_file.stream_position()? as u32;
+
+
+			let mut objects_crc32_count_sum: u32 = 0;
+
+			
+			for record in pool.reference_records.iter() {
+				objects_crc32_count_sum += record.object_entries_count as u32;
+			}
+
+			let pool_header = PoolManifestHeader {
+				equals524288: 524288,
+				equals2048: 2048,
+				objects_crc32_count_sum: objects_crc32_count_sum,
+			};
+
+			pool_header.write(&mut dpc_file)?;
+
+			//
+			// Pool Manifest
+			//
+
+			#[derive(BinWrite)]
+			#[binwrite(little)]
+			struct PascalArrayU32 {
+				len: u32,
+				data: Vec<u32>,
+			}
+
+			let object_crc32s = PascalArrayU32 {
+				len: pool.object_entry_indices.len() as u32,
+				data: pool.object_entry_indices.clone(),
+			};
+
+			object_crc32s.write(&mut dpc_file)?;
+
+			let mut reference_count_map: HashMap<u32, u32> = HashMap::new();
+			for i in object_crc32s.data.iter() {
+				reference_count_map.insert(pool.object_entries[*i as usize].crc32, match reference_count_map.get(&pool.object_entries[*i as usize].crc32) {
+					None => 1,
+					Some(x) => *x + 1,
+				});
+			}
+
+			let mut vec_crc32s = vec![];
+			let mut vec_reference_records_indices = vec![];
+			let mut vec_reference_count: Vec<u32> = vec![];
+			let mut vec_object_padded_size: Vec<u32> = vec![];
+			for entry in pool.object_entries.iter() {
+				vec_crc32s.push(entry.crc32);
+				vec_reference_records_indices.push(entry.reference_record_index);
+				vec_reference_count.push(reference_count_map.get(&entry.crc32).unwrap().clone());
+				vec_object_padded_size.push(object_padded_size_map.get(&entry.crc32).unwrap().clone());
+			}
+
+			let crc32s = PascalArrayU32 {
+				len: vec_crc32s.len() as u32,
+				data: vec_crc32s,
+			};
+
+			crc32s.write(&mut dpc_file)?;
+
+			///////////////////////////////
+			let reference_count = PascalArrayU32 {
+				len: vec_reference_count.len() as u32,
+				data: vec_reference_count,
+			};
+			reference_count.write(&mut dpc_file)?;
+
+			let object_padded_size = PascalArrayU32 {
+				len: vec_object_padded_size.len() as u32,
+				data: vec_object_padded_size,
+			};
+
+			object_padded_size.write(&mut dpc_file)?;
+
+
+
+			///////////////////////////////
+
+			let reference_records_indices = PascalArrayU32 {
+				len: vec_reference_records_indices.len() as u32,
+				data: vec_reference_records_indices,
+			};
+
+			reference_records_indices.write(&mut dpc_file)?;
+
+			#[derive(BinWrite)]
+			#[binwrite(little)]
+			struct PascalArrayReferenceRecord {
+				len: u32,
+				data: Vec<ReferenceRecord>,
+			}
+
+			let mut vec_reference_records = vec![];
+
+
+			
+			let pos = dpc_file.stream_position()?;
+			let end_of_pool_manifest = calculate_padded_size(pos as u32 + 28 * pool.reference_records.len() as u32 + 28);
+
+			for record in pool.reference_records.iter() {
+
+				let mut start_chunk_index: u32 = end_of_pool_manifest / 2048;
+				for i in 0..record.object_entries_starting_index {
+					let object_entry_index: u32 = pool.object_entry_indices[i as usize];
+					start_chunk_index += object_padded_size_map.get(&pool.object_entries[object_entry_index as usize].crc32).unwrap();
+				}
+
+				let mut end_chunk_index = start_chunk_index;
+				for i in record.object_entries_starting_index..(record.object_entries_starting_index + record.object_entries_count as u32) {
+					let object_entry_index: u32 = pool.object_entry_indices[i as usize];
+					end_chunk_index += object_padded_size_map.get(&pool.object_entries[object_entry_index as usize].crc32).unwrap();
+				}
+
+				vec_reference_records.push(ReferenceRecord {
+					start_chunk_index: start_chunk_index,
+					end_chunk_index: end_chunk_index,
+					objects_crc32_starting_index: record.object_entries_starting_index,
+					placeholder_dpc_index: 0,
+					objects_crc32_count: record.object_entries_count,
+					placeholder_times_referenced: 0xFFFFFFFF,
+					placeholder_current_references_shared: 0xFFFFFFFF,
+					placeholder_current_references_weak: 0xFFFFFFFF,
+				})
+			}
+
+			let reference_records = PascalArrayReferenceRecord {
+				len: vec_reference_records.len() as u32,
+				data: vec_reference_records,
+			};
+
+			reference_records.write(&mut dpc_file)?;
+
+			// terminal
+			let llll = ReferenceRecord {
+				start_chunk_index: 0,
+				end_chunk_index: 0,
+				objects_crc32_starting_index: 0,
+				placeholder_dpc_index: 0,
+				objects_crc32_count: 0,
+				placeholder_times_referenced: 0xFFFFFFFF,
+				placeholder_current_references_shared: 0xFFFFFFFF,
+				placeholder_current_references_weak: 0xFFFFFFFF,
+			};
+			llll.write(&mut dpc_file)?;
+
+			let pos: i64 = dpc_file.stream_position()? as i64;
+			let lll = vec![0xff;calculate_padding_size(pos as u32) as usize];
+			dpc_file.write(&lll)?;
+
+			pool_manifest_padded_size = dpc_file.stream_position()? as u32 - pool_manifest_offset;
+
+			for i in pool.object_entry_indices.iter() {
+				let crc32 = pool.object_entries[*i as usize].crc32;
+				let mut object_file = File::open(index.get(&crc32).unwrap().as_path())?;
+				let mut buffer: [u8; 24] = [0; 24];
+				object_file.read(&mut buffer)?;
+
+				let (_, mut oh) = ObjectHeader::parse(&buffer).unwrap();
+
+				max_pool_decompressed_size = max(max_pool_decompressed_size, (oh.decompressed_size + 2047) / 2048);
+
+				oh.data_size = oh.data_size - oh.class_object_size;
+				let mut buffer = vec![0;oh.data_size as usize];
+
+				object_file.seek(SeekFrom::Current(oh.class_object_size as i64))?;
+				object_file.read(&mut buffer)?;
+
+				oh.class_object_size = 0;
+				oh.write(&mut dpc_file)?;
+				dpc_file.write(&buffer)?;
+				
+				let pos: i64 = dpc_file.stream_position()? as i64;
+				let lll = vec![0xff;calculate_padding_size(pos as u32) as usize];
+				dpc_file.write(&lll)?;
+
+				pool_sector_padding_size += lll.len() as u32;
+			}
+		}
+
+		let mut file_padded_size = dpc_file.stream_position()? as u32;
 
 		// HEADER
 
 		dpc_file.seek(SeekFrom::Start(0))?;
 
 		#[derive(BinWrite,Clone,Debug,PartialEq,Eq)]
+		#[binwrite(little)]
 		struct PrimaryHeaderPartA {
 			is_not_rtc: u32,
 			block_count: u32,
@@ -543,17 +762,6 @@ impl DPC for FuelDPC {
 		dpc_file.seek(SeekFrom::Start(256))?;
 
 
-		let mut version_lookup: HashMap<String, (u32, u32)> = HashMap::new();
-		version_lookup.insert(String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"), (272, 380));
-		version_lookup.insert(String::from("v1.381.66.09 - Asobo Studio - Internal Cross Technology"), (272, 380));
-		version_lookup.insert(String::from("v1.381.65.09 - Asobo Studio - Internal Cross Technology"), (271, 380));
-		version_lookup.insert(String::from("v1.381.64.09 - Asobo Studio - Internal Cross Technology"), (271, 380));
-		version_lookup.insert(String::from("v1.379.60.09 - Asobo Studio - Internal Cross Technology"), (269, 380));
-		version_lookup.insert(String::from("v1.325.50.07 - Asobo Studio - Internal Cross Technology"), (262, 326));
-		version_lookup.insert(String::from("v1.220.50.07 - Asobo Studio - Internal Cross Technology"), (262, 221));
-
-		let (version_patch, version_minor) = version_lookup.get(&manifest_json.header.version_string).unwrap();
-
 
 		let mut block_working_buffer_capacity_even = 0;
 		let mut block_working_buffer_capacity_odd = 0;
@@ -567,12 +775,14 @@ impl DPC for FuelDPC {
 			}
 		}
 
+
+
 		let phpa = PrimaryHeaderPartA {
 			is_not_rtc: !manifest_json.header.is_rtc as u32,
 			block_count: manifest_json.blocks.len() as u32,
 			block_working_buffer_capacity_even: block_working_buffer_capacity_even,
 			block_working_buffer_capacity_odd: block_working_buffer_capacity_odd,
-			padded_size: pool_manifest_offset - 2048,
+			padded_size: blocks_padded_size,
 			version_patch: *version_patch,
 			version_minor: *version_minor,
 		};
@@ -586,6 +796,7 @@ impl DPC for FuelDPC {
 		dpc_file.seek(SeekFrom::Start(0x720))?;
 
 		#[derive(BinWrite,Clone,Debug,PartialEq,Eq)]
+		#[binwrite(little)]
 		struct PrimaryHeaderPartB {
 			pool_manifest_padded_size: u32,
 			pool_manifest_offset: u32,
@@ -595,6 +806,12 @@ impl DPC for FuelDPC {
 			block_sector_padding_size: u32,
 			pool_sector_padding_size: u32,
 			file_size: u32,
+		}
+
+		if manifest_json.header.incredi_builder_string.len() == 0 {
+			block_sector_padding_size = 0xFFFFFFFF;
+			pool_sector_padding_size = 0xFFFFFFFF;
+			file_padded_size = 0xFFFFFFFF;
 		}
 
 		let phpb = PrimaryHeaderPartB {
@@ -610,13 +827,19 @@ impl DPC for FuelDPC {
 
 		phpb.write(&mut dpc_file)?;
 
-		dpc_file.write(manifest_json.header.incredi_builder_string.as_bytes())?;
+		if manifest_json.header.incredi_builder_string.len() != 0 {
+			dpc_file.write(manifest_json.header.incredi_builder_string.as_bytes())?;
+		} else {
+			dpc_file.write(&vec![0xFF; 128])?;
+		}
 
 		dpc_file.seek(SeekFrom::Start(0x7c0))?;
 
 		let padding = [0xff;64];
 
 		dpc_file.write(&padding)?;
+
+
 
 		Ok(())
 	}
@@ -631,8 +854,9 @@ mod test {
 	use checksums::Algorithm;
 	use std::path::Path;
 	use test_generator::test_resources;
+	use tempdir::TempDir;
 
-    #[test_resources("data/*.DPC")]
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc(path: &str) {
 		let dpc = FuelDPC::new(&Options {
 			is_quiet: true,
@@ -641,12 +865,16 @@ mod test {
 			is_lz: false,
 		});
 
-		let dpc_file = Path::new(path);
-		let dpc_file_2 = Path::new("data/test/TEMP.DPC");
-		let dpc_directory = Path::new("data/test/TEMP");
+		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
 
-		dpc.extract(&dpc_file, &dpc_directory).unwrap();
+		let dpc_file = Path::new(path);
+		let dpc_file_2 = tmp_dir.path().join("TEMP.DPC");
+		let dpc_directory = tmp_dir.path().join("TEMP");
+
+		dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
 		dpc.create(&dpc_directory, &dpc_file_2).unwrap();
-		assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2, Algorithm::SHA1));
+		assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2.as_path(), Algorithm::SHA1));
+
+		tmp_dir.close().expect("Failed to delete temp_dir");
     }
 }
