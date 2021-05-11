@@ -9,6 +9,7 @@ pub struct Options {
 	pub is_force: bool,
 	pub is_unsafe: bool,
 	pub is_lz: bool,
+	pub is_optimization: bool,
 }
 
 impl From<&ArgMatches<'_>> for Options {
@@ -18,6 +19,7 @@ impl From<&ArgMatches<'_>> for Options {
 			is_force: arg_matches.is_present("FORCE"),
 			is_unsafe: arg_matches.is_present("UNSAFE"),
 			is_lz: arg_matches.is_present("LZ"),
+			is_optimization: arg_matches.is_present("OPTIMIZATION"),
 		}
 	}
 }

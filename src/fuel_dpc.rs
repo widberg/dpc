@@ -19,6 +19,7 @@ use binwrite::BinWrite;
 use serde::Serialize;
 use serde::Deserialize;
 use std::cmp::max;
+use itertools::Itertools;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32
 {
@@ -64,7 +65,7 @@ struct PoolObjectEntry {
 	reference_record_index: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq,Eq, Hash)]
 struct JsonReferenceRecord {
 	object_entries_starting_index: u32,
 	object_entries_count: u16,
@@ -446,7 +447,7 @@ impl DPC for FuelDPC {
 			panic!("Problem opening the input file: {:?}", why.kind());
 		});
 
-		let manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
+		let mut manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
 
 		let mut dpc_file = File::create(output_path.as_ref())?;
 
@@ -556,7 +557,21 @@ impl DPC for FuelDPC {
 		let mut pool_sector_padding_size: u32 = 0;
 		let mut max_pool_decompressed_size = 0;
 		
-		if let Some(pool) = &manifest_json.pool {
+		if let Some(pool) = &mut manifest_json.pool {
+
+			
+			if self.options.is_optimization {
+				let vec_new_reference_records: Vec<JsonReferenceRecord> = pool.reference_records.clone().into_iter().unique().collect();
+
+				for entry in pool.object_entries.iter_mut() {
+					let record = pool.reference_records[entry.reference_record_index as usize - 1];
+					let index = vec_new_reference_records.iter().position(|&r| r == record ).unwrap();
+					entry.reference_record_index = index as u32 + 1;
+				}
+
+				pool.reference_records = vec_new_reference_records;
+			}
+
 
 			pool_manifest_offset = dpc_file.stream_position()? as u32;
 
@@ -658,6 +673,8 @@ impl DPC for FuelDPC {
 			
 			let pos = dpc_file.stream_position()?;
 			let end_of_pool_manifest = calculate_padded_size(pos as u32 + 28 * pool.reference_records.len() as u32 + 28);
+
+
 
 			for record in pool.reference_records.iter() {
 

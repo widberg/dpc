@@ -68,6 +68,10 @@ fn main() -> Result<()> {
 				.short("l")
 				.long("lz")
 				.help("Apply Asobo LZ compression/deflation when appropriate"))
+		.arg(Arg::with_name("OPTIMIZATION")
+				.short("O")
+				.long("optimization")
+				.help("Optimize the DPC"))
         .get_matches_from(wild::args());
 
 	if matches.is_present("EXTRACT") == matches.is_present("CREATE") {
