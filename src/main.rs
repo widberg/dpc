@@ -4,6 +4,7 @@ use std::io::Result;
 
 pub mod base_dpc;
 pub mod fuel_dpc;
+pub mod lz;
 
 use base_dpc::Options;
 use base_dpc::DPC;
