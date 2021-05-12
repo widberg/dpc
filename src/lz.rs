@@ -1,8 +1,9 @@
 use std::io::Cursor;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::io::prelude::*;
+use std::vec::Vec;
 
-pub fn lz_fuel_decompress(compressed_buffer: &Vec<u8>, decompressed_buffer: &mut Vec<u8>, is_in_place: bool) {
+pub fn lzss_decompress(compressed_buffer: &Vec<u8>, decompressed_buffer: &mut Vec<u8>, is_in_place: bool) {
     // Magic Numbers
     const WINDOW_LOG: u32 = 0xe;
     const WINDOW_MASK: u32 = 0x3fff;
@@ -21,15 +22,14 @@ pub fn lz_fuel_decompress(compressed_buffer: &Vec<u8>, decompressed_buffer: &mut
             if (flags & 0x80000000) != 0 {
                 let temp: u32 = compressed_buffer_cursor.read_u16::<BigEndian>().unwrap() as u32; // read as big endian
 
-				let mut window_buffer = vec![];
-				window_buffer.clone_from_slice(&decompressed_buffer_cursor.get_ref()[decompressed_buffer_size - ((temp & temp_mask) as usize + 1)..]);
-				let mut window_buffer_cursor = Cursor::new(window_buffer);
-				
-				for _ in 0..((temp >> temp_shift) + 3) {
-					let mut t = [0];
-					window_buffer_cursor.read(&mut t).unwrap();
-					decompressed_buffer_cursor.write(&t).unwrap();
-                }
+				let start: usize = decompressed_buffer_cursor.position() as usize - ((temp & temp_mask) as usize + 1);
+				let length: usize = (temp >> temp_shift) as usize + 3;
+				let end: usize = start + length;
+
+				for i in start..end {
+					let byte: u8 = decompressed_buffer_cursor.get_ref()[i];
+					decompressed_buffer_cursor.write(&[byte]).unwrap();
+				}
             } else {
 				let mut t = [0];
 				compressed_buffer_cursor.read(&mut t).unwrap();
@@ -43,4 +43,35 @@ pub fn lz_fuel_decompress(compressed_buffer: &Vec<u8>, decompressed_buffer: &mut
 			flags <<= 1
         }
     }
+}
+
+#[cfg(test)]
+mod test {
+	use crate::lz::lzss_decompress;
+	use test_generator::test_resources;
+	use std::fs::File;
+	use std::io::Read;
+	use std::io::Write;
+	use byteorder::{LittleEndian, ReadBytesExt};
+	use std::path::PathBuf;
+
+    #[test_resources("data/*.in")]
+    fn test_fuel_lz(path: &str) {
+		let mut compressed_file = File::open(path).unwrap();
+
+		let decompressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap();
+		let compressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap();
+
+		let mut compressed_buffer = vec![0; compressed_buffer_len as usize];
+		compressed_file.read(&mut compressed_buffer).unwrap();
+
+		let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
+
+		lzss_decompress(&compressed_buffer, &mut decompressed_buffer, false);
+
+		let mut out_path = PathBuf::from(path);
+		out_path.set_extension("out");
+		let mut decompressed_file = File::create(out_path).unwrap();
+		decompressed_file.write(&decompressed_buffer).unwrap();
+	}
 }

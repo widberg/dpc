@@ -1,4 +1,5 @@
 use crate::base_dpc;
+use crate::lz;
 use base_dpc::DPC;
 use base_dpc::Options;
 use std::path::Path;
@@ -880,6 +881,7 @@ mod test {
 			is_force: true,
 			is_unsafe: false,
 			is_lz: false,
+			is_optimization: false,
 		});
 
 		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
