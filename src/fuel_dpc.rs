@@ -21,6 +21,8 @@ use serde::Serialize;
 use serde::Deserialize;
 use std::cmp::max;
 use itertools::Itertools;
+use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::Cursor;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32
 {
@@ -140,12 +142,22 @@ struct BlockDescription {
 
 pub struct FuelDPC {
 	options: Options,
+	version_lookup: HashMap<String, (u32, u32, u32)>,
 }
 
 impl DPC for FuelDPC {
 	fn new(options: &Options) -> FuelDPC {
+		let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
+		version_lookup.insert(String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 253));
+		version_lookup.insert(String::from("v1.381.66.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 252));
+		version_lookup.insert(String::from("v1.381.65.09 - Asobo Studio - Internal Cross Technology"), (271, 380, 249));
+		version_lookup.insert(String::from("v1.381.64.09 - Asobo Studio - Internal Cross Technology"), (271, 380, 249));
+		version_lookup.insert(String::from("v1.379.60.09 - Asobo Studio - Internal Cross Technology"), (269, 380, 211));
+		version_lookup.insert(String::from("v1.325.50.07 - Asobo Studio - Internal Cross Technology"), (262, 326, 146));
+		version_lookup.insert(String::from("v1.220.50.07 - Asobo Studio - Internal Cross Technology"), (262, 221, 144));
 		FuelDPC {
 			options: *options,
+			version_lookup: version_lookup,
 		}
 	}
 
@@ -251,7 +263,9 @@ impl DPC for FuelDPC {
 		struct BlockObject {
 			#[nom(Parse = "ObjectHeader::parse")]
 			header: ObjectHeader,
-			#[nom(Count((header.data_size) as usize))]
+			#[nom(Count((header.class_object_size) as usize))]
+			class_object: Vec<u8>,
+			#[nom(Count((header.data_size - header.class_object_size) as usize))]
 			data: Vec<u8>,
 		}
 
@@ -289,6 +303,10 @@ impl DPC for FuelDPC {
 			Ok((_, h)) => h,
 			Err(error) => panic!("{}", error),
 		};
+
+		if !self.version_lookup.contains_key(header.version_string) && !self.options.is_unsafe {
+			panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and extract the dpc anyway (This will probably fail).");
+		}
 
 		manifest_json.header.version_string = String::from(header.version_string);
 		manifest_json.header.is_rtc = header.is_not_rtc == 0;
@@ -335,8 +353,22 @@ impl DPC for FuelDPC {
 
 				if !crc32s.contains(&object.header.crc32) {
 					let mut object_file = File::create(objects_path.join(format!("{}.{}", object.header.crc32, class_names.get(&object.header.class_crc32).unwrap())))?;
-					object.header.write(&mut object_file)?;
-					object_file.write(&object.data)?;
+					let mut oh = object.header;
+					if self.options.is_lz && object.header.compressed_size != 0 {
+						oh.compressed_size = 0;
+					}
+					oh.write(&mut object_file)?;
+					object_file.write(&object.class_object)?;
+					if self.options.is_lz && object.header.compressed_size != 0 {
+						let mut data_cursor = Cursor::new(&object.data);
+						let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
+						let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
+						let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
+						lz::lzss_decompress(&object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
+						object_file.write(&decompressed_buffer)?;
+					} else {
+						object_file.write(&object.data)?;
+					}
 					crc32s.insert(object.header.crc32);
 
 					global_object_headers.insert(object.header.crc32, object.header);
@@ -413,12 +445,25 @@ impl DPC for FuelDPC {
 					.open(objects_path.join(format!("{}.{}", pool_object.header.crc32, class_names.get(&pool_object.header.class_crc32).unwrap())))?;
 				
 				object_file.seek(SeekFrom::End(0))?;
-				object_file.write(pool_object.data.as_bytes())?;
+				if self.options.is_lz && (pool_object.header.compressed_size != 0) {
+					let mut data_cursor = Cursor::new(&pool_object.data);
+					let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
+					let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
+					let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
+					lz::lzss_decompress(&pool_object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
+					object_file.write(&decompressed_buffer)?;
+				} else {
+					object_file.write(pool_object.data.as_bytes())?;
+				}
 				global_objects.get_mut(&pool_object.header.crc32).unwrap().compress = pool_object.header.compressed_size != 0;
 
 				let mut oh = global_object_headers.get(&pool_object.header.crc32).unwrap().clone();
 				oh.data_size += pool_object.header.data_size;
-				oh.compressed_size = pool_object.header.compressed_size;
+				if self.options.is_lz && pool_object.header.compressed_size != 0 {
+					oh.compressed_size = 0;
+				} else {
+					oh.compressed_size = pool_object.header.compressed_size;
+				}
 				oh.decompressed_size = pool_object.header.decompressed_size;
 
 				object_file.seek(SeekFrom::Start(0))?;
@@ -444,6 +489,10 @@ impl DPC for FuelDPC {
 	}
 
 	fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+		if self.options.is_lz && !self.options.is_optimization {
+			panic!("Unoptimized DPC creation for fuel with lz is unsupported due to the original compression algorithm being unknown. Either remove the -l/--lz flag or add the -O/--optimization flag");
+		}
+
 		let manifest_file = File::open(input_path.as_ref().join("manifest.json")).unwrap_or_else(|why| {
 			panic!("Problem opening the input file: {:?}", why.kind());
 		});
@@ -473,16 +522,12 @@ impl DPC for FuelDPC {
 
 		
 
-		let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
-		version_lookup.insert(String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 253));
-		version_lookup.insert(String::from("v1.381.66.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 252));
-		version_lookup.insert(String::from("v1.381.65.09 - Asobo Studio - Internal Cross Technology"), (271, 380, 249));
-		version_lookup.insert(String::from("v1.381.64.09 - Asobo Studio - Internal Cross Technology"), (271, 380, 249));
-		version_lookup.insert(String::from("v1.379.60.09 - Asobo Studio - Internal Cross Technology"), (269, 380, 211));
-		version_lookup.insert(String::from("v1.325.50.07 - Asobo Studio - Internal Cross Technology"), (262, 326, 146));
-		version_lookup.insert(String::from("v1.220.50.07 - Asobo Studio - Internal Cross Technology"), (262, 221, 144));
 
-		let (version_patch, version_minor, mut block_type) = version_lookup.get(&manifest_json.header.version_string).unwrap();
+		let (version_patch, version_minor, mut block_type) = self.version_lookup.get(&manifest_json.header.version_string).unwrap_or(&(0, 0, 0));
+
+		if *version_patch == 0 && !self.options.is_unsafe {
+			panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and use the invalid string.");
+		}
 
 		let mut pool_object_crc32s: HashSet<u32> = HashSet::new();
 
