@@ -18,11 +18,21 @@ mod built_info {
 }
 
 fn main() -> Result<()> {
-	let mut version_string = String::from(built_info::PKG_VERSION);
+	let mut version_string = String::from("version ");
+
+	version_string.push_str(built_info::PKG_VERSION);
 
 	if let Some(hash) = built_info::GIT_COMMIT_HASH {
 		version_string.push(';');
 		version_string.push_str(hash);
+	}
+
+	version_string.push(';');
+	version_string.push_str(built_info::TARGET);
+
+	if let Some(ci) = built_info::CI_PLATFORM {
+		version_string.push(';');
+		version_string.push_str(ci);
 	}
 
     let matches = App::new("dpc")
@@ -45,6 +55,7 @@ fn main() -> Result<()> {
 				.long("game")
 				.takes_value(true)
 				.required(true)
+				.possible_values(&["fuel"])
 				.help("The game the dpc should be compatible with"))
 		.arg(Arg::with_name("QUIET")
 				.short("q")
@@ -90,7 +101,7 @@ fn main() -> Result<()> {
 	};
 
 	let dpc = match matches.value_of("GAME") {
-		None => FuelDPC::new(&options, &custom_args), // default to fuel until other games are supported
+		None => panic!("Game is required"), // default to fuel until other games are supported
 		Some(game) => match game {
 			"fuel" => FuelDPC::new(&options, &custom_args),
 			_ => panic!("bad game"),
@@ -105,17 +116,23 @@ fn main() -> Result<()> {
 
 	for input_path_string in input_path_strings {
 		let input_path = Path::new(input_path_string);
-		let output_path = match matches.value_of_os("OUTPUT") {
-			Some(output_path_string) => PathBuf::from(output_path_string),
-			None => input_path.with_extension("DPC.d"),
-		};
 
 		if matches.is_present("EXTRACT") {
+			let output_path = match matches.value_of_os("OUTPUT") {
+				Some(output_path_string) => PathBuf::from(output_path_string),
+				None => input_path.with_extension("DPC.d"),
+			};
+
 			match dpc.extract(&input_path, &output_path.as_path()) {
 				Ok(_) => (),
 				Err(error) => panic!("Extraction error: {:?}", error),
 			};
 		} else {
+			let output_path = match matches.value_of_os("OUTPUT") {
+				Some(output_path_string) => PathBuf::from(output_path_string),
+				None => input_path.with_extension("DPC"),
+			};
+
 			match dpc.create(&input_path, &output_path.as_path()) {
 				Ok(_) => (),
 				Err(error) => panic!("Creation error: {:?}", error),
