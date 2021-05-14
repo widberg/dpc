@@ -362,7 +362,7 @@ impl DPC for FuelDPC {
 					if self.options.is_lz && object.header.compressed_size != 0 {
 						let mut data_cursor = Cursor::new(&object.data);
 						let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
-						let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
+						let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 4;
 						let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
 						lz::lzss_decompress(&object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
 						object_file.write(&decompressed_buffer)?;
@@ -448,7 +448,7 @@ impl DPC for FuelDPC {
 				if self.options.is_lz && (pool_object.header.compressed_size != 0) {
 					let mut data_cursor = Cursor::new(&pool_object.data);
 					let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
-					let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
+					let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 4;
 					let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
 					lz::lzss_decompress(&pool_object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
 					object_file.write(&decompressed_buffer)?;
@@ -681,7 +681,6 @@ impl DPC for FuelDPC {
 
 			crc32s.write(&mut dpc_file)?;
 
-			///////////////////////////////
 			let reference_count = PascalArrayU32 {
 				len: vec_reference_count.len() as u32,
 				data: vec_reference_count,
@@ -694,10 +693,6 @@ impl DPC for FuelDPC {
 			};
 
 			object_padded_size.write(&mut dpc_file)?;
-
-
-
-			///////////////////////////////
 
 			let reference_records_indices = PascalArrayU32 {
 				len: vec_reference_records_indices.len() as u32,

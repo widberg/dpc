@@ -6,8 +6,8 @@ use std::io;
 
 pub fn lzss_decompress(compressed_buffer: &[u8], _compressed_buffer_size: usize, decompressed_buffer: &mut [u8], decompressed_buffer_size: usize, is_in_place: bool) -> Result<usize, io::Error> {
     // Magic Numbers
-    const WINDOW_LOG: u32 = 0xe;
-    const WINDOW_MASK: u32 = 0x3fff;
+    const WINDOW_LOG: u32 = 14;
+	const WINDOW_MASK: u32 = (1 << WINDOW_LOG) - 1;
 
 	let mut compressed_buffer_cursor = Cursor::new(compressed_buffer);
 	let mut decompressed_buffer_cursor = Cursor::new(decompressed_buffer);
@@ -33,7 +33,7 @@ pub fn lzss_decompress(compressed_buffer: &[u8], _compressed_buffer_size: usize,
 				decompressed_buffer_cursor.write_u8(byte)?;
             }
 
-            if (decompressed_buffer_cursor.position() as usize == decompressed_buffer_size) || (is_in_place && (decompressed_buffer_cursor.position() > compressed_buffer_cursor.position())) {
+            if (decompressed_buffer_cursor.position() as usize >= decompressed_buffer_size) || (is_in_place && (decompressed_buffer_cursor.position() > compressed_buffer_cursor.position())) {
                 return Ok(decompressed_buffer_cursor.position() as usize);
             }
 
@@ -84,8 +84,8 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 				}
 
 				let pos: u32 = decompressed_buffer_cursor.position() as u32;
-				let mut k: u32 = pos - (temp_mask+MIN_DISTANCE);
-				if (k as i32) < 0 {
+				let mut k: u32 = (pos as i32 - (temp_mask+MIN_DISTANCE) as i32) as u32;
+				if (k & 0x80000000) != 0 {
 					k=0;
 				}
 				let mut l: usize = decompressed_buffer_size - decompressed_buffer_cursor.position() as usize;
@@ -94,18 +94,23 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 				}
 				let mut ml = 0; // max match len
 				let mut mj = 0; // max match pos
-				for j in pos-1..k-1 {
+				let start: u32 = (pos as i32 - 1) as u32;
+				let end: u32 = (k as i32 - 1) as u32;
+				let mut j: u32 = start;
+				while j != end {
 					let mut rr = l;
 					for r in 0..l {
-						if decompressed_buffer_cursor.get_ref()[decompressed_buffer_cursor.position() as usize + r as usize] != decompressed_buffer[j as usize + r as usize] {
+						if decompressed_buffer[decompressed_buffer_cursor.position() as usize + r as usize] != decompressed_buffer[(j as isize + r as isize) as usize] {
 							rr = r;
 							break;
 						}
 					}
 					if rr > ml {
 						ml=rr;
-						mj=pos-j;
+						mj=pos as u32 - j as u32;
 					}
+
+					j = (j as i32 - 1) as u32;
 				}
 
 				if ml<MIN_MATCH_LEN as usize {
@@ -194,12 +199,12 @@ mod test {
 		lz::lzss_decompress(&compressed_buffer[..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false).unwrap();
 
 		let mut out_path = PathBuf::from(path);
-		out_path.set_extension("compressed_buffer");
+		out_path.set_extension("out");
 		let mut decompressed_file = File::create(&out_path).unwrap();
 		decompressed_file.write(&decompressed_buffer).unwrap();
 
 		let mut good_path = PathBuf::from(path);
-		good_path.set_extension("compressed_buffer.good");
+		good_path.set_extension("out.good");
 		
 		assert_eq!(hash_file(&good_path.as_path(), Algorithm::SHA1), hash_file(&out_path.as_path(), Algorithm::SHA1));
 
