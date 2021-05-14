@@ -1,6 +1,8 @@
 use clap::{Arg, App};
-use std::path::Path;
+use std::ffi::OsStr;
 use std::io::Result;
+use std::path::Path;
+use std::path::PathBuf;
 
 pub mod base_dpc;
 pub mod fuel_dpc;
@@ -14,7 +16,6 @@ use fuel_dpc::FuelDPC;
 mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
-
 
 fn main() -> Result<()> {
 	let mut version_string = String::from(built_info::PKG_VERSION);
@@ -56,10 +57,12 @@ fn main() -> Result<()> {
 		.arg(Arg::with_name("EXTRACT")
 				.short("e")
 				.long("extract")
+				.conflicts_with("CREATE")
 				.help("DPC -> directory"))
 		.arg(Arg::with_name("CREATE")
 				.short("c")
 				.long("create")
+				.conflicts_with("EXTRACT")
 				.help("directory -> DPC"))
 		.arg(Arg::with_name("UNSAFE")
 				.short("u")
@@ -73,36 +76,51 @@ fn main() -> Result<()> {
 				.short("O")
 				.long("optimization")
 				.help("Optimize the DPC"))
-        .get_matches_from(wild::args());
-
-	if matches.is_present("EXTRACT") == matches.is_present("CREATE") {
-		panic!("Exactly one of -e/-c must be present.");
-	}
+		.arg(Arg::with_name("CUSTOM_ARGS")
+				.last(true)
+				.required(false)
+				.help("Supply arguments directly to the dpc backend"))
+        .get_matches_from(wild::args_os());
 
 	let options = Options::from(&matches);
 
+	let custom_args: Vec<&OsStr> = match matches.values_of_os("CUSTOM_ARGS") {
+		Some(args) => args.collect(),
+		None => vec![],
+	};
+
 	let dpc = match matches.value_of("GAME") {
-		None => FuelDPC::new(&options), // default to fuel until other games are supported
+		None => FuelDPC::new(&options, &custom_args), // default to fuel until other games are supported
 		Some(game) => match game {
-			"fuel" => FuelDPC::new(&options),
+			"fuel" => FuelDPC::new(&options, &custom_args),
 			_ => panic!("bad game"),
 		},
 	};
 
-	let input_path = Path::new(matches.value_of("INPUT").unwrap());
-	// doesnt work for creation because no .DPC ext
-	let output_path = Path::new(matches.value_of("OUTPUT").unwrap_or(input_path.file_stem().unwrap().to_str().unwrap()));
+	let input_path_strings = matches.values_of_os("INPUT").unwrap().into_iter();
 
-	if matches.is_present("EXTRACT") {
-		match dpc.extract(&input_path, &output_path) {
-			Ok(_) => (),
-			Err(error) => panic!("Extraction error: {:?}", error),
+	if input_path_strings.len() > 1 && matches.is_present("OUTPUT") {
+		panic!("Cannot specify output path for more than one input path.");
+	}
+
+	for input_path_string in input_path_strings {
+		let input_path = Path::new(input_path_string);
+		let output_path = match matches.value_of_os("OUTPUT") {
+			Some(output_path_string) => PathBuf::from(output_path_string),
+			None => input_path.with_extension("DPC.d"),
 		};
-	} else {
-		match dpc.create(&input_path, &output_path) {
-			Ok(_) => (),
-			Err(error) => panic!("Creation error: {:?}", error),
-		};
+
+		if matches.is_present("EXTRACT") {
+			match dpc.extract(&input_path, &output_path.as_path()) {
+				Ok(_) => (),
+				Err(error) => panic!("Extraction error: {:?}", error),
+			};
+		} else {
+			match dpc.create(&input_path, &output_path.as_path()) {
+				Ok(_) => (),
+				Err(error) => panic!("Creation error: {:?}", error),
+			};
+		}
 	}
 
 	Ok(())

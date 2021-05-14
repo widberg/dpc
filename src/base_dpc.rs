@@ -1,7 +1,8 @@
-use std::path::Path;
-use std::io::Result;
 use clap::ArgMatches;
 use std::convert::From;
+use std::ffi::OsStr;
+use std::io::Result;
+use std::path::Path;
 
 #[derive(Clone,Copy)]
 pub struct Options {
@@ -25,7 +26,7 @@ impl From<&ArgMatches<'_>> for Options {
 }
 
 pub trait DPC {
-	fn new(options: &Options) -> Self;
+	fn new(options: &Options, custom_args: &Vec<&OsStr>) -> Self;
 	fn extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
 	fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
 }

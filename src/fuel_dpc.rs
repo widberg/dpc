@@ -1,28 +1,29 @@
-use crate::base_dpc;
-use crate::lz;
 use base_dpc::DPC;
 use base_dpc::Options;
-use std::path::Path;
-use std::io::Result;
-use std::fs;
-use std::fs::File;
+use binwrite::BinWrite;
+use byteorder::{LittleEndian, ReadBytesExt};
+use crate::base_dpc;
+use crate::lz;
 use indicatif::ProgressBar;
-use std::io::Read;
-use std::io::Write;
+use itertools::Itertools;
+use nom_derive::{NomLE, Parse};
 use nom::*;
 use nom::number::complete::*;
-use nom_derive::{NomLE, Parse};
-use std::io::SeekFrom;
-use std::io::prelude::*;
-use std::collections::HashSet;
-use std::collections::HashMap;
-use binwrite::BinWrite;
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 use std::cmp::max;
-use itertools::Itertools;
-use byteorder::{LittleEndian, ReadBytesExt};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::ffi::OsStr;
+use std::fs;
+use std::fs::File;
 use std::io::Cursor;
+use std::io::prelude::*;
+use std::io::Read;
+use std::io::Result;
+use std::io::SeekFrom;
+use std::io::Write;
+use std::path::Path;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32
 {
@@ -146,7 +147,11 @@ pub struct FuelDPC {
 }
 
 impl DPC for FuelDPC {
-	fn new(options: &Options) -> FuelDPC {
+	fn new(options: &Options, custom_args: &Vec<&OsStr>) -> FuelDPC {
+		if custom_args.len() > 1 {
+			panic!("The fuel dpc backend does not accept any custom commands. Run again without --.");
+		}
+
 		let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
 		version_lookup.insert(String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 253));
 		version_lookup.insert(String::from("v1.381.66.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 252));
