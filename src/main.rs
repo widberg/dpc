@@ -1,4 +1,4 @@
-use clap::{Arg, App};
+use clap::{Arg, App, AppSettings};
 use std::ffi::OsStr;
 use std::io::Result;
 use std::path::Path;
@@ -43,7 +43,6 @@ fn main() -> Result<()> {
                  .short("i")
                  .long("input")
                  .takes_value(true)
-				 .required(true)
                  .help("The input DPC file"))
         .arg(Arg::with_name("OUTPUT")
                  .short("o")
@@ -69,11 +68,13 @@ fn main() -> Result<()> {
 				.short("e")
 				.long("extract")
 				.conflicts_with("CREATE")
+				.requires("INPUT")
 				.help("DPC -> directory"))
 		.arg(Arg::with_name("CREATE")
 				.short("c")
 				.long("create")
 				.conflicts_with("EXTRACT")
+				.requires("INPUT")
 				.help("directory -> DPC"))
 		.arg(Arg::with_name("UNSAFE")
 				.short("u")
@@ -91,13 +92,17 @@ fn main() -> Result<()> {
 				.last(true)
 				.required(false)
 				.help("Supply arguments directly to the dpc backend"))
+		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
+		.setting(AppSettings::ArgRequiredElseHelp)
         .get_matches_from(wild::args_os());
 
 	let options = Options::from(&matches);
 
-	let custom_args: Vec<&OsStr> = match matches.values_of_os("CUSTOM_ARGS") {
-		Some(args) => args.collect(),
-		None => vec![],
+	let mut custom_args: Vec<&OsStr> = vec![&OsStr::new("--")];
+
+	match matches.values_of_os("CUSTOM_ARGS") {
+		Some(args) => custom_args.extend(args),
+		None => (),
 	};
 
 	let dpc = match matches.value_of("GAME") {
@@ -107,6 +112,10 @@ fn main() -> Result<()> {
 			_ => panic!("bad game"),
 		},
 	};
+
+	if !matches.is_present("EXTRACT") && !matches.is_present("CREATE") {
+		return Ok(());
+	}
 
 	let input_path_strings = matches.values_of_os("INPUT").unwrap().into_iter();
 

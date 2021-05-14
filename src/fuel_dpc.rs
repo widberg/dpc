@@ -1,9 +1,11 @@
 use base_dpc::DPC;
 use base_dpc::Options;
 use binwrite::BinWrite;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use clap::{Arg, App};
 use crate::base_dpc;
 use crate::lz;
+use dialoguer::Select;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use nom_derive::{NomLE, Parse};
@@ -148,9 +150,17 @@ pub struct FuelDPC {
 
 impl DPC for FuelDPC {
 	fn new(options: &Options, custom_args: &Vec<&OsStr>) -> FuelDPC {
-		if custom_args.len() > 1 {
-			panic!("The fuel dpc backend does not accept any custom commands. Run again without --.");
-		}
+		let _matches = App::new("fuel dpc backend")
+			.version("version 1.0.0")
+			.author("widberg <https://github.com/widberg>")
+			.about("FUEL")
+			.arg(Arg::with_name("TEST")
+					.short("t")
+					.long("test")
+					.takes_value(true)
+					.help("test"))
+			.after_help("--test")
+			.get_matches_from(custom_args);
 
 		let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
 		version_lookup.insert(String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"), (272, 380, 253));
@@ -212,7 +222,20 @@ impl DPC for FuelDPC {
 		});
 
 		if output_path.as_ref().exists() && !self.options.is_force {
-			panic!("Output directory already exists. Choose a new output directory or run the program with the -f flag to overwrite the existing directory.");
+			println!("Output directory already exists. You can avoid this interaction by choosing a new output directory or run the program with the -f flag to overwrite the existing directory and avoid this prompt for all files. What would you like to do for {}", output_path.as_ref().to_str().unwrap());
+			let selection = Select::new()
+				.item("Exit")
+				.item("Skip this file")
+				.item("Overwrite this file")
+				.default(0)
+				.interact()?;
+			
+			match selection {
+				0 => panic!("Aborting"),
+				1 => return Ok(()),
+				2 => (),
+				_ => panic!("Invalid choice"),
+			};
 		}
 
 		fs::create_dir_all(output_path.as_ref()).unwrap_or_else(|why| {
@@ -365,7 +388,7 @@ impl DPC for FuelDPC {
 					if self.options.is_lz && object.header.compressed_size != 0 {
 						let mut data_cursor = Cursor::new(&object.data);
 						let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
-						let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 4;
+						let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 8;
 						let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
 						lz::lzss_decompress(&object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
 						object_file.write(&decompressed_buffer)?;
@@ -451,7 +474,7 @@ impl DPC for FuelDPC {
 				if self.options.is_lz && (pool_object.header.compressed_size != 0) {
 					let mut data_cursor = Cursor::new(&pool_object.data);
 					let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
-					let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 4;
+					let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 8;
 					let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
 					lz::lzss_decompress(&pool_object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
 					object_file.write(&decompressed_buffer)?;
@@ -491,6 +514,10 @@ impl DPC for FuelDPC {
 		Ok(())
 	}
 
+	//
+	// CREATE
+	//
+
 	fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
 		if self.options.is_lz && !self.options.is_optimization {
 			panic!("Unoptimized DPC creation for fuel with lz is unsupported due to the original compression algorithm being unknown. Either remove the -l/--lz flag or add the -O/--optimization flag");
@@ -501,7 +528,20 @@ impl DPC for FuelDPC {
 		});
 
 		if output_path.as_ref().exists() && !self.options.is_force {
-			panic!("Output DPC already exists. Choose a new output path or run the program with the -f flag to overwrite the existing DPC.");
+			println!("Output DPC already exists. You can avoid this interaction by choosing a new output DPC path or run the program with the -f flag to overwrite the existing DPC and avoid this prompt for all files. What would you like to do for {}", output_path.as_ref().to_str().unwrap());
+			let selection = Select::new()
+				.item("Exit")
+				.item("Skip this file")
+				.item("Overwrite this file")
+				.default(0)
+				.interact()?;
+			
+			match selection {
+				0 => panic!("Aborting"),
+				1 => return Ok(()),
+				2 => (),
+				_ => panic!("Invalid choice"),
+			};
 		}
 
 		let mut manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
@@ -561,10 +601,26 @@ impl DPC for FuelDPC {
 				let (_, mut oh) = ObjectHeader::parse(&buffer).unwrap();
 
 				if !pool_object_crc32s.contains(&oh.crc32) {
-					oh.write(&mut dpc_file)?;
-					let mut data = vec![0; oh.data_size as usize];
-					object_file.read(&mut data)?;
-					dpc_file.write(&data)?;
+					if object.compress && self.options.is_lz {
+						let mut data = vec![0; oh.data_size as usize];
+						object_file.read(&mut data)?;
+						let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
+
+						let compressed_buffer_len = lz::lzss_compress_optimized(&data[oh.class_object_size as usize..], oh.decompressed_size as usize, &mut compressed_buffer[..], oh.decompressed_size as usize * 2)?;
+						oh.compressed_size = compressed_buffer_len as u32 + 8;
+						oh.data_size = oh.class_object_size + oh.compressed_size;
+
+						oh.write(&mut dpc_file)?;
+						dpc_file.write(&data[0..oh.class_object_size as usize])?;
+						dpc_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
+						dpc_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+						dpc_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+					} else {
+						oh.write(&mut dpc_file)?;
+						let mut data = vec![0; oh.data_size as usize];
+						object_file.read(&mut data)?;
+						dpc_file.write(&data)?;
+					}
 				} else {
 					if !object_padded_size_map.contains_key(&oh.crc32) {
 						object_padded_size_map.insert(oh.crc32, calculate_padded_size(24 + oh.data_size - oh.class_object_size) >> 11);
@@ -929,7 +985,7 @@ mod test {
 			is_unsafe: false,
 			is_lz: false,
 			is_optimization: false,
-		});
+		}, vec![]);
 
 		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
 
@@ -940,6 +996,29 @@ mod test {
 		dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
 		dpc.create(&dpc_directory, &dpc_file_2).unwrap();
 		assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2.as_path(), Algorithm::SHA1));
+
+		tmp_dir.close().expect("Failed to delete temp_dir");
+    }
+
+	#[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    fn test_fuel_dpc_optimized(path: &str) {
+		let dpc = FuelDPC::new(&Options {
+			is_quiet: true,
+			is_force: true,
+			is_unsafe: false,
+			is_lz: true,
+			is_optimization: true,
+		}, vec![]);
+
+		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
+
+		let dpc_file = Path::new(path);
+		let dpc_file_2 = tmp_dir.path().join("TEMP.DPC");
+		let dpc_directory = tmp_dir.path().join("TEMP");
+
+		dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
+		dpc.create(&dpc_directory, &dpc_file_2).unwrap();
+		// assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2.as_path(), Algorithm::SHA1));
 
 		tmp_dir.close().expect("Failed to delete temp_dir");
     }

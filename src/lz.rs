@@ -177,7 +177,7 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 		}
 	}
 
-	Ok(compressed_buffer_cursor.position() as usize)
+	Ok(compressed_buffer_cursor.position() as usize - 4)
 }
 
 #[cfg(test)]
@@ -197,7 +197,7 @@ mod test {
 		let mut compressed_file = File::open(path).unwrap();
 
 		let decompressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap();
-		let compressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap();
+		let compressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap() - 8;
 
 		let mut compressed_buffer = vec![0; compressed_buffer_len as usize];
 		compressed_file.read(&mut compressed_buffer).unwrap();
@@ -220,7 +220,7 @@ mod test {
 
 		let mut recompressed_buffer = vec![0; decompressed_buffer_len as usize * 2];
 
-		let recompressed_size = lz::lzss_compress_optimized(&decompressed_buffer[..], decompressed_buffer_len as usize, &mut recompressed_buffer[..], decompressed_buffer_len as usize * 2).unwrap() - 4;
+		let recompressed_size = lz::lzss_compress_optimized(&decompressed_buffer[..], decompressed_buffer_len as usize, &mut recompressed_buffer[..], decompressed_buffer_len as usize * 2).unwrap();
 		lz::lzss_decompress(&recompressed_buffer[..], recompressed_size, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false).unwrap() ;
 
 		decompressed_file = File::create(&out_path).unwrap();

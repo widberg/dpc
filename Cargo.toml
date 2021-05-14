@@ -11,6 +11,7 @@ built = { version = "0.5.0", features = ["git2"] }
 byteorder = "1.4.3"
 checksums = "0.7.1"
 clap = "2.33.3"
+dialoguer = "0.8.0"
 indicatif = "0.16.0"
 itertools = "0.10.0"
 nom = "6.1.2"
