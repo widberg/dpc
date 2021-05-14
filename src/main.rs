@@ -82,7 +82,7 @@ fn main() -> Result<()> {
 	let options = Options::from(&matches);
 
 	let dpc = match matches.value_of("GAME") {
-		None => panic!("bad game"),
+		None => FuelDPC::new(&options), // default to fuel until other games are supported
 		Some(game) => match game {
 			"fuel" => FuelDPC::new(&options),
 			_ => panic!("bad game"),

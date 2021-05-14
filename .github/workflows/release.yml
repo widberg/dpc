@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  once:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+  build:
+    name: Publish for ${{ matrix.os }}
+    needs: once
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        name: [linux, windows, macos]
+
+        include:
+          - name: linux
+            os: ubuntu-latest
+            executable_name: target/release/dpc
+          - name: windows
+            os: windows-latest
+            executable_name: target/release/dpc.exe
+          - name: macos
+            os: macos-latest
+            executable_name: target/release/dpc
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+
+    - name: Build
+      run: cargo build --release
+
+    - name: Create Archive
+      run: tar -czvf dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz ${{ matrix.executable_name }} README.md
+
+    - name: Upload Archive to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.once.outputs.upload_url }}
+        asset_name: dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz
+        asset_path: dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz
+        asset_content_type: application/gzip

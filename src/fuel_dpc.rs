@@ -277,8 +277,6 @@ impl DPC for FuelDPC {
 			data: Vec<u8>,
 		}
 
-
-		
 		#[derive(NomLE,Clone,Debug,PartialEq,Eq)]
 		struct PoolManifest {
 			#[nom(Parse = "PoolManifestHeader::parse")]
@@ -496,6 +494,10 @@ impl DPC for FuelDPC {
 		let manifest_file = File::open(input_path.as_ref().join("manifest.json")).unwrap_or_else(|why| {
 			panic!("Problem opening the input file: {:?}", why.kind());
 		});
+
+		if output_path.as_ref().exists() && !self.options.is_force {
+			panic!("Output DPC already exists. Choose a new output path or run the program with the -f flag to overwrite the existing DPC.");
+		}
 
 		let mut manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
 
