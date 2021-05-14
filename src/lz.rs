@@ -45,37 +45,47 @@ pub fn lzss_decompress(compressed_buffer: &[u8], _compressed_buffer_size: usize,
 pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_size: usize, compressed_buffer: &mut [u8], _compressed_buffer_size: usize) -> Result<usize, io::Error> {
 	const WINDOW_LOG: u32 = 14;
 	const WINDOW_MASK: u32 = (1<<WINDOW_LOG)-1;
-	const MATCH_NUM: usize = 30;
-	const MATCH_ITER: usize = 4;
+	const MATCH_NUM: u32 = 30;
+	const MATCH_ITER: u32 = 4;
 	const MIN_MATCH_LEN: u32 = 3;
 	const MIN_DISTANCE: u32 = 1;
 
-	let mut distances_table = [[0u32; MATCH_ITER]; MATCH_NUM];
-	let mut lengths_table = [[0u32; MATCH_ITER]; MATCH_NUM];
+	let mut distances_table = [[0u32; MATCH_ITER as usize]; MATCH_NUM as usize];
+	let mut lengths_table = [[0u32; MATCH_ITER as usize]; MATCH_NUM as usize];
 
 	let mut decompressed_buffer_cursor = Cursor::new(decompressed_buffer);
 	let mut compressed_buffer_cursor = Cursor::new(compressed_buffer);
 
+	let mut next: u64 = 0;
+
 	while (decompressed_buffer_cursor.position() as usize) < decompressed_buffer_size {
-		let decompressed_buffer_cursor_backup_position = decompressed_buffer_cursor.position();
-		let flag_position = compressed_buffer_cursor.position();
+
+		if decompressed_buffer_cursor.position() >= next {
+			println!("inp={}/{} out={}\r", decompressed_buffer_cursor.position() as u32, decompressed_buffer_size as u32, compressed_buffer_cursor.position() as u32);
+			next = decompressed_buffer_cursor.position() + 0x10000;
+			if next > decompressed_buffer_size as u64 {
+				next = decompressed_buffer_size as u64;
+			}
+		}
+
+		let decompressed_buffer_cursor_position_backup = decompressed_buffer_cursor.position();
+		let flag_position: usize = compressed_buffer_cursor.position() as usize;
 		compressed_buffer_cursor.seek(SeekFrom::Current(4))?;
 		let mut opt_flag: u32 = 0;
-		let mut opt_rate: f64 = 0.0f64;
+		let mut opt_rate: f64 = 0.0;
 
 		for t in 0..MATCH_ITER {
-
-			let mut flag: u32=0;
-			let mut ulen=0;
-			let mut clen=0;
-			decompressed_buffer_cursor.seek(SeekFrom::Start(decompressed_buffer_cursor_backup_position))?;
-			let temp_wlog: u32 = WINDOW_LOG - t as u32;
-			let temp_mlen=(1<<(16-temp_wlog))-1+MIN_MATCH_LEN;
+			let mut flag: u32 = 0;
+			let mut ulen: u32 = 0;
+			let mut clen: u32 = 0;
+			decompressed_buffer_cursor.seek(SeekFrom::Start(decompressed_buffer_cursor_position_backup))?;
+			let temp_wlog: u32 = WINDOW_LOG - t;
+			let temp_mlen: u32 = (1 << (16 - temp_wlog)) - 1 + MIN_MATCH_LEN;
 			let temp_mask: u32 = WINDOW_MASK >> t;
 
 			for i in 0..MATCH_NUM {
-				distances_table[i as usize][t as usize]=0;
-				lengths_table[i as usize][t as usize]=1;
+				distances_table[i as usize][t as usize] = 0;
+				lengths_table[i as usize][t as usize] = 1;
 			}
 
 			for i in 0..MATCH_NUM {
@@ -84,45 +94,46 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 				}
 
 				let pos: u32 = decompressed_buffer_cursor.position() as u32;
-				let mut k: u32 = (pos as i32 - (temp_mask+MIN_DISTANCE) as i32) as u32;
+				let mut k: u32 = (pos as i32 - (temp_mask + MIN_DISTANCE) as i32) as u32;
 				if (k & 0x80000000) != 0 {
-					k=0;
+					k = 0;
 				}
-				let mut l: usize = decompressed_buffer_size - decompressed_buffer_cursor.position() as usize;
-				if l > temp_mlen as usize {
-					l = temp_mlen as usize;
+				let mut l: u32 = (decompressed_buffer_size as u32 - decompressed_buffer_cursor.position() as u32) as u32;
+				if l > temp_mlen {
+					l = temp_mlen;
 				}
-				let mut ml = 0; // max match len
-				let mut mj = 0; // max match pos
+				let mut ml: u32 = 0; // max match len
+				let mut mj: u32 = 0; // max match pos
 				let start: u32 = (pos as i32 - 1) as u32;
 				let end: u32 = (k as i32 - 1) as u32;
 				let mut j: u32 = start;
 				while j != end {
-					let mut rr = l;
+					let mut rr: u32 = l;
 					for r in 0..l {
-						if decompressed_buffer[decompressed_buffer_cursor.position() as usize + r as usize] != decompressed_buffer[(j as isize + r as isize) as usize] {
+						if decompressed_buffer[(decompressed_buffer_cursor.position() as u32 + r) as usize] != decompressed_buffer[(j + r) as usize] {
 							rr = r;
 							break;
 						}
 					}
 					if rr > ml {
-						ml=rr;
-						mj=pos as u32 - j as u32;
+						ml = rr;
+						mj = pos - j;
 					}
 
 					j = (j as i32 - 1) as u32;
 				}
 
-				if ml<MIN_MATCH_LEN as usize {
+				if ml < MIN_MATCH_LEN {
 					// literal
 					ulen += 1;
 					decompressed_buffer_cursor.seek(SeekFrom::Current(1))?;
 					clen += 1;
-				} else {
+				}
+				else {
 					// match
-					distances_table[i as usize][t as usize]=mj as u32;
-					lengths_table[i as usize][t as usize]=ml as u32;
-					flag |= 1<<(31-i);
+					distances_table[i as usize][t as usize] = mj;
+					lengths_table[i as usize][t as usize] = ml;
+					flag |= 1 << (31 - i);
 					ulen += ml;
 					decompressed_buffer_cursor.seek(SeekFrom::Current(ml as i64))?;
 					clen += 2;
@@ -130,23 +141,19 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 
 			} // for
 
-			let new_rate: f64 = ulen as f64 / (4+clen) as f64;
+			let new_rate: f64 = ulen as f64 / (4 + clen) as f64;
 
-			if new_rate>opt_rate {
-				opt_rate=new_rate;
-				opt_flag=flag|t as u32;
+			if new_rate > opt_rate {
+				opt_rate = new_rate;
+				opt_flag = flag | t;
 			}
 		}
 
-		let backup_position = compressed_buffer_cursor.position();
-		compressed_buffer_cursor.seek(SeekFrom::Start(flag_position))?;
-		compressed_buffer_cursor.write_u32::<BigEndian>(opt_flag as u32)?;
-		compressed_buffer_cursor.seek(SeekFrom::Start(backup_position))?;
-		
-		let t = opt_flag & 3;
-		
-		decompressed_buffer_cursor.seek(SeekFrom::Start(decompressed_buffer_cursor_backup_position))?;
-		let temp_wlog: u32 = WINDOW_LOG - t as u32;
+		(&mut compressed_buffer_cursor.get_mut()[flag_position..flag_position+4]).write_u32::<BigEndian>(opt_flag)?;
+
+		let t: u32 = opt_flag & 3;
+		decompressed_buffer_cursor.seek(SeekFrom::Start(decompressed_buffer_cursor_position_backup))?;
+		let temp_wlog: u32 = WINDOW_LOG - t;
 		let temp_mask: u32 = WINDOW_MASK >> t;
 
 		for i in 0..MATCH_NUM {
@@ -154,17 +161,18 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 				break;
 			}
 
-			if opt_flag & (1<<(31-i)) != 0 {
+			if (opt_flag & (1 << (31 - i))) != 0 {
 				// match
-				let ml=lengths_table[i as usize][t as usize];
-				let mj=distances_table[i as usize][t as usize];
-				let c: u16 = ((ml-MIN_MATCH_LEN)<<temp_wlog) as u16 + ((mj-MIN_DISTANCE)&temp_mask) as u16;
-				compressed_buffer_cursor.write(&[(c >> 8) as u8, c as u8])?;
-				compressed_buffer_cursor.seek(SeekFrom::Current(ml as i64))?;
-			} else {
+				let ml: u32 = lengths_table[i as usize][t as usize];
+				let mj: u32 = distances_table[i as usize][t as usize];
+				let c: u16 = ((ml - MIN_MATCH_LEN) << temp_wlog) as u16 + ((mj - MIN_DISTANCE) & temp_mask) as u16;
+				compressed_buffer_cursor.write_u16::<BigEndian>(c)?;
+				decompressed_buffer_cursor.seek(SeekFrom::Current(ml as i64))?;
+			}
+			else {
 				// literal
-				let byte = decompressed_buffer_cursor.read_u8().unwrap();
-				compressed_buffer_cursor.write_u8(byte).unwrap();
+				let byte = decompressed_buffer_cursor.read_u8()?;
+				compressed_buffer_cursor.write_u8(byte)?;
 			}
 		}
 	}
@@ -185,7 +193,7 @@ mod test {
 	use checksums::Algorithm;
 
     #[test_resources("data/*.in")]
-    fn test_fuel_lzss(path: &str) {
+    fn test_lzss_optimized(path: &str) {
 		let mut compressed_file = File::open(path).unwrap();
 
 		let decompressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap();
