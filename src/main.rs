@@ -48,6 +48,7 @@ fn main() -> Result<()> {
                  .short("o")
                  .long("output")
                  .takes_value(true)
+				 .requires("INPUT")
                  .help("The output directory"))
 		.arg(Arg::with_name("GAME")
 				.short("g")
@@ -132,10 +133,7 @@ fn main() -> Result<()> {
 				None => input_path.with_extension("DPC.d"),
 			};
 
-			match dpc.extract(&input_path, &output_path.as_path()) {
-				Ok(_) => (),
-				Err(error) => panic!("Extraction error: {:?}", error),
-			};
+			dpc.extract(&input_path, &output_path.as_path())?
 		} else {
 			let output_path = match matches.value_of_os("OUTPUT") {
 				Some(output_path_string) => PathBuf::from(output_path_string),

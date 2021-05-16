@@ -33,13 +33,13 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
-            executable_name: target/release/dpc
+            executable_name: dpc
           - name: windows
             os: windows-latest
-            executable_name: target/release/dpc.exe
+            executable_name: dpc.exe
           - name: macos
             os: macos-latest
-            executable_name: target/release/dpc
+            executable_name: dpc
 
     steps:
     - uses: actions/checkout@v1
@@ -53,7 +53,7 @@ jobs:
       run: cargo build --release
 
     - name: Create Archive
-      run: tar -czvf dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz ${{ matrix.executable_name }} README.md
+      run: tar -C target/release/ -czvf dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz ${{ matrix.executable_name }} ../../README.md
 
     - name: Upload Archive to Release
       uses: actions/upload-release-asset@v1

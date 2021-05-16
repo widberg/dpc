@@ -13,14 +13,14 @@ pub fn lzss_decompress(compressed_buffer: &[u8], _compressed_buffer_size: usize,
 	let mut decompressed_buffer_cursor = Cursor::new(decompressed_buffer);
 
     loop {
-        let mut flags: u32 = compressed_buffer_cursor.read_u32::<BigEndian>()?; // read as big endian
+        let mut flags: u32 = compressed_buffer_cursor.read_u32::<BigEndian>().unwrap(); // read as big endian
         let len: u32 = flags & 0x3; // 0b11
         let temp_shift: u32 = WINDOW_LOG - len;
         let temp_mask: u32 = WINDOW_MASK >> len;
 
         for _ in 0..30 {
             if (flags & 0x80000000) != 0 {
-                let temp: u32 = compressed_buffer_cursor.read_u16::<BigEndian>()? as u32; // read as big endian
+                let temp: u32 = compressed_buffer_cursor.read_u16::<BigEndian>().unwrap() as u32; // read as big endian
 				let start: usize = decompressed_buffer_cursor.position() as usize - ((temp & temp_mask) as usize + 1);
 				let end: usize = start + (temp >> temp_shift) as usize + 3;
 
@@ -29,7 +29,7 @@ pub fn lzss_decompress(compressed_buffer: &[u8], _compressed_buffer_size: usize,
 					decompressed_buffer_cursor.write_u8(byte)?;
 				}
             } else {
-				let byte = compressed_buffer_cursor.read_u8()?;
+				let byte = compressed_buffer_cursor.read_u8().unwrap();
 				decompressed_buffer_cursor.write_u8(byte)?;
             }
 
@@ -177,7 +177,7 @@ pub fn lzss_compress_optimized(decompressed_buffer: &[u8], decompressed_buffer_s
 		}
 	}
 
-	Ok(compressed_buffer_cursor.position() as usize - 4)
+	Ok(compressed_buffer_cursor.position() as usize)
 }
 
 #[cfg(test)]

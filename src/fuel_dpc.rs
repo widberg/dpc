@@ -26,6 +26,7 @@ use std::io::Result;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
+use tempdir::TempDir;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32
 {
@@ -145,21 +146,20 @@ struct BlockDescription {
 
 pub struct FuelDPC {
 	options: Options,
+	unoptimized_pool: bool,
 	version_lookup: HashMap<String, (u32, u32, u32)>,
 }
 
 impl DPC for FuelDPC {
 	fn new(options: &Options, custom_args: &Vec<&OsStr>) -> FuelDPC {
-		let _matches = App::new("fuel dpc backend")
+		let matches = App::new("fuel dpc backend")
 			.version("version 1.0.0")
 			.author("widberg <https://github.com/widberg>")
 			.about("FUEL")
-			.arg(Arg::with_name("TEST")
-					.short("t")
-					.long("test")
-					.takes_value(true)
-					.help("test"))
-			.after_help("--test")
+			.arg(Arg::with_name("UNOPTIMIZED-POOL")
+					.short("p")
+					.long("unoptimized-pool")
+					.help("Don't minify the pool manifest"))
 			.get_matches_from(custom_args);
 
 		let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
@@ -172,6 +172,7 @@ impl DPC for FuelDPC {
 		version_lookup.insert(String::from("v1.220.50.07 - Asobo Studio - Internal Cross Technology"), (262, 221, 144));
 		FuelDPC {
 			options: *options,
+			unoptimized_pool: matches.is_present("UNOPTIMIZED-POOL"),
 			version_lookup: version_lookup,
 		}
 	}
@@ -358,8 +359,10 @@ impl DPC for FuelDPC {
 
 		let objects_path = output_path.as_ref().join("objects");
 		fs::create_dir_all(&objects_path)?;
+		let mut x = 1;
 
 		for block_description in header.block_descriptions.iter() {
+			pb.println(format!("Processing block {}/{}", x, header.block_descriptions.len()));
 
 			let mut v = vec![];
 
@@ -368,8 +371,14 @@ impl DPC for FuelDPC {
 
 			let objects = match count!(buff.as_bytes(), BlockObject::parse, block_description.object_count as usize) {
 				Ok((_, h)) => h,
-				Err(error) => panic!("{}", error),
+				Err(error) => panic!("{} on block {}", error, x),
 			};
+
+			println!("id = {}, data_size = {}, padded_size = {}, offset = {}", x, block_description.data_size, block_description.padded_size, block_description.working_buffer_offset);
+
+			x += 1;
+
+			let mut a = 0;
 
 			for object in objects.iter() {
 				v.push(ObjectDescription {
@@ -377,22 +386,28 @@ impl DPC for FuelDPC {
 					compress: object.header.compressed_size != 0,
 				});
 
+				println!("\t{} {} {} {}", a, object.header.data_size + 24, class_names.get(&object.header.class_crc32).unwrap(), object.header.compressed_size != 0);
+
+				a += object.header.data_size + 24;
+
 				if !crc32s.contains(&object.header.crc32) {
 					let mut object_file = File::create(objects_path.join(format!("{}.{}", object.header.crc32, class_names.get(&object.header.class_crc32).unwrap())))?;
 					let mut oh = object.header;
 					if self.options.is_lz && object.header.compressed_size != 0 {
+						pb.println(format!("Decompressing {}", object.header.crc32));
+						let mut decompressed_buffer = vec![0; oh.decompressed_size as usize];
+						lz::lzss_decompress(&object.data[8..], oh.compressed_size as usize - 8, &mut decompressed_buffer[..], oh.decompressed_size as usize, false)?;
+						
 						oh.compressed_size = 0;
-					}
-					oh.write(&mut object_file)?;
-					object_file.write(&object.class_object)?;
-					if self.options.is_lz && object.header.compressed_size != 0 {
-						let mut data_cursor = Cursor::new(&object.data);
-						let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
-						let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 8;
-						let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
-						lz::lzss_decompress(&object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
+						oh.data_size = oh.class_object_size + oh.decompressed_size;
+
+						oh.write(&mut object_file)?;
+						object_file.write(&object.class_object)?;
 						object_file.write(&decompressed_buffer)?;
 					} else {
+						pb.println(format!("Processing {}", object.header.crc32));
+						oh.write(&mut object_file)?;
+						object_file.write(&object.class_object)?;
 						object_file.write(&object.data)?;
 					}
 					crc32s.insert(object.header.crc32);
@@ -415,8 +430,6 @@ impl DPC for FuelDPC {
 			//println!("{:#?}", objects);
 		}
 		// ...
-
-		pb.finish_and_clear();
 
 		if header.pool_manifest_offset != 0 {
 
@@ -464,27 +477,35 @@ impl DPC for FuelDPC {
 				Err(error) => panic!("{}", error),
 			};
 
+			pb.println("Processing pool");
+			pb.set_position(0);
+			pb.set_length(pool_objects.len() as u64);
+
 			for pool_object in pool_objects.iter() {
+				pb.println(format!("Processing {}", pool_object.header.crc32));
+
 				let mut object_file = std::fs::OpenOptions::new()
 					.read(true)
 					.write(true)
 					.open(objects_path.join(format!("{}.{}", pool_object.header.crc32, class_names.get(&pool_object.header.class_crc32).unwrap())))?;
 				
+				let mut oh = global_object_headers.get(&pool_object.header.crc32).unwrap().clone();
 				object_file.seek(SeekFrom::End(0))?;
 				if self.options.is_lz && (pool_object.header.compressed_size != 0) {
+					pb.println(format!("Decompressing {}", pool_object.header.crc32));
 					let mut data_cursor = Cursor::new(&pool_object.data);
 					let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
 					let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 8;
 					let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
 					lz::lzss_decompress(&pool_object.data[8..], compressed_buffer_len as usize, &mut decompressed_buffer[..], decompressed_buffer_len as usize, false)?;
 					object_file.write(&decompressed_buffer)?;
+					oh.data_size = oh.class_object_size + oh.decompressed_size;
 				} else {
 					object_file.write(pool_object.data.as_bytes())?;
+					oh.data_size = oh.class_object_size + pool_object.header.data_size;
 				}
 				global_objects.get_mut(&pool_object.header.crc32).unwrap().compress = pool_object.header.compressed_size != 0;
 
-				let mut oh = global_object_headers.get(&pool_object.header.crc32).unwrap().clone();
-				oh.data_size += pool_object.header.data_size;
 				if self.options.is_lz && pool_object.header.compressed_size != 0 {
 					oh.compressed_size = 0;
 				} else {
@@ -494,10 +515,14 @@ impl DPC for FuelDPC {
 
 				object_file.seek(SeekFrom::Start(0))?;
 				oh.write(&mut object_file)?;
+
+				pb.inc(1);
 			}
 		}
 
 		// ...
+
+		pb.finish_and_clear();
 
 		for block in manifest_json.blocks.iter_mut() {
 			for object in block.objects.iter_mut() {
@@ -586,9 +611,26 @@ impl DPC for FuelDPC {
 
 
 		let mut object_padded_size_map: HashMap<u32, u32> = HashMap::new();
+		let mut pool_object_compress_map: HashMap<u32, bool> = HashMap::new();
 
+		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
+
+		let mut object_count = 0;
+		for block in manifest_json.blocks.iter() {
+			object_count += block.objects.len();
+		}
+
+		let pb = match self.options.is_quiet {
+			false => ProgressBar::new(object_count as u64),
+			true => ProgressBar::hidden(),
+		};
+
+		let mut x = 1;
 
 		for block in manifest_json.blocks.iter() {
+			pb.println(format!("Processing block {}/{}", x, manifest_json.blocks.len()));
+			x += 1;
+
 			let start_pos = dpc_file.stream_position()?;
 
 
@@ -600,18 +642,22 @@ impl DPC for FuelDPC {
 				
 				let (_, mut oh) = ObjectHeader::parse(&buffer).unwrap();
 
+				pb.println(format!("Processing {}", oh.crc32));
 				if !pool_object_crc32s.contains(&oh.crc32) {
-					if object.compress && self.options.is_lz {
-						let mut data = vec![0; oh.data_size as usize];
+					if object.compress && oh.compressed_size == 0 && self.options.is_lz && self.options.is_optimization {
+						pb.println(format!("Compressing {}", oh.crc32));
+						let mut class_object_data = vec![0; oh.class_object_size as usize];
+						object_file.read(&mut class_object_data)?;
+						let mut data = vec![0; oh.decompressed_size as usize];
 						object_file.read(&mut data)?;
 						let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
 
-						let compressed_buffer_len = lz::lzss_compress_optimized(&data[oh.class_object_size as usize..], oh.decompressed_size as usize, &mut compressed_buffer[..], oh.decompressed_size as usize * 2)?;
+						let compressed_buffer_len = lz::lzss_compress_optimized(&data[..], oh.decompressed_size as usize, &mut compressed_buffer[..], oh.decompressed_size as usize * 2)?;
 						oh.compressed_size = compressed_buffer_len as u32 + 8;
 						oh.data_size = oh.class_object_size + oh.compressed_size;
 
 						oh.write(&mut dpc_file)?;
-						dpc_file.write(&data[0..oh.class_object_size as usize])?;
+						dpc_file.write(&class_object_data)?;
 						dpc_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
 						dpc_file.write_u32::<LittleEndian>(oh.compressed_size)?;
 						dpc_file.write(&compressed_buffer[0..compressed_buffer_len])?;
@@ -622,18 +668,50 @@ impl DPC for FuelDPC {
 						dpc_file.write(&data)?;
 					}
 				} else {
+					let mut class_object_data = vec![0; oh.class_object_size as usize];
+					object_file.read(&mut class_object_data)?;
+
+					if let Some(v) = pool_object_compress_map.get(&oh.crc32) {
+						assert_eq!(*v, object.compress, "Inconsistent compress values for crc32 {}", oh.crc32);
+					} else {
+						pool_object_compress_map.insert(oh.crc32, object.compress);
+
+						if object.compress && oh.compressed_size == 0 && self.options.is_lz && self.options.is_optimization {
+							pb.println(format!("Compressing {}", oh.crc32));
+							let compressed_path = tmp_dir.path().join(oh.crc32.to_string());
+							let mut compressed_file = File::create(compressed_path)?;
+
+							let mut decompressed_buffer = vec![0; oh.decompressed_size as usize];
+							let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
+
+							object_file.read(&mut decompressed_buffer)?;
+
+							let compressed_buffer_len = lz::lzss_compress_optimized(&decompressed_buffer[..], oh.decompressed_size as usize, &mut compressed_buffer[..], oh.decompressed_size as usize * 2)?;
+
+							oh.compressed_size = compressed_buffer_len as u32 + 8;
+							oh.data_size = oh.compressed_size;
+							oh.class_object_size = 0;
+
+							oh.write(&mut compressed_file)?;
+							compressed_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
+							compressed_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+							compressed_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+						}
+					}
+
 					if !object_padded_size_map.contains_key(&oh.crc32) {
 						object_padded_size_map.insert(oh.crc32, calculate_padded_size(24 + oh.data_size - oh.class_object_size) >> 11);
 					}
 
+					oh.class_object_size = class_object_data.len() as u32;
 					oh.data_size = oh.class_object_size;
 					oh.compressed_size = 0;
 					oh.decompressed_size = 0;
 					oh.write(&mut dpc_file)?;
-					let mut data = vec![0; oh.class_object_size as usize];
-					object_file.read(&mut data)?;
-					dpc_file.write(&data)?;
+					dpc_file.write(&class_object_data)?;
 				}
+
+				pb.inc(1);
 			}
 
 			let end_pos = dpc_file.stream_position()?;
@@ -668,8 +746,12 @@ impl DPC for FuelDPC {
 		
 		if let Some(pool) = &mut manifest_json.pool {
 
-			
-			if self.options.is_optimization {
+			pb.println("Processing pool");
+			pb.set_position(0);
+			pb.set_length(pool.object_entry_indices.len() as u64);
+
+			if self.options.is_optimization && !self.unoptimized_pool {
+				pb.println("Optimizing the pool");
 				let vec_new_reference_records: Vec<JsonReferenceRecord> = pool.reference_records.clone().into_iter().unique().collect();
 
 				for entry in pool.object_entries.iter_mut() {
@@ -834,7 +916,13 @@ impl DPC for FuelDPC {
 
 			for i in pool.object_entry_indices.iter() {
 				let crc32 = pool.object_entries[*i as usize].crc32;
-				let mut object_file = File::open(index.get(&crc32).unwrap().as_path())?;
+				pb.println(format!("Processing {}", crc32));
+
+				let mut object_file = match *pool_object_compress_map.get(&crc32).unwrap() && self.options.is_lz && self.options.is_optimization {
+					true => File::open(tmp_dir.path().join(crc32.to_string()))?,
+					false => File::open(index.get(&crc32).unwrap().as_path())?,
+				};
+
 				let mut buffer: [u8; 24] = [0; 24];
 				object_file.read(&mut buffer)?;
 
@@ -857,8 +945,12 @@ impl DPC for FuelDPC {
 				dpc_file.write(&lll)?;
 
 				pool_sector_padding_size += lll.len() as u32;
+
+				pb.inc(1);
 			}
 		}
+		
+		tmp_dir.close().expect("Failed to delete temp_dir");
 
 		let mut file_padded_size = dpc_file.stream_position()? as u32;
 
@@ -960,7 +1052,7 @@ impl DPC for FuelDPC {
 
 		dpc_file.write(&padding)?;
 
-
+		pb.finish_and_clear();
 
 		Ok(())
 	}
@@ -976,6 +1068,8 @@ mod test {
 	use std::path::Path;
 	use test_generator::test_resources;
 	use tempdir::TempDir;
+	use std::ffi::OsStr;
+	use checksumdir::checksumdir;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc(path: &str) {
@@ -985,7 +1079,7 @@ mod test {
 			is_unsafe: false,
 			is_lz: false,
 			is_optimization: false,
-		}, vec![]);
+		}, &vec![&OsStr::new("--")]);
 
 		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
 
@@ -1008,7 +1102,7 @@ mod test {
 			is_unsafe: false,
 			is_lz: true,
 			is_optimization: true,
-		}, vec![]);
+		}, &vec![&OsStr::new("--"), &OsStr::new("--unoptimized-pool")]);
 
 		let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
 
@@ -1017,8 +1111,14 @@ mod test {
 		let dpc_directory = tmp_dir.path().join("TEMP");
 
 		dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
+		let cx = checksumdir(dpc_directory.as_os_str().to_str().unwrap()).unwrap();
+
 		dpc.create(&dpc_directory, &dpc_file_2).unwrap();
-		// assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2.as_path(), Algorithm::SHA1));
+
+		dpc.extract(&dpc_file_2, &dpc_directory).unwrap();
+		let cy = checksumdir(dpc_directory.as_os_str().to_str().unwrap()).unwrap();
+		
+		assert_eq!(cx, cy);
 
 		tmp_dir.close().expect("Failed to delete temp_dir");
     }
