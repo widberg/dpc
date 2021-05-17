@@ -1,4 +1,4 @@
-use clap::{Arg, App, AppSettings};
+use clap::{App, AppSettings, Arg};
 use std::ffi::OsStr;
 use std::io::Result;
 use std::path::Path;
@@ -18,22 +18,22 @@ mod built_info {
 }
 
 fn main() -> Result<()> {
-	let mut version_string = String::from("version ");
+    let mut version_string = String::from("version ");
 
-	version_string.push_str(built_info::PKG_VERSION);
+    version_string.push_str(built_info::PKG_VERSION);
 
-	if let Some(hash) = built_info::GIT_COMMIT_HASH {
-		version_string.push(';');
-		version_string.push_str(hash);
-	}
+    if let Some(hash) = built_info::GIT_COMMIT_HASH {
+        version_string.push(';');
+        version_string.push_str(hash);
+    }
 
-	version_string.push(';');
-	version_string.push_str(built_info::TARGET);
+    version_string.push(';');
+    version_string.push_str(built_info::TARGET);
 
-	if let Some(ci) = built_info::CI_PLATFORM {
-		version_string.push(';');
-		version_string.push_str(ci);
-	}
+    if let Some(ci) = built_info::CI_PLATFORM {
+        version_string.push(';');
+        version_string.push_str(ci);
+    }
 
     let matches = App::new("dpc")
         .version(version_string.as_str())
@@ -69,14 +69,23 @@ fn main() -> Result<()> {
 				.short("e")
 				.long("extract")
 				.conflicts_with("CREATE")
+				.conflicts_with("VALIDATE")
 				.requires("INPUT")
 				.help("DPC -> directory"))
 		.arg(Arg::with_name("CREATE")
 				.short("c")
 				.long("create")
 				.conflicts_with("EXTRACT")
+				.conflicts_with("VALIDATE")
 				.requires("INPUT")
 				.help("directory -> DPC"))
+		.arg(Arg::with_name("VALIDATE")
+				.short("v")
+				.long("validate")
+				.conflicts_with("CREATE")
+				.conflicts_with("EXTRACT")
+				.requires("INPUT")
+				.help("Checks if your DPC is valid"))
 		.arg(Arg::with_name("UNSAFE")
 				.short("u")
 				.long("unsafe")
@@ -97,55 +106,67 @@ fn main() -> Result<()> {
 		.setting(AppSettings::ArgRequiredElseHelp)
         .get_matches_from(wild::args_os());
 
-	let options = Options::from(&matches);
+    let options = Options::from(&matches);
 
-	let mut custom_args: Vec<&OsStr> = vec![&OsStr::new("--")];
+    let mut custom_args: Vec<&OsStr> = vec![&OsStr::new("--")];
 
-	match matches.values_of_os("CUSTOM_ARGS") {
-		Some(args) => custom_args.extend(args),
-		None => (),
-	};
+    match matches.values_of_os("CUSTOM_ARGS") {
+        Some(args) => custom_args.extend(args),
+        None => (),
+    };
 
-	let dpc = match matches.value_of("GAME") {
-		None => panic!("Game is required"), // default to fuel until other games are supported
-		Some(game) => match game {
-			"fuel" => FuelDPC::new(&options, &custom_args),
-			_ => panic!("bad game"),
-		},
-	};
+    let dpc = match matches.value_of("GAME") {
+        None => panic!("Game is required"), // default to fuel until other games are supported
+        Some(game) => match game {
+            "fuel" => FuelDPC::new(&options, &custom_args),
+            _ => panic!("bad game"),
+        },
+    };
 
-	if !matches.is_present("EXTRACT") && !matches.is_present("CREATE") {
-		return Ok(());
-	}
+    if !matches.is_present("EXTRACT") && !matches.is_present("CREATE") && !matches.is_present("VALIDATE") {
+        return Ok(());
+    }
 
-	let input_path_strings = matches.values_of_os("INPUT").unwrap().into_iter();
+    let input_path_strings = matches.values_of_os("INPUT").unwrap().into_iter();
 
-	if input_path_strings.len() > 1 && matches.is_present("OUTPUT") {
-		panic!("Cannot specify output path for more than one input path.");
-	}
+    if input_path_strings.len() > 1 && matches.is_present("OUTPUT") {
+        panic!("Cannot specify output path for more than one input path.");
+    }
 
-	for input_path_string in input_path_strings {
-		let input_path = Path::new(input_path_string);
+    for input_path_string in input_path_strings {
+        let input_path = Path::new(input_path_string);
 
-		if matches.is_present("EXTRACT") {
-			let output_path = match matches.value_of_os("OUTPUT") {
-				Some(output_path_string) => PathBuf::from(output_path_string),
-				None => input_path.with_extension("DPC.d"),
-			};
+        if matches.is_present("EXTRACT") {
+            let output_path = match matches.value_of_os("OUTPUT") {
+                Some(output_path_string) => PathBuf::from(output_path_string),
+                None => input_path.with_extension("DPC.d"),
+            };
 
-			dpc.extract(&input_path, &output_path.as_path())?
+            dpc.extract(&input_path, &output_path.as_path())?
+        } else if matches.is_present("CREATE") {
+            let output_path = match matches.value_of_os("OUTPUT") {
+                Some(output_path_string) => PathBuf::from(output_path_string),
+                None => input_path.with_extension("DPC"),
+            };
+
+            match dpc.create(&input_path, &output_path.as_path()) {
+                Ok(_) => (),
+                Err(error) => panic!("Creation error: {:?}", error),
+            };
+        } else if matches.is_present("VALIDATE") {
+            let output_path = match matches.value_of_os("OUTPUT") {
+                Some(output_path_string) => PathBuf::from(output_path_string),
+                None => input_path.with_extension("DPC.json"),
+            };
+
+            match dpc.validate(&input_path, &output_path.as_path()) {
+                Ok(_) => (),
+                Err(error) => panic!("Validation error: {:?}", error),
+            };
 		} else {
-			let output_path = match matches.value_of_os("OUTPUT") {
-				Some(output_path_string) => PathBuf::from(output_path_string),
-				None => input_path.with_extension("DPC"),
-			};
-
-			match dpc.create(&input_path, &output_path.as_path()) {
-				Ok(_) => (),
-				Err(error) => panic!("Creation error: {:?}", error),
-			};
+			panic!("Unreachable")
 		}
-	}
+    }
 
-	Ok(())
+    Ok(())
 }

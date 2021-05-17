@@ -1,6 +1,6 @@
 fn main() {
     let mut opts = built::Options::default();
-	opts.set_git(true);
+    opts.set_git(true);
 
     let src = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let dst = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).join("built.rs");
