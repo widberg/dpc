@@ -1,8 +1,11 @@
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use lz4::{Decoder, EncoderBuilder};
+use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;
+use std::path::Path;
 
 pub fn lzss_decompress(
     compressed_buffer: &[u8],
@@ -199,6 +202,133 @@ pub fn lzss_compress_optimized(
     }
 
     Ok(compressed_buffer_cursor.position() as usize)
+}
+
+pub trait LZ {
+    fn decompress_internal(
+        compressed_buffer: &Vec<u8>,
+        decompressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error>;
+    fn compress_internal(
+        decompressed_buffer: &Vec<u8>,
+        compressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error>;
+    fn decompress<P: AsRef<Path>>(
+        compressed_path: &P,
+        decompressed_path: &P,
+    ) -> Result<(), io::Error> {
+        let mut compressed_file = File::open(compressed_path.as_ref())?;
+        let mut decompressed_file = File::create(decompressed_path.as_ref())?;
+
+        let decompressed_len = compressed_file.read_u32::<LittleEndian>()? as usize;
+        let compressed_len = compressed_file.read_u32::<LittleEndian>()? as usize - 8;
+
+        let mut decompressed_buffer = vec![0; decompressed_len];
+        let mut compressed_buffer = vec![0; compressed_len];
+
+        compressed_file.read(&mut compressed_buffer)?;
+
+        Self::decompress_internal(&compressed_buffer, &mut decompressed_buffer)?;
+
+        decompressed_file.write(&decompressed_buffer)?;
+
+        Ok(())
+    }
+
+    fn compress<P: AsRef<Path>>(
+        decompressed_path: &P,
+        compressed_path: &P,
+    ) -> Result<(), io::Error> {
+        let mut decompressed_file = File::open(decompressed_path.as_ref())?;
+        let mut compressed_file = File::create(compressed_path.as_ref())?;
+
+        let mut decompressed_buffer = vec![];
+
+        decompressed_file.read_to_end(&mut decompressed_buffer)?;
+
+        let mut compressed_buffer = vec![0; decompressed_buffer.len() * 2];
+
+        Self::compress_internal(&decompressed_buffer, &mut compressed_buffer)?;
+
+        compressed_file.write_u32::<LittleEndian>(decompressed_buffer.len() as u32)?;
+        compressed_file.write_u32::<LittleEndian>(compressed_buffer.len() as u32 + 8)?;
+
+        compressed_file.write(&compressed_buffer)?;
+
+        Ok(())
+    }
+}
+
+pub struct LZLZSS {}
+
+impl LZ for LZLZSS {
+    fn decompress_internal(
+        compressed_buffer: &Vec<u8>,
+        decompressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error> {
+        let decompressed_buffer_len = decompressed_buffer.len();
+        match lzss_decompress(
+            &compressed_buffer[..],
+            compressed_buffer.len(),
+            &mut decompressed_buffer[..],
+            decompressed_buffer_len,
+            false,
+        ) {
+            Ok(_) => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+
+    fn compress_internal(
+        decompressed_buffer: &Vec<u8>,
+        compressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error> {
+        let compressed_buffer_len = compressed_buffer.len();
+        match lzss_compress_optimized(
+            &decompressed_buffer[..],
+            decompressed_buffer.len(),
+            &mut compressed_buffer[..],
+            compressed_buffer_len,
+        ) {
+            Ok(len) => {
+                compressed_buffer.resize(len, 0);
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
+    }
+}
+
+pub struct LZLZ4 {}
+
+impl LZ for LZLZ4 {
+    fn decompress_internal(
+        compressed_buffer: &Vec<u8>,
+        decompressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error> {
+        let compressed_buffer_cursor = Cursor::new(compressed_buffer);
+        let mut decompressed_buffer_cursor = Cursor::new(decompressed_buffer);
+
+        let mut decoder = Decoder::new(compressed_buffer_cursor)?;
+        io::copy(&mut decoder, &mut decompressed_buffer_cursor)?;
+
+        Ok(())
+    }
+
+    fn compress_internal(
+        decompressed_buffer: &Vec<u8>,
+        compressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error> {
+        let mut decompressed_buffer_cursor = Cursor::new(decompressed_buffer);
+        let compressed_buffer_cursor = Cursor::new(compressed_buffer);
+
+        let mut encoder = EncoderBuilder::new()
+            .level(4)
+            .build(compressed_buffer_cursor)?;
+        io::copy(&mut decompressed_buffer_cursor, &mut encoder)?;
+        let (_output, result) = encoder.finish();
+        result
+    }
 }
 
 #[cfg(test)]

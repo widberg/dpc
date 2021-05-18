@@ -1,4 +1,4 @@
-use clap::{App, AppSettings, Arg};
+use clap::{App, AppSettings, Arg, SubCommand};
 use std::ffi::OsStr;
 use std::io::Result;
 use std::path::Path;
@@ -11,6 +11,7 @@ pub mod lz;
 use base_dpc::Options;
 use base_dpc::DPC;
 use fuel_dpc::FuelDPC;
+use lz::LZ;
 
 #[allow(dead_code)]
 mod built_info {
@@ -43,12 +44,14 @@ fn main() -> Result<()> {
                  .short("i")
                  .long("input")
                  .takes_value(true)
+				 .global(true)
                  .help("The input DPC file"))
         .arg(Arg::with_name("OUTPUT")
                  .short("o")
                  .long("output")
                  .takes_value(true)
 				 .requires("INPUT")
+				 .global(true)
                  .help("The output directory"))
 		.arg(Arg::with_name("GAME")
 				.short("g")
@@ -102,18 +105,126 @@ fn main() -> Result<()> {
 				.last(true)
 				.required(false)
 				.help("Supply arguments directly to the dpc backend"))
+		.subcommand(SubCommand::with_name("lz")
+				.about("Used to compress raw files")
+				.arg(Arg::with_name("ALGORITHM")
+						.short("a")
+						.long("algorithm")
+						.takes_value(true)
+						.required(true)
+						.requires("INPUT")
+						.possible_values(&["lzss", "lz4"])
+						.help("The algorithm the raw file should be compatible with"))
+				.arg(Arg::with_name("COMPRESS")
+						.short("c")
+						.long("compress")
+						.requires("INPUT")
+						.conflicts_with("DECOMPRESS")
+						.help("compress the file"))
+				.arg(Arg::with_name("DECOMPRESS")
+						.short("d")
+						.long("decompress")
+						.requires("INPUT")
+						.conflicts_with("COMPRESS")
+						.help("decompress the file"))
+				.after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
+				.settings(&[AppSettings::ArgRequiredElseHelp]))
+		.subcommand(SubCommand::with_name("obj")
+				.about("Used to compress object files")
+				.arg(Arg::with_name("GAME")
+						.short("g")
+						.long("game")
+						.takes_value(true)
+						.required(true)
+						.possible_values(&["fuel"])
+						.help("The game the object should be compatible with"))
+				.arg(Arg::with_name("COMPRESS")
+						.short("c")
+						.long("compress")
+						.requires("INPUT")
+						.conflicts_with("DECOMPRESS")
+						.help("compress the file"))
+				.arg(Arg::with_name("DECOMPRESS")
+						.short("d")
+						.long("decompress")
+						.requires("INPUT")
+						.conflicts_with("COMPRESS")
+						.help("decompress the file"))
+				.after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
+				.settings(&[AppSettings::ArgRequiredElseHelp]))
 		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
-		.setting(AppSettings::ArgRequiredElseHelp)
+		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
         .get_matches_from(wild::args_os());
+
+    if let Some(subcommand_matches) = matches.subcommand_matches("lz") {
+        let input_path_string = matches.value_of_os("INPUT").unwrap();
+        let input_path = Path::new(input_path_string);
+
+        let output_path = match subcommand_matches.value_of_os("OUTPUT") {
+            Some(output_path_string) => PathBuf::from(output_path_string),
+            None => input_path.with_extension(if subcommand_matches.is_present("COMPRESS") {
+                "comp"
+            } else {
+                "uncomp"
+            }),
+        };
+
+        match subcommand_matches.value_of("ALGORITHM") {
+            None => panic!("Algorithm is required"),
+            Some(algorithm) => match algorithm {
+                "lzss" => {
+                    if subcommand_matches.is_present("COMPRESS") {
+                        lz::LZLZSS::compress(&input_path, &output_path.as_path())?;
+                    } else {
+                        lz::LZLZSS::decompress(&input_path, &output_path.as_path())?;
+                    }
+                }
+                "lz4" => {
+                    if subcommand_matches.is_present("COMPRESS") {
+                        lz::LZLZ4::compress(&input_path, &output_path.as_path())?;
+                    } else {
+                        lz::LZLZ4::decompress(&input_path, &output_path.as_path())?;
+                    }
+                }
+                _ => panic!("bad algorithm"),
+            },
+        };
+
+        return Ok(());
+    }
 
     let options = Options::from(&matches);
 
-    let mut custom_args: Vec<&OsStr> = vec![&OsStr::new("--")];
-
-    match matches.values_of_os("CUSTOM_ARGS") {
-        Some(args) => custom_args.extend(args),
-        None => (),
+    let custom_args: Vec<&OsStr> = match matches.values_of_os("CUSTOM_ARGS") {
+        Some(args) => args.collect(),
+        None => vec![],
     };
+
+	if let Some(subcommand_matches) = matches.subcommand_matches("obj") {
+        let input_path_string = matches.value_of_os("INPUT").unwrap();
+        let input_path = Path::new(input_path_string);
+
+        let output_path = match subcommand_matches.value_of_os("OUTPUT") {
+            Some(output_path_string) => Path::new(output_path_string),
+            None => input_path,
+        };
+
+		let dpc = match subcommand_matches.value_of("GAME") {
+			None => panic!("Game is required"), // default to fuel until other games are supported
+			Some(game) => match game {
+				"fuel" => FuelDPC::new(&options, &custom_args),
+				_ => panic!("bad game"),
+			},
+		};
+
+		if subcommand_matches.is_present("COMPRESS") {
+			dpc.compress_object(&input_path, &output_path)?;
+		} else {
+			dpc.decompress_object(&input_path, &output_path)?;
+		}
+
+        return Ok(());
+    }
 
     let dpc = match matches.value_of("GAME") {
         None => panic!("Game is required"), // default to fuel until other games are supported
@@ -123,7 +234,10 @@ fn main() -> Result<()> {
         },
     };
 
-    if !matches.is_present("EXTRACT") && !matches.is_present("CREATE") && !matches.is_present("VALIDATE") {
+    if !matches.is_present("EXTRACT")
+        && !matches.is_present("CREATE")
+        && !matches.is_present("VALIDATE")
+    {
         return Ok(());
     }
 
@@ -163,9 +277,9 @@ fn main() -> Result<()> {
                 Ok(_) => (),
                 Err(error) => panic!("Validation error: {:?}", error),
             };
-		} else {
-			panic!("Unreachable")
-		}
+        } else {
+            panic!("Unreachable")
+        }
     }
 
     Ok(())

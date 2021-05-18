@@ -30,4 +30,6 @@ pub trait DPC {
     fn extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
     fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
     fn validate<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
+    fn compress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
+    fn decompress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
 }

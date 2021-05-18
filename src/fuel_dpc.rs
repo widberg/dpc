@@ -4,7 +4,7 @@ use base_dpc::Options;
 use base_dpc::DPC;
 use binwrite::BinWrite;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use clap::{App, Arg};
+use clap::{App, AppSettings, Arg};
 use dialoguer::Select;
 use indicatif::ProgressBar;
 use itertools::Itertools;
@@ -132,20 +132,20 @@ struct ReferenceRecord {
 
 #[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
 struct PoolManifest {
-	#[nom(Parse = "PoolManifestHeader::parse")]
-	header: PoolManifestHeader,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
-	objects_crc32s: Vec<u32>,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
-	crc32s: Vec<u32>,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
-	reference_counts: Vec<u32>,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
-	object_padded_size: Vec<u32>,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
-	reference_records_indices: Vec<u32>,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, ReferenceRecord::parse) }")]
-	reference_records: Vec<ReferenceRecord>,
+    #[nom(Parse = "PoolManifestHeader::parse")]
+    header: PoolManifestHeader,
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+    objects_crc32s: Vec<u32>,
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+    crc32s: Vec<u32>,
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+    reference_counts: Vec<u32>,
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+    object_padded_size: Vec<u32>,
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+    reference_records_indices: Vec<u32>,
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, ReferenceRecord::parse) }")]
+    reference_records: Vec<ReferenceRecord>,
 }
 
 #[derive(Serialize, NomLE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,41 +160,41 @@ struct BlockDescription {
 }
 
 named_args!(take_c_string_as_str(size: usize)<&str>, do_parse!(
-	s: take_str!(size) >>
-	(s.trim_end_matches('\0'))
+    s: take_str!(size) >>
+    (s.trim_end_matches('\0'))
 ));
 
 named!(take_nothing_as_str<&str>, do_parse!(("")));
 
 #[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
 struct PrimaryHeader<'a> {
-	#[nom(Parse = "{ |i| take_c_string_as_str(i, 256) }")]
-	version_string: &'a str,
-	is_not_rtc: u32,
-	#[nom(Verify = "*block_count <= 64")]
-	block_count: u32,
-	block_working_buffer_capacity_even: u32,
-	block_working_buffer_capacity_odd: u32,
-	padded_size: u32,
-	version_patch: u32,
-	version_minor: u32,
-	#[nom(Count = "block_count", Parse = "BlockDescription::parse")]
-	block_descriptions: Vec<BlockDescription>,
-	#[nom(MoveAbs(0x720))]
-	#[nom(Map = "|x| x * 2048")]
-	pool_manifest_padded_size: u32,
-	#[nom(Map = "|x| x * 2048")]
-	pool_manifest_offset: u32,
-	pool_manifest_unused0: u32,
-	pool_manifest_unused1: u32,
-	pool_object_decompression_buffer_capacity: u32,
-	block_sector_padding_size: u32,
-	pool_sector_padding_size: u32,
-	file_size: u32,
-	#[nom(
-		Parse = "{ |i| { if file_size != 0xFFFFFFFF { take_c_string_as_str(i, 128) } else { take_nothing_as_str(i) } } }"
-	)]
-	incredi_builder_string: &'a str,
+    #[nom(Parse = "{ |i| take_c_string_as_str(i, 256) }")]
+    version_string: &'a str,
+    is_not_rtc: u32,
+    #[nom(Verify = "*block_count <= 64")]
+    block_count: u32,
+    block_working_buffer_capacity_even: u32,
+    block_working_buffer_capacity_odd: u32,
+    padded_size: u32,
+    version_patch: u32,
+    version_minor: u32,
+    #[nom(Count = "block_count", Parse = "BlockDescription::parse")]
+    block_descriptions: Vec<BlockDescription>,
+    #[nom(MoveAbs(0x720))]
+    #[nom(Map = "|x| x * 2048")]
+    pool_manifest_padded_size: u32,
+    #[nom(Map = "|x| x * 2048")]
+    pool_manifest_offset: u32,
+    pool_manifest_unused0: u32,
+    pool_manifest_unused1: u32,
+    pool_object_decompression_buffer_capacity: u32,
+    block_sector_padding_size: u32,
+    pool_sector_padding_size: u32,
+    file_size: u32,
+    #[nom(
+        Parse = "{ |i| { if file_size != 0xFFFFFFFF { take_c_string_as_str(i, 128) } else { take_nothing_as_str(i) } } }"
+    )]
+    incredi_builder_string: &'a str,
 }
 
 pub struct FuelDPC {
@@ -215,6 +215,7 @@ impl DPC for FuelDPC {
                     .long("unoptimized-pool")
                     .help("Don't minify the pool manifest"),
             )
+            .settings(&[AppSettings::NoBinaryName])
             .get_matches_from(custom_args);
 
         let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
@@ -326,7 +327,6 @@ impl DPC for FuelDPC {
 
         let mut manifest_json = Manifest::new();
 
-
         #[derive(NomLE, Clone, Debug, PartialEq, Eq)]
         struct BlockObject {
             #[nom(Parse = "ObjectHeader::parse")]
@@ -344,8 +344,6 @@ impl DPC for FuelDPC {
             #[nom(Count((header.data_size) as usize), AlignAfter(2048))]
             data: Vec<u8>,
         }
-
-        
 
         let mut buffer = [0; 2048];
         input_file.read(&mut buffer)?;
@@ -1189,8 +1187,7 @@ impl DPC for FuelDPC {
     }
 
     fn validate<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-        let mut dpc_file =
-            File::open(input_path.as_ref())?;
+        let mut dpc_file = File::open(input_path.as_ref())?;
 
         if output_path.as_ref().exists() && !self.options.is_force {
             println!("Output json already exists. You can avoid this interaction by choosing a new output json path or run the program with the -f flag to overwrite the existing json and avoid this prompt for all files. What would you like to do for {}", output_path.as_ref().to_str().unwrap());
@@ -1209,71 +1206,156 @@ impl DPC for FuelDPC {
             };
         }
 
-		let mut primary_header_buffer = Vec::new();
-		dpc_file.read_to_end(&mut primary_header_buffer)?;
+        let mut primary_header_buffer = Vec::new();
+        dpc_file.read_to_end(&mut primary_header_buffer)?;
 
-		#[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
-		struct DPCObjectHeader {
-			data_size: u32,
-			class_object_size: u32,
-			decompressed_size: u32,
-			compressed_size: u32,
-			class_crc32: u32,
-			#[nom(SkipAfter(data_size))]
-			crc32: u32,
-		}
+        #[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
+        struct DPCObjectHeader {
+            data_size: u32,
+            class_object_size: u32,
+            decompressed_size: u32,
+            #[nom(
+                Verify = "if *compressed_size != 0 { data_size == class_object_size + *compressed_size } else { data_size == class_object_size + decompressed_size }"
+            )]
+            compressed_size: u32,
+            class_crc32: u32,
+            #[nom(SkipAfter(data_size))]
+            crc32: u32,
+        }
 
-		#[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
-		struct DPCPoolObjectHeader {
-			data_size: u32,
-			class_object_size: u32,
-			decompressed_size: u32,
-			compressed_size: u32,
-			class_crc32: u32,
-			#[nom(SkipAfter(calculate_padded_size(data_size + 24) as usize - 24))]
-			crc32: u32,
-		}
+        #[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
+        struct DPCPoolObjectHeader {
+            data_size: u32,
+            class_object_size: u32,
+            decompressed_size: u32,
+            #[nom(
+                Verify = "if *compressed_size != 0 { data_size == class_object_size + *compressed_size } else { data_size == class_object_size + decompressed_size }"
+            )]
+            compressed_size: u32,
+            class_crc32: u32,
+            #[nom(SkipAfter(calculate_padded_size(data_size + 24) as usize - 24))]
+            crc32: u32,
+        }
 
-		#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
-		struct DPCBlock {
-			objects: Vec<DPCObjectHeader>,
-		}
+        #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+        struct DPCBlock {
+            objects: Vec<DPCObjectHeader>,
+        }
 
-		named_args!(parse_dpcblock(padding_size: usize, object_count: usize)<DPCBlock>, do_parse!(
-			objects: count!(DPCObjectHeader::parse, object_count) >>
-			padding: take!(padding_size) >>
-			(DPCBlock { objects: objects })
-		));
+        named_args!(parse_dpcblock(padding_size: usize, object_count: usize)<DPCBlock>, do_parse!(
+            objects: count!(DPCObjectHeader::parse, object_count) >>
+            padding: take!(padding_size) >>
+            (DPCBlock { objects: objects })
+        ));
 
-		#[derive(Serialize, Nom, Clone, Debug, PartialEq, Eq)]
-		struct DPCPool {
-			#[nom(AlignAfter(2048))]
-			manifest: PoolManifest,
-			#[nom(Count = "manifest.objects_crc32s.len()")]
-			#[nom(AlignAfter(2048))]
-			objects: Vec<DPCPoolObjectHeader>,
-		}
+        #[derive(Serialize, Nom, Clone, Debug, PartialEq, Eq)]
+        struct DPCPool {
+            #[nom(AlignAfter(2048))]
+            manifest: PoolManifest,
+            #[nom(Count = "manifest.objects_crc32s.len()")]
+            #[nom(AlignAfter(2048))]
+            objects: Vec<DPCPoolObjectHeader>,
+        }
 
-		#[derive(Serialize, Nom, Clone, Debug, PartialEq, Eq)]
-		#[nom(Exact)]
-		struct DPCFile<'a> {
-			#[nom(AlignAfter(2048))]
-			primary_header: PrimaryHeader<'a>,
-			#[nom(PreExec="let mut x = 0;", Count="primary_header.block_count", Parse = "|i| { let res = parse_dpcblock(i, calculate_padding_size(primary_header.block_descriptions[x].data_size) as usize, primary_header.block_descriptions[x].object_count as usize); x += 1; res }")]
-			blocks: Vec<DPCBlock>,
-			#[nom(Cond="primary_header.pool_manifest_offset != 0")]
-			#[nom(AlignAfter(2048))]
-			#[serde(skip_serializing_if = "Option::is_none")]
-			pool: Option<DPCPool>,
-		}
+        #[derive(Serialize, Nom, Clone, Debug, PartialEq, Eq)]
+        #[nom(Exact)]
+        struct DPCFile<'a> {
+            #[nom(AlignAfter(2048))]
+            primary_header: PrimaryHeader<'a>,
+            #[nom(
+                PreExec = "let mut x = 0;",
+                Count = "primary_header.block_count",
+                Parse = "|i| { let res = parse_dpcblock(i, calculate_padding_size(primary_header.block_descriptions[x].data_size) as usize, primary_header.block_descriptions[x].object_count as usize); x += 1; res }"
+            )]
+            blocks: Vec<DPCBlock>,
+            #[nom(Cond = "primary_header.pool_manifest_offset != 0")]
+            #[nom(AlignAfter(2048))]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            pool: Option<DPCPool>,
+        }
 
-		let dpc_json = match DPCFile::parse(&primary_header_buffer[..]) {
+        let dpc_json = match DPCFile::parse(&primary_header_buffer[..]) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };
 
-		let mut output_file = File::create(output_path.as_ref())?;
-		output_file.write(serde_json::to_string_pretty(&dpc_json)?.as_bytes())?;
+        let mut output_file = File::create(output_path.as_ref())?;
+        output_file.write(serde_json::to_string_pretty(&dpc_json)?.as_bytes())?;
+
+        Ok(())
+    }
+	
+    fn compress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+		let mut input_file = File::open(input_path)?;
+		let mut output_file = File::create(output_path)?;
+
+		let mut object_header_buffer = [0; 24];
+		input_file.read(&mut object_header_buffer)?;
+
+		let mut object_header = match ObjectHeader::parse(&object_header_buffer) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
+
+		if object_header.compressed_size != 0 {
+			panic!("Already compressed");
+		}
+
+		let mut class_object_data = vec![0; object_header.class_object_size as usize];
+		input_file.read(&mut class_object_data)?;
+
+		let mut decompressed_buffer = vec![0; object_header.decompressed_size as usize];
+		input_file.read(&mut decompressed_buffer)?;
+
+		let mut compressed_buffer = vec![0; object_header.decompressed_size as usize * 2];
+
+		let compressed_len = lz::lzss_compress_optimized(&decompressed_buffer[..], object_header.decompressed_size as usize, &mut compressed_buffer[..], object_header.decompressed_size as usize * 2)?;
+		compressed_buffer.resize(compressed_len, 0);
+
+		object_header.compressed_size = compressed_len as u32 + 8;
+		object_header.data_size = object_header.class_object_size + object_header.compressed_size;
+
+		object_header.write(&mut output_file)?;
+		output_file.write(&class_object_data)?;
+		output_file.write_u32::<LittleEndian>(object_header.decompressed_size)?;
+		output_file.write_u32::<LittleEndian>(object_header.compressed_size)?;
+		output_file.write(&compressed_buffer)?;
+
+		Ok(())
+	}
+
+    fn decompress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+		let mut input_file = File::open(input_path)?;
+		let mut output_file = File::create(output_path)?;
+
+		let mut object_header_buffer = [0; 24];
+		input_file.read(&mut object_header_buffer)?;
+
+		let mut object_header = match ObjectHeader::parse(&object_header_buffer) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
+
+		if object_header.compressed_size == 0 {
+			panic!("Already decompressed");
+		}
+
+		let mut class_object_data = vec![0; object_header.class_object_size as usize];
+		input_file.read(&mut class_object_data)?;
+
+		let mut decompressed_buffer = vec![0; object_header.decompressed_size as usize];
+		let mut compressed_buffer = vec![0; object_header.compressed_size as usize];
+		input_file.seek(SeekFrom::Current(8))?;
+		input_file.read(&mut compressed_buffer)?;
+
+		lz::lzss_decompress(&compressed_buffer[..], object_header.compressed_size as usize, &mut decompressed_buffer[..], object_header.decompressed_size as usize, false)?;
+
+		object_header.compressed_size = 0;
+		object_header.data_size = object_header.class_object_size + object_header.decompressed_size;
+
+		object_header.write(&mut output_file)?;
+		output_file.write(&class_object_data)?;
+		output_file.write(&decompressed_buffer)?;
 
 		Ok(())
 	}
@@ -1292,7 +1374,7 @@ mod test {
     use tempdir::TempDir;
     use test_generator::test_resources;
 
-	#[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_validate(path: &str) {
         let dpc = FuelDPC::new(
             &Options {
@@ -1302,13 +1384,13 @@ mod test {
                 is_lz: false,
                 is_optimization: false,
             },
-            &vec![&OsStr::new("--")],
+            &vec![],
         );
 
         let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
 
         let dpc_file = Path::new(path);
-        let dpc_json= tmp_dir.path().join("temp.json");
+        let dpc_json = tmp_dir.path().join("temp.json");
 
         dpc.validate(&dpc_file, &dpc_json.as_path()).unwrap();
 
@@ -1325,7 +1407,7 @@ mod test {
                 is_lz: false,
                 is_optimization: false,
             },
-            &vec![&OsStr::new("--")],
+            &vec![],
         );
 
         let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
@@ -1354,7 +1436,7 @@ mod test {
                 is_lz: true,
                 is_optimization: true,
             },
-            &vec![&OsStr::new("--"), &OsStr::new("--unoptimized-pool")],
+            &vec![&OsStr::new("--unoptimized-pool")],
         );
 
         let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
@@ -1386,7 +1468,7 @@ mod test {
                 is_lz: true,
                 is_optimization: false,
             },
-            &vec![&OsStr::new("--")],
+            &vec![],
         );
 
         let dpc_create = FuelDPC::new(
@@ -1397,7 +1479,7 @@ mod test {
                 is_lz: false,
                 is_optimization: false,
             },
-            &vec![&OsStr::new("--")],
+            &vec![],
         );
 
         let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
@@ -1406,7 +1488,9 @@ mod test {
         let dpc_file_2 = tmp_dir.path().join("TEMP.DPC");
         let dpc_directory = tmp_dir.path().join("TEMP");
 
-        dpc_extract.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
+        dpc_extract
+            .extract(&dpc_file, &dpc_directory.as_path())
+            .unwrap();
         let cx = checksumdir(dpc_directory.join("objects").as_os_str().to_str().unwrap()).unwrap();
 
         dpc_create.create(&dpc_directory, &dpc_file_2).unwrap();
