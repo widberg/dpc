@@ -1398,7 +1398,7 @@ mod test {
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
-    fn test_fuel_dpc(path: &str) {
+    fn test_fuel_dpc_normal(path: &str) {
         let dpc = FuelDPC::new(
             &Options {
                 is_quiet: true,

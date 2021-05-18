@@ -1,7 +1,7 @@
 # DPC
 
 ```plaintext
-dpc version 0.1.0;452c6d7a015dc87f10545c1793f0d3b6e6f0afbc;x86_64-pc-windows-msvc
+dpc version 0.1.1;452c6d7a015dc87f10545c1793f0d3b6e6f0afbc;x86_64-pc-windows-msvc
 widberg <https://github.com/widberg>
 Work with DPC files
 
