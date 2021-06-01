@@ -150,7 +150,11 @@ fn main() -> Result<()> {
 						.requires("INPUT")
 						.conflicts_with("COMPRESS")
 						.help("decompress the file"))
-				.after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
+				.arg(Arg::with_name("SPLIT")
+						.short("s")
+						.long("split")
+						.requires("INPUT")
+						.help("split the file"))
 				.settings(&[AppSettings::ArgRequiredElseHelp]))
 		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
 		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
@@ -202,7 +206,7 @@ fn main() -> Result<()> {
 
 	if let Some(subcommand_matches) = matches.subcommand_matches("obj") {
         let input_path_string = matches.value_of_os("INPUT").unwrap();
-        let input_path = Path::new(input_path_string);
+        let mut input_path = Path::new(input_path_string);
 
         let output_path = match subcommand_matches.value_of_os("OUTPUT") {
             Some(output_path_string) => Path::new(output_path_string),
@@ -219,8 +223,14 @@ fn main() -> Result<()> {
 
 		if subcommand_matches.is_present("COMPRESS") {
 			dpc.compress_object(&input_path, &output_path)?;
-		} else {
+			input_path = output_path;
+		} else if subcommand_matches.is_present("DECOMPRESS") {
 			dpc.decompress_object(&input_path, &output_path)?;
+			input_path = output_path;
+		}
+		
+		if subcommand_matches.is_present("SPLIT") {
+			dpc.split_object(&input_path, &output_path)?;
 		}
 
         return Ok(());

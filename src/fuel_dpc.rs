@@ -200,6 +200,7 @@ struct PrimaryHeader<'a> {
 pub struct FuelDPC {
     options: Options,
     unoptimized_pool: bool,
+	no_pool: bool,
     version_lookup: HashMap<String, (u32, u32, u32)>,
 }
 
@@ -214,6 +215,12 @@ impl DPC for FuelDPC {
                     .short("p")
                     .long("unoptimized-pool")
                     .help("Don't minify the pool manifest"),
+            )
+            .arg(
+                Arg::with_name("NO-POOL")
+                    .short("n")
+                    .long("no-pool")
+                    .help("Don't use a pool"),
             )
             .settings(&[AppSettings::NoBinaryName])
             .get_matches_from(custom_args);
@@ -250,6 +257,7 @@ impl DPC for FuelDPC {
         FuelDPC {
             options: *options,
             unoptimized_pool: matches.is_present("UNOPTIMIZED-POOL"),
+            no_pool: matches.is_present("NO-POOL"),
             version_lookup: version_lookup,
         }
     }
@@ -647,6 +655,15 @@ impl DPC for FuelDPC {
         }
 
         let mut manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
+
+		if self.no_pool {
+			manifest_json.header.pool_manifest_unused = 0;
+			manifest_json.pool = None;
+		}
+
+		if manifest_json.pool.is_some() && !self.options.is_unsafe {
+			panic!("Creating a DPC with a pool is unsafe. Either add the -u/--unsafe main option to do it anyway or -- -n/--no-pool custom argument to move pool objects to blocks.");
+		}
 
         let mut dpc_file = File::create(output_path.as_ref())?;
 
@@ -1356,6 +1373,36 @@ impl DPC for FuelDPC {
 		object_header.write(&mut output_file)?;
 		output_file.write(&class_object_data)?;
 		output_file.write(&decompressed_buffer)?;
+
+		Ok(())
+	}
+
+	fn split_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+		let mut header_path = output_path.as_ref().to_path_buf();
+		header_path.push(".header");
+		let mut header_file = File::create(header_path)?;
+
+		let mut data_path = output_path.as_ref().to_path_buf();
+		data_path.push(".data");
+		let mut data_file = File::create(data_path)?;
+
+		let mut input_file = File::open(input_path)?;
+
+		let mut object_header_buffer = [0; 24];
+		input_file.read(&mut object_header_buffer)?;
+
+		let object_header = match ObjectHeader::parse(&object_header_buffer) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
+
+		let mut header_buffer = vec![0; object_header.class_object_size as usize];
+		input_file.read(&mut header_buffer)?;
+		header_file.write(&header_buffer)?;
+
+		let mut data_buffer = vec![0; object_header.data_size as usize - object_header.class_object_size as usize];
+		input_file.read(&mut data_buffer)?;
+		data_file.write(&data_buffer)?;
 
 		Ok(())
 	}
