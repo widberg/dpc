@@ -1413,6 +1413,7 @@ impl DPC for FuelDPC {
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
         fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         fmt_fns.insert(1391959958, fuel_fmt::fuel_fmt_extract_user_define_z);
+        fmt_fns.insert(4096629181, fuel_fmt::fuel_fmt_extract_game_obj_z);
 
 		fs::create_dir_all(output_path)?;
 

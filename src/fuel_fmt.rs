@@ -6,6 +6,7 @@ use serde::Serialize;
 use nom_derive::{NomLE, Parse};
 use std::io::Write;
 use nom::number::complete::*;
+use nom::*;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -76,7 +77,7 @@ pub fn fuel_fmt_extract_material_z(header: &[u8], data: &[u8], output_path: &Pat
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct UserDefineZ {
-	#[nom(Map = "|x: &[u8]| String::from_utf8(x.to_vec()).unwrap()", Take = "le_u32(i)?.1 as usize")]
+	#[nom(Map = "|x: &str| String::from(x)", Parse = "|i| take_str!(i, le_u32(i)?.1 as usize)")]
 	data: String,
 }
 
@@ -103,6 +104,52 @@ pub fn fuel_fmt_extract_user_define_z(header: &[u8], data: &[u8], output_path: &
 	let material_object = UserDefineObject {
 		resource_object,
 		user_define,
+	};
+
+	output_file.write(serde_json::to_string_pretty(&material_object)?.as_bytes())?;
+
+	Ok(())
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct GameObjZChild {
+	#[nom(Map = "|x: &str| String::from(x)", Parse = "|i| take_str!(i, le_u32(i)?.1 as usize)")]
+	str: String,
+	is_in_world: u32,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+	crc32s: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct GameObjZ {
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, GameObjZChild::parse) }")]
+	children: Vec<GameObjZChild>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct GameObjObject {
+	resource_object: ResourceObjectZ,
+	game_obj: GameObjZ,
+}
+
+pub fn fuel_fmt_extract_game_obj_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
+	let mut output_file = File::create(json_path)?;
+
+	let resource_object = match ResourceObjectZ::parse(&header) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let game_obj = match GameObjZ::parse(&data) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let material_object = GameObjObject {
+		resource_object,
+		game_obj,
 	};
 
 	output_file.write(serde_json::to_string_pretty(&material_object)?.as_bytes())?;
