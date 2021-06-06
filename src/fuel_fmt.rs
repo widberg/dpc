@@ -10,12 +10,15 @@ use std::io::Write;
 #[nom(Exact)]
 struct ResourceObjectZ {
 	friendly_name_crc32: u32,
+    #[serde(skip_serializing)]
 	crc32s_count: u32,
 	#[nom(Cond = "crc32s_count != 0")]
 	#[nom(Count = "crc32s_count")]
     #[serde(skip_serializing_if = "Option::is_none")]
     crc32s: Option<Vec<u32>>,
 }
+
+static mut MATERIAL_BITMAP_CRC32S_COUNT: u32 = 0;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -32,7 +35,7 @@ struct MaterialZ {
 	unknown_bitmap_crc322: u32,
 	unknown_bitmap_crc323: u32,
 	unknown0: u8,
-	#[nom(Count = "0")]
+	#[nom(Count = "unsafe { MATERIAL_BITMAP_CRC32S_COUNT }")]
 	bitmap_crc32s: Vec<u32>,
 }
 
@@ -44,8 +47,8 @@ struct MaterialObject {
 	material: MaterialZ,
 }
 
-fn fuel_fmt_extract_material_z<P: AsRef<Path>>(header: &[u8], data: &[u8], output_path: &P) -> Result<()> {
-	let json_path = output_path.as_ref().join("object.json");
+pub fn fuel_fmt_extract_material_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
 	let mut output_file = File::create(json_path)?;
 
 	let resource_object = match ResourceObjectZ::parse(&header) {
@@ -53,17 +56,19 @@ fn fuel_fmt_extract_material_z<P: AsRef<Path>>(header: &[u8], data: &[u8], outpu
 		Err(error) => panic!("{}", error),
 	};
 
+	unsafe { MATERIAL_BITMAP_CRC32S_COUNT = resource_object.crc32s_count };
+
 	let material = match MaterialZ::parse(&data) {
 		Ok((_, h)) => h,
 		Err(error) => panic!("{}", error),
 	};
 
-	let materialObject = MaterialObject {
+	let material_object = MaterialObject {
 		resource_object,
 		material,
 	};
 
-	output_file.write(serde_json::to_string_pretty(&materialObject)?.as_bytes())?;
+	output_file.write(serde_json::to_string_pretty(&material_object)?.as_bytes())?;
 
 	Ok(())
 }

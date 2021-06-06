@@ -1409,6 +1409,37 @@ impl DPC for FuelDPC {
 	}
 	
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
+        let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
+        fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
+
+		let mut input_file = File::open(input_path)?;
+
+		let mut object_header_buffer = [0; 24];
+		input_file.read(&mut object_header_buffer)?;
+
+		let object_header = match ObjectHeader::parse(&object_header_buffer) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
+
+		let fmt_fn = fmt_fns.get(&object_header.class_crc32).unwrap();
+
+		let mut header = vec![0; object_header.class_object_size as usize];
+		input_file.read(&mut header)?;
+
+		let mut data = vec![0; object_header.decompressed_size as usize];
+
+		if object_header.compressed_size != 0 {
+			let mut compresssed_data = vec![0; object_header.compressed_size as usize];
+			input_file.read(&mut compresssed_data)?;
+			lz::lzss_decompress(&compresssed_data[..], object_header.compressed_size as usize, &mut data[..], object_header.decompressed_size as usize, false)?;
+		} else {
+			input_file.read(&mut data)?;
+		}
+
+		fmt_fn(&header, &data, output_path.as_ref())?;
+
 		Ok(())
 	}
 
