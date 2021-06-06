@@ -1433,7 +1433,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1396791303, "Skin_Z");
         // fmt_fns.insert(1471281566, "Bitmap_Z");
         // fmt_fns.insert(1536002910, "Font_Z");
-        // fmt_fns.insert(1625945536, "RotShapeData_Z");
+        fmt_fns.insert(1625945536, fuel_fmt::fuel_fmt_extract_rot_shape_data_z);
         // fmt_fns.insert(1706265229, "Surface_Z");
         // fmt_fns.insert(1910554652, "SplineGraph_Z");
         // fmt_fns.insert(1943824915, "Lod_Z");
