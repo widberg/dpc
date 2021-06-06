@@ -1438,7 +1438,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1910554652, "SplineGraph_Z");
         // fmt_fns.insert(1943824915, "Lod_Z");
         // fmt_fns.insert(2245010728, "Node_Z");
-        // fmt_fns.insert(2259852416, "Binary_Z");
+        fmt_fns.insert(2259852416, fuel_fmt::fuel_fmt_extract_binary_z);
         // fmt_fns.insert(2398393906, "CollisionVol_Z");
         // fmt_fns.insert(2906362741, "WorldRef_Z");
         // fmt_fns.insert(3312018398, "Particles_Z");
