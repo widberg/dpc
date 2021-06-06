@@ -1437,7 +1437,6 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1706265229, "Surface_Z");
         // fmt_fns.insert(1910554652, "SplineGraph_Z");
         // fmt_fns.insert(1943824915, "Lod_Z");
-        // fmt_fns.insert(2204276779, "Material_Z");
         // fmt_fns.insert(2245010728, "Node_Z");
         // fmt_fns.insert(2259852416, "Binary_Z");
         // fmt_fns.insert(2398393906, "CollisionVol_Z");
@@ -1445,9 +1444,9 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(3312018398, "Particles_Z");
         // fmt_fns.insert(3412401859, "LodData_Z");
         // fmt_fns.insert(3611002348, "Skel_Z");
-        // fmt_fns.insert(3626109572, "MeshData_Z");
+        fmt_fns.insert(3626109572, fuel_fmt::fuel_fmt_extract_mesh_data_z);
         // fmt_fns.insert(3747817665, "SurfaceDatas_Z");
-        fmt_fns.insert(3834418854, fuel_fmt_extract_material_anim_z);
+        fmt_fns.insert(3834418854, fuel_fmt::fuel_fmt_extract_material_anim_z);
         // fmt_fns.insert(3845834591, "GwRoad_Z");
         // fmt_fns.insert(4096629181, "GameObj_Z");
         // fmt_fns.insert(4240844041, "Camera_Z");
