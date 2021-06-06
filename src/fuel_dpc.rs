@@ -1413,6 +1413,8 @@ impl DPC for FuelDPC {
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
         fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
 
+		fs::create_dir_all(output_path)?;
+
 		let mut input_file = File::open(input_path)?;
 
 		let mut object_header_buffer = [0; 24];
