@@ -287,3 +287,56 @@ pub fn fuel_fmt_extract_material_obj_z(header: &[u8], data: &[u8], output_path: 
 
 	Ok(())
 }
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct MaterialAnimZ {
+	unknown0: u32,
+    unknown1: u32,
+    unknown2: u32,
+    unknown3: u32,
+    unknown4: u32,
+    unknown5: u32,
+    unknown6: u32,
+    unknown7: u32,
+    unknown8: u32,
+    unknown9: u32,
+    unknown10: u32,
+    unknown11: u32,
+    unknown12: u32,
+    unknown13: u32,
+    unknown14: u32,
+    material_crc32: u32,
+    unknown15: u32,
+    unknown16: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+struct MaterialAnimObject {
+	resource_object: ResourceObjectZ,
+	material_anim: MaterialAnimZ,
+}
+
+pub fn fuel_fmt_extract_material_anim_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
+	let mut output_file = File::create(json_path)?;
+
+	let resource_object = match ResourceObjectZ::parse(&header) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let material_anim = match MaterialAnimZ::parse(&data) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let object = MaterialAnimObject {
+		resource_object,
+		material_anim,
+	};
+
+	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+	Ok(())
+}

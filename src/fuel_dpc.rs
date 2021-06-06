@@ -1447,7 +1447,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(3611002348, "Skel_Z");
         // fmt_fns.insert(3626109572, "MeshData_Z");
         // fmt_fns.insert(3747817665, "SurfaceDatas_Z");
-        // fmt_fns.insert(3834418854, "MaterialAnim_Z");
+        fmt_fns.insert(3834418854, fuel_fmt_extract_material_anim_z);
         // fmt_fns.insert(3845834591, "GwRoad_Z");
         // fmt_fns.insert(4096629181, "GameObj_Z");
         // fmt_fns.insert(4240844041, "Camera_Z");
