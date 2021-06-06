@@ -1,11 +1,12 @@
 use clap::{App, AppSettings, Arg, SubCommand};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io::Result;
 use std::path::Path;
 use std::path::PathBuf;
 
 pub mod base_dpc;
 pub mod fuel_dpc;
+pub mod fuel_fmt;
 pub mod lz;
 
 use base_dpc::Options;
@@ -156,6 +157,28 @@ fn main() -> Result<()> {
 						.requires("INPUT")
 						.help("split the file"))
 				.settings(&[AppSettings::ArgRequiredElseHelp]))
+		.subcommand(SubCommand::with_name("fmt")
+				.about("Used to format object files")
+				.arg(Arg::with_name("GAME")
+						.short("g")
+						.long("game")
+						.takes_value(true)
+						.required(true)
+						.possible_values(&["fuel"])
+						.help("The game the object should be compatible with"))
+				.arg(Arg::with_name("CREATE")
+						.short("c")
+						.long("create")
+						.requires("INPUT")
+						.conflicts_with("EXTRACT")
+						.help("create the file"))
+				.arg(Arg::with_name("EXTRACT")
+						.short("e")
+						.long("extract")
+						.requires("INPUT")
+						.conflicts_with("CREATE")
+						.help("extract the file"))
+				.settings(&[AppSettings::ArgRequiredElseHelp]))
 		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
 		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
         .get_matches_from(wild::args_os());
@@ -208,7 +231,7 @@ fn main() -> Result<()> {
         let input_path_string = matches.value_of_os("INPUT").unwrap();
         let mut input_path = Path::new(input_path_string);
 
-        let output_path = match subcommand_matches.value_of_os("OUTPUT") {
+        let output_path = match matches.value_of_os("OUTPUT") {
             Some(output_path_string) => Path::new(output_path_string),
             None => input_path,
         };
@@ -231,6 +254,33 @@ fn main() -> Result<()> {
 		
 		if subcommand_matches.is_present("SPLIT") {
 			dpc.split_object(&input_path, &output_path)?;
+		}
+
+        return Ok(());
+    }
+
+	if let Some(subcommand_matches) = matches.subcommand_matches("fmt") {
+        let input_path_string = matches.value_of_os("INPUT").unwrap();
+        let input_path = Path::new(input_path_string);
+		let mut t = OsString::new();
+
+        let output_path = match matches.value_of_os("OUTPUT") {
+            Some(output_path_string) => Path::new(output_path_string),
+            None => { t.push(input_path.as_os_str()); t.push(".d"); Path::new(&t) },
+        };
+
+		let dpc = match subcommand_matches.value_of("GAME") {
+			None => panic!("Game is required"), // default to fuel until other games are supported
+			Some(game) => match game {
+				"fuel" => FuelDPC::new(&options, &custom_args),
+				_ => panic!("bad game"),
+			},
+		};
+
+		if subcommand_matches.is_present("CREATE") {
+			dpc.fmt_create(&input_path, &output_path)?;
+		} else if subcommand_matches.is_present("EXTRACT") {
+			dpc.fmt_extract(&input_path, &output_path)?;
 		}
 
         return Ok(());

@@ -27,6 +27,7 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 use tempdir::TempDir;
+use crate::fuel_fmt;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32 {
     return (unpadded_size + 0x7ff) & 0xfffff800;
@@ -1404,6 +1405,14 @@ impl DPC for FuelDPC {
 		input_file.read(&mut data_buffer)?;
 		data_file.write(&data_buffer)?;
 
+		Ok(())
+	}
+	
+    fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+		Ok(())
+	}
+
+    fn fmt_create<P: AsRef<Path>>(&self, _input_path: &P, _output_path: &P) -> Result<()> {
 		Ok(())
 	}
 }
