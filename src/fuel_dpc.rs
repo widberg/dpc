@@ -1423,7 +1423,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(849267944, "Sound_Z");
         fmt_fns.insert(849861735, fuel_fmt::fuel_fmt_extract_material_obj_z);
         // fmt_fns.insert(866453734, "RotShape_Z");
-        // fmt_fns.insert(954499543, "ParticlesData_Z");
+        fmt_fns.insert(954499543, fuel_fmt::fuel_fmt_extract_particles_data_z);
         // fmt_fns.insert(968261323, "World_Z");
         // fmt_fns.insert(1114947943, "Warp_Z");
         // fmt_fns.insert(1135194223, "Spline_Z");

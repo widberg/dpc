@@ -420,3 +420,48 @@ pub fn fuel_fmt_extract_rot_shape_data_z(header: &[u8], data: &[u8], output_path
 
 	Ok(())
 }
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct ParticlesDataZ {
+    equals257: u32,
+    position_x: f32,
+    position_y: f32,
+    position_z: f32,
+    velocity_x: f32,
+    velocity_y: f32,
+    velocity_z: f32,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u16) }")]
+	shorts: Vec<u16>,
+	zero: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ParticlesDataObject {
+	resource_object: ResourceObjectZ,
+	particles_data: ParticlesDataZ,
+}
+
+pub fn fuel_fmt_extract_particles_data_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
+	let mut output_file = File::create(json_path)?;
+
+	let resource_object = match ResourceObjectZ::parse(&header) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let particles_data = match ParticlesDataZ::parse(&data) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let object = ParticlesDataObject {
+		resource_object,
+		particles_data,
+	};
+
+	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+	Ok(())
+}
