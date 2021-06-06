@@ -18,6 +18,24 @@ struct ResourceObjectZ {
     crc32s: Option<Vec<u32>>,
 }
 
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct ObjectZ {
+	friendly_name_crc32: u32,
+	#[nom(Cond = "i.len() == 94")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+	crc32_or_zero: Option<u32>,
+	#[nom(Cond = "i.len() > 94")]
+	#[nom(Parse = "|i| length_count!(i, le_u32, le_u32)")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+	crc32s: Option<Vec<u32>>,
+	#[nom(Count = "22")]
+	floats: Vec<f32>,
+	short: u16,
+}
+
+/////////////////////////
+
 static mut MATERIAL_BITMAP_CRC32S_COUNT: usize = 0;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -490,6 +508,44 @@ pub fn fuel_fmt_extract_binary_z(header: &[u8], data: &[u8], output_path: &Path)
 	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
 	output_bin_file.write(&data)?;
+
+	Ok(())
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct CameraZ {
+    angle_of_view: f32,
+    zero: f32,
+	node_crc32: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CameraObject {
+	object: ObjectZ,
+	camera: CameraZ,
+}
+
+pub fn fuel_fmt_extract_camera_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
+	let mut output_file = File::create(json_path)?;
+
+	let object = match ObjectZ::parse(&header) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let camera = match CameraZ::parse(&data) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let object = CameraObject {
+		object,
+		camera,
+	};
+
+	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
 	Ok(())
 }
