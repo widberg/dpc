@@ -34,7 +34,7 @@ struct ObjectZ {
 	short: u16,
 }
 
-/////////////////////////
+
 
 static mut MATERIAL_BITMAP_CRC32S_COUNT: usize = 0;
 
@@ -543,6 +543,77 @@ pub fn fuel_fmt_extract_camera_z(header: &[u8], data: &[u8], output_path: &Path)
 	let object = CameraObject {
 		object,
 		camera,
+	};
+
+	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+	Ok(())
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct WarpZ {
+	some: u32,
+    u0: f32,        
+    u1: f32,
+    u2: f32,
+    u3: f32,
+    u4: f32,
+    u5: f32,
+    u6: f32,
+    u7: f32,
+    u8: f32,
+    u9: f32,
+    u10: f32,
+    u11: f32,
+    u12: f32,
+    u13: f32,
+    u14: f32,
+    u15: f32,
+    u16: f32,
+    u17: f32,
+    u18: f32,
+    u19: f32,
+    u20: f32,
+    u21: f32,
+    u22: f32,
+    u23: f32,
+    u24: f32,
+    u25: f32,
+    u26: f32,
+    u27: f32,
+    u28: f32,
+    u29: f32,
+    u30: f32,
+    u31: f32,
+    u32: f32,
+    u33: f32,
+    u34: f32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WarpObject {
+	resource_object: ResourceObjectZ,
+	warp: WarpZ,
+}
+
+pub fn fuel_fmt_extract_warp_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
+	let mut output_file = File::create(json_path)?;
+
+	let resource_object = match ResourceObjectZ::parse(&header) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let warp = match WarpZ::parse(&data) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let object = WarpObject {
+		resource_object,
+		warp,
 	};
 
 	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
