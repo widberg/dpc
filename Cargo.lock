@@ -355,6 +355,7 @@ dependencies = [
  "checksums",
  "clap",
  "dialoguer",
+ "hound",
  "indicatif",
  "itertools",
  "lz4",
@@ -471,6 +472,12 @@ checksum = "322f4de77956e22ed0e5032c359a0f1273f1f7f0d79bfa3b8ffbc730d7fbcc5c"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "hound"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a164bb2ceaeff4f42542bdb847c41517c78a60f5649671b2a07312b6e117549"
 
 [[package]]
 name = "idna"

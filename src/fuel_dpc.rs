@@ -1420,7 +1420,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(705810152, "Rtc_Z");
         // fmt_fns.insert(838505646, "GenWorld_Z");
         // fmt_fns.insert(848525546, "LightData_Z");
-        // fmt_fns.insert(849267944, "Sound_Z");
+        fmt_fns.insert(849267944, fuel_fmt::fuel_fmt_extract_sound_z);
         fmt_fns.insert(849861735, fuel_fmt::fuel_fmt_extract_material_obj_z);
         // fmt_fns.insert(866453734, "RotShape_Z");
         fmt_fns.insert(954499543, fuel_fmt::fuel_fmt_extract_particles_data_z);
@@ -1429,10 +1429,8 @@ impl DPC for FuelDPC {
         fmt_fns.insert(1135194223, fuel_fmt::fuel_fmt_extract_spline_z);
         // fmt_fns.insert(1175485833, "Anim_Z");
         // fmt_fns.insert(1387343541, "Mesh_Z");
-        // fmt_fns.insert(1391959958, "UserDefine_Z");
         // fmt_fns.insert(1396791303, "Skin_Z");
         // fmt_fns.insert(1471281566, "Bitmap_Z");
-        // fmt_fns.insert(1536002910, "Font_Z");
         fmt_fns.insert(1625945536, fuel_fmt::fuel_fmt_extract_rot_shape_data_z);
         // fmt_fns.insert(1706265229, "Surface_Z");
         // fmt_fns.insert(1910554652, "SplineGraph_Z");
@@ -1445,10 +1443,8 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(3412401859, "LodData_Z");
         // fmt_fns.insert(3611002348, "Skel_Z");
         fmt_fns.insert(3626109572, fuel_fmt::fuel_fmt_extract_mesh_data_z);
-        // fmt_fns.insert(3747817665, "SurfaceDatas_Z");
         fmt_fns.insert(3834418854, fuel_fmt::fuel_fmt_extract_material_anim_z);
         // fmt_fns.insert(3845834591, "GwRoad_Z");
-        // fmt_fns.insert(4096629181, "GameObj_Z");
         fmt_fns.insert(4240844041, fuel_fmt::fuel_fmt_extract_camera_z);
 
 		fs::create_dir_all(output_path)?;
