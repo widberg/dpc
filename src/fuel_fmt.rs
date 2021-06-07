@@ -10,6 +10,8 @@ use nom::*;
 use hound;
 use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
+use image::{dxt::DxtDecoder, dxt::DXTVariant, ImageDecoder, png::PngEncoder, ColorType};
+use zerocopy::{AsBytes};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -728,6 +730,66 @@ pub fn fuel_fmt_extract_sound_z(header: &[u8], data: &[u8], output_path: &Path) 
 
 	let object = SoundObject {
 		sound_header,
+	};
+
+	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+	Ok(())
+}
+
+// https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-header
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct BitmapZHeader {
+    friendly_name_crc32: u32,
+    dw_caps2: u16,
+	#[serde(skip_serializing)]
+    width: u32,
+	#[serde(skip_serializing)]
+    height: u32,
+	#[allow(dead_code)]
+	#[serde(skip_serializing)]
+    data_size: u32,
+    u1: u8,
+    bitmap_type: u8,
+    zero: u16,
+    u7: f32,
+    dxt_version0: u8,
+    mip_map_count: u8,
+    u2: u8,
+    u3: u8,
+    dxt_version1: u8,
+    u4: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BitmapObject {
+	bitmap_header: BitmapZHeader,
+}
+
+pub fn fuel_fmt_extract_bitmap_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+	let json_path = output_path.join("object.json");
+	let mut output_file = File::create(json_path)?;
+
+	let png_path = output_path.join("data.png");
+	let output_png_file = File::create(png_path)?;
+
+	let bitmap_header = match BitmapZHeader::parse(&header) {
+		Ok((_, h)) => h,
+		Err(error) => panic!("{}", error),
+	};
+
+	let data_cursor = Cursor::new(&data);
+	let dxt_decoder = DxtDecoder::new(data_cursor, bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
+
+	let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 2];
+    dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
+
+	let png_encoder = PngEncoder::new(output_png_file);
+	png_encoder.encode(buf.as_bytes(), bitmap_header.width, bitmap_header.height, ColorType::Rgba8).unwrap();
+
+	let object = BitmapObject {
+		bitmap_header,
 	};
 
 	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
