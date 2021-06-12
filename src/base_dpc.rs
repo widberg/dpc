@@ -11,6 +11,7 @@ pub struct Options {
     pub is_unsafe: bool,
     pub is_lz: bool,
     pub is_optimization: bool,
+	pub is_recursive: bool,
 }
 
 impl From<&ArgMatches<'_>> for Options {
@@ -21,6 +22,7 @@ impl From<&ArgMatches<'_>> for Options {
             is_unsafe: arg_matches.is_present("UNSAFE"),
             is_lz: arg_matches.is_present("LZ"),
             is_optimization: arg_matches.is_present("OPTIMIZATION"),
+            is_recursive: arg_matches.is_present("RECURSIVE"),
         }
     }
 }

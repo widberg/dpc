@@ -18,7 +18,7 @@ use zerocopy::{AsBytes};
 struct ResourceObjectZ {
 	friendly_name_crc32: u32,
 	#[nom(Cond = "i.len() != 0")]
-	#[nom(Count = "{ if i.len() != 0 { le_u32(i)?.1 } else { 0 } }")]
+	#[nom(LengthCount = "le_u32")]
     #[serde(skip_serializing_if = "Option::is_none")]
     crc32s: Option<Vec<u32>>,
 }
@@ -31,7 +31,7 @@ struct ObjectZ {
     #[serde(skip_serializing_if = "Option::is_none")]
 	crc32_or_zero: Option<u32>,
 	#[nom(Cond = "i.len() > 94")]
-	#[nom(Parse = "|i| length_count!(i, le_u32, le_u32)")]
+	#[nom(LengthCount = "le_u32")]
     #[serde(skip_serializing_if = "Option::is_none")]
 	crc32s: Option<Vec<u32>>,
 	#[nom(Count = "22")]
@@ -100,7 +100,7 @@ pub fn fuel_fmt_extract_material_z(header: &[u8], data: &[u8], output_path: &Pat
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct UserDefineZ {
-	#[nom(Map = "|x: &str| String::from(x)", Parse = "|i| take_str!(i, le_u32(i)?.1 as usize)")]
+	#[nom(Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[..]).to_string()", Parse = "|i| length_count!(i, le_u32, le_u8)")]
 	data: String,
 }
 
@@ -136,17 +136,17 @@ pub fn fuel_fmt_extract_user_define_z(header: &[u8], data: &[u8], output_path: &
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GameObjZChild {
-	#[nom(Map = "|x: &str| String::from(x)", Parse = "|i| take_str!(i, le_u32(i)?.1 as usize)")]
-	str: String,
+	#[nom(Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[0..x.len() - 1]).to_string()", Parse = "|i| length_count!(i, le_u32, le_u8)")]
+	string: String,
 	is_in_world: u32,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+	#[nom(LengthCount = "le_u32")]
 	crc32s: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct GameObjZ {
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, GameObjZChild::parse) }")]
+	#[nom(LengthCount = "le_u32")]
 	children: Vec<GameObjZChild>,
 }
 
@@ -270,7 +270,7 @@ pub fn fuel_fmt_extract_font_z(header: &[u8], data: &[u8], output_path: &Path) -
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialObjZEntry {
 	array_name_crc32: u32,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
+	#[nom(LengthCount = "le_u32")]
 	material_anim_crc32s: Vec<u32>,
 }
 
@@ -312,6 +312,12 @@ pub fn fuel_fmt_extract_material_obj_z(header: &[u8], data: &[u8], output_path: 
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZColor {
+	unknown: f32,
+	rgba: u32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct MaterialAnimZ {
 	unknown0: u32,
@@ -323,15 +329,16 @@ struct MaterialAnimZ {
     unknown6: u32,
     unknown7: u32,
     unknown8: u32,
-    unknown9: u32,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZColor::parse) }")]
+    colors: Vec<MaterialAnimZColor>,
     unknown10: u32,
     unknown11: u32,
     unknown12: u32,
     unknown13: u32,
     unknown14: u32,
     material_crc32: u32,
-    unknown15: u32,
-    unknown16: u8,
+    unknown_crc32: u32,
+    unknown15: u8,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -408,7 +415,7 @@ pub fn fuel_fmt_extract_mesh_data_z(header: &[u8], data: &[u8], output_path: &Pa
 #[nom(Exact)]
 struct RotShapeDataZ {
     one: u32,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u16) }")]
+	#[nom(LengthCount = "le_u32")]
 	shorts: Vec<u16>,
 	#[nom(Map = "|x: &[u8]| x.to_vec()", Take = "shorts.len() * 28")]
     padding: Vec<u8>,
@@ -454,7 +461,7 @@ struct ParticlesDataZ {
     velocity_x: f32,
     velocity_y: f32,
     velocity_z: f32,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, le_u16) }")]
+	#[nom(LengthCount = "le_u32")]
 	shorts: Vec<u16>,
 	zero: u32,
 }
@@ -691,7 +698,10 @@ struct SoundZHeader {
     sample_rate: u32,
 	#[serde(skip_serializing)]
     data_size: u32,
-    sound_type: u32,
+    sound_type: u16,
+	#[nom(Cond = "i.len() == 2")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+	zero: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -767,6 +777,41 @@ struct BitmapObject {
 	bitmap_header: BitmapZHeader,
 }
 
+// alternate
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct BitmapZHeaderAlternate {
+    friendly_name_crc32: u32,
+    zero0: u32,
+    unknown0: u8,
+    dxt_version0: u8,
+    unknown1: u8,
+    zero1: u16,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct BitmapZAlternate {
+	#[nom(PreExec = "let data_size = i.len();")]
+	#[serde(skip_serializing)]
+    width: u32,
+	#[serde(skip_serializing)]
+    height: u32,
+    zero: u32,
+    unknown0: u32,
+    unknown1: u16,
+    unknown2: u8,
+	#[nom(Count = "data_size - 19")]
+	data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BitmapObjectAlternate {
+	bitmap_header: BitmapZHeaderAlternate,
+	bitmap: BitmapZAlternate,
+}
+
 pub fn fuel_fmt_extract_bitmap_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
 	let json_path = output_path.join("object.json");
 	let mut output_file = File::create(json_path)?;
@@ -774,25 +819,60 @@ pub fn fuel_fmt_extract_bitmap_z(header: &[u8], data: &[u8], output_path: &Path)
 	let png_path = output_path.join("data.png");
 	let output_png_file = File::create(png_path)?;
 
-	let bitmap_header = match BitmapZHeader::parse(&header) {
-		Ok((_, h)) => h,
-		Err(error) => panic!("{}", error),
-	};
+	if header.len() != 13 {
+		let bitmap_header = match BitmapZHeader::parse(&header) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
 
-	let data_cursor = Cursor::new(&data);
-	let dxt_decoder = DxtDecoder::new(data_cursor, bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
+		let data_cursor = Cursor::new(&data);
+		let dxt_decoder = DxtDecoder::new(data_cursor, bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
 
-	let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 2];
-    dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
+		println!("{} {}", bitmap_header.width, bitmap_header.height);
 
-	let png_encoder = PngEncoder::new(output_png_file);
-	png_encoder.encode(buf.as_bytes(), bitmap_header.width, bitmap_header.height, ColorType::Rgba8).unwrap();
+		let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
+		dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
 
-	let object = BitmapObject {
-		bitmap_header,
-	};
+		let png_encoder = PngEncoder::new(output_png_file);
+		png_encoder.encode(buf.as_bytes(), bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { ColorType::Rgb8 } else { ColorType::Rgba8 }).unwrap();
 
-	output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+		let object = BitmapObject {
+			bitmap_header,
+		};
+
+		output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+	} else {
+		let bitmap_header = match BitmapZHeaderAlternate::parse(&header) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
+		
+		let bitmap = match BitmapZAlternate::parse(&data) {
+			Ok((_, h)) => h,
+			Err(error) => panic!("{}", error),
+		};
+
+		if bitmap_header.dxt_version0 == 7 {
+			let png_encoder = PngEncoder::new(output_png_file);
+			png_encoder.encode(bitmap.data.as_bytes(), bitmap.width, bitmap.height, ColorType::L16).unwrap();
+		} else {
+			let data_cursor = Cursor::new(&bitmap.data[..]);
+			let dxt_decoder = DxtDecoder::new(data_cursor, bitmap.width, bitmap.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
+
+			let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
+			dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
+
+			let png_encoder = PngEncoder::new(output_png_file);
+			png_encoder.encode(buf.as_bytes(), bitmap.width, bitmap.height, if bitmap_header.dxt_version0 == 14 { ColorType::Rgb8 } else { ColorType::Rgba8 }).unwrap();
+		}
+
+		let object = BitmapObjectAlternate {
+			bitmap_header,
+			bitmap,
+		};
+
+		output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+	}
 
 	Ok(())
 }

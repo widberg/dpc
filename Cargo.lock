@@ -834,9 +834,9 @@ dependencies = [
 
 [[package]]
 name = "nom-derive"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16ec3c862bb3a3c70001ec0db2089281071af26ee79b7d82b65c119d660b063b"
+checksum = "2dec2ce23e047ed2614ff19727e58f2b730bc0d2fb3efc6b32ec8e304e6eedc8"
 dependencies = [
  "nom 6.1.2",
  "nom-derive-impl",
@@ -845,9 +845,9 @@ dependencies = [
 
 [[package]]
 name = "nom-derive-impl"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad25f1c4f0153f5747523edcce85ec6c503316a684c3593e3fa3881e48294547"
+checksum = "64c51f28a869d73d35e4878333b4c7bf31b61ef20773aab5196d939907bc1eb2"
 dependencies = [
  "proc-macro2 1.0.26",
  "quote 1.0.9",

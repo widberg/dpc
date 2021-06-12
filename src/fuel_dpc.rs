@@ -17,15 +17,19 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
+use std::io::Error;
+use std::io::ErrorKind;
 use std::io::Read;
 use std::io::Result;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 use tempdir::TempDir;
 use crate::fuel_fmt;
 
@@ -442,11 +446,8 @@ impl DPC for FuelDPC {
                 // a += object.header.data_size + 24;
 
                 if !crc32s.contains(&object.header.crc32) {
-                    let mut object_file = File::create(objects_path.join(format!(
-                        "{}.{}",
-                        object.header.crc32,
-                        class_names.get(&object.header.class_crc32).unwrap()
-                    )))?;
+					let object_file_path = objects_path.join(format!("{}.{}", object.header.crc32, class_names.get(&object.header.class_crc32).unwrap()));
+                    let mut object_file = File::create(&object_file_path)?;
                     let mut oh = object.header;
                     if self.options.is_lz && object.header.compressed_size != 0 {
                         pb.println(format!("Decompressing {}", object.header.crc32));
@@ -471,6 +472,18 @@ impl DPC for FuelDPC {
                         object_file.write(&object.class_object)?;
                         object_file.write(&object.data)?;
                     }
+
+					if oh.data_size > oh.class_object_size && self.options.is_recursive {
+						pb.println(format!("Extracting {}", oh.crc32));
+						let mut t = OsString::new();
+						t.push(object_file_path.as_os_str());
+						t.push(".d");
+						match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
+							Ok(_) => (),
+							Err(ref e) => if e.kind() != ErrorKind::Other { panic!("{}: {}", oh.crc32, e); },
+						}
+					}
+
                     crc32s.insert(object.header.crc32);
 
                     global_object_headers.insert(object.header.crc32, object.header);
@@ -551,15 +564,17 @@ impl DPC for FuelDPC {
             for pool_object in pool_objects.iter() {
                 pb.println(format!("Processing {}", pool_object.header.crc32));
 
+				let object_file_path = objects_path.join(format!(
+					"{}.{}",
+					pool_object.header.crc32,
+					class_names.get(&pool_object.header.class_crc32).unwrap()
+				));
+
                 let mut object_file =
                     std::fs::OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .open(objects_path.join(format!(
-                            "{}.{}",
-                            pool_object.header.crc32,
-                            class_names.get(&pool_object.header.class_crc32).unwrap()
-                        )))?;
+                        .open(&object_file_path)?;
 
                 let mut oh = global_object_headers
                     .get(&pool_object.header.crc32)
@@ -599,6 +614,17 @@ impl DPC for FuelDPC {
 
                 object_file.seek(SeekFrom::Start(0))?;
                 oh.write(&mut object_file)?;
+
+				if self.options.is_recursive {
+					pb.println(format!("Extracting {}", oh.crc32));
+					let mut t = OsString::new();
+					t.push(object_file_path.as_os_str());
+					t.push(".d");
+					match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
+						Ok(_) => (),
+						Err(ref e) => if e.kind() != ErrorKind::Other { panic!("{}: {}", oh.crc32, e); },
+					}
+				}
 
                 pb.inc(1);
             }
@@ -1475,7 +1501,7 @@ impl DPC for FuelDPC {
 
 			fmt_fn(&header, &data, output_path.as_ref())?;
 		} else {
-			panic!("Unsupported format");
+			return Err(Error::new(ErrorKind::Other, "unsupported format"));
 		}
 
 		Ok(())
@@ -1508,6 +1534,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: false,
                 is_optimization: false,
+				is_recursive: false,
             },
             &vec![],
         );
@@ -1531,6 +1558,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: false,
                 is_optimization: false,
+				is_recursive: false,
             },
             &vec![],
         );
@@ -1551,6 +1579,30 @@ mod test {
         tmp_dir.close().expect("Failed to delete temp_dir");
     }
 
+	#[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    fn test_fuel_dpc_recursive(path: &str) {
+        let dpc = FuelDPC::new(
+            &Options {
+                is_quiet: false,
+                is_force: true,
+                is_unsafe: false,
+                is_lz: true,
+                is_optimization: false,
+				is_recursive: true,
+            },
+            &vec![],
+        );
+
+        let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
+
+        let dpc_file = Path::new(path);
+        let dpc_directory = tmp_dir.path().join("TEMP");
+
+        dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
+
+        tmp_dir.close().expect("Failed to delete temp_dir");
+    }
+
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_optimized(path: &str) {
         let dpc = FuelDPC::new(
@@ -1560,6 +1612,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: true,
                 is_optimization: true,
+				is_recursive: false,
             },
             &vec![&OsStr::new("--unoptimized-pool")],
         );
@@ -1592,6 +1645,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: true,
                 is_optimization: false,
+				is_recursive: false,
             },
             &vec![],
         );
@@ -1603,6 +1657,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: false,
                 is_optimization: false,
+				is_recursive: false,
             },
             &vec![],
         );
