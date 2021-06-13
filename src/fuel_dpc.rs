@@ -1437,7 +1437,7 @@ impl DPC for FuelDPC {
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
 		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
-        fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
+        // fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         fmt_fns.insert(1391959958, fuel_fmt::fuel_fmt_extract_user_define_z);
         fmt_fns.insert(4096629181, fuel_fmt::fuel_fmt_extract_game_obj_z);
         fmt_fns.insert(3747817665, fuel_fmt::fuel_fmt_extract_surface_datas_z);
@@ -1456,7 +1456,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1175485833, "Anim_Z");
         // fmt_fns.insert(1387343541, "Mesh_Z");
         // fmt_fns.insert(1396791303, "Skin_Z");
-        fmt_fns.insert(1471281566, fuel_fmt::fuel_fmt_extract_bitmap_z);
+        // fmt_fns.insert(1471281566, fuel_fmt::fuel_fmt_extract_bitmap_z);
         fmt_fns.insert(1625945536, fuel_fmt::fuel_fmt_extract_rot_shape_data_z);
         // fmt_fns.insert(1706265229, "Surface_Z");
         // fmt_fns.insert(1910554652, "SplineGraph_Z");
@@ -1471,7 +1471,7 @@ impl DPC for FuelDPC {
         fmt_fns.insert(3626109572, fuel_fmt::fuel_fmt_extract_mesh_data_z);
         fmt_fns.insert(3834418854, fuel_fmt::fuel_fmt_extract_material_anim_z);
         // fmt_fns.insert(3845834591, "GwRoad_Z");
-        fmt_fns.insert(4240844041, fuel_fmt::fuel_fmt_extract_camera_z);
+        // fmt_fns.insert(4240844041, fuel_fmt::fuel_fmt_extract_camera_z);
 
 		fs::create_dir_all(output_path)?;
 
@@ -1583,7 +1583,7 @@ mod test {
     fn test_fuel_dpc_recursive(path: &str) {
         let dpc = FuelDPC::new(
             &Options {
-                is_quiet: false,
+                is_quiet: true,
                 is_force: true,
                 is_unsafe: false,
                 is_lz: true,

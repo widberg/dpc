@@ -60,9 +60,10 @@ struct MaterialZ {
 	#[nom(Cond = "i.len() != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
 	unknown0: Option<u8>,
+	#[nom(Cond = "i.len() > 1 && unsafe { MATERIAL_BITMAP_CRC32S_COUNT > 0 }")]
 	#[nom(Count = "unsafe { MATERIAL_BITMAP_CRC32S_COUNT }")]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-	bitmap_crc32s: Vec<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+	bitmap_crc32s: Option<Vec<u32>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -312,6 +313,48 @@ pub fn fuel_fmt_extract_material_obj_z(header: &[u8], data: &[u8], output_path: 
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZUnknown0 {
+	unknown0: f32,
+	unknown1: f32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZUnknown23 {
+	unknown0: f32,
+	unknown1: f32,
+	unknown2: f32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZUnknown4 {
+	unknown0: f32,
+	unknown1: f32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZUnknown56 {
+	unknown0: f32,
+	unknown1: f32,
+	unknown2: f32,
+	unknown3: f32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZUnknown89 {
+	unknown0: f32,
+	unknown1: f32,
+	unknown2: f32,
+	unknown3: f32,
+	unknown4: f32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MaterialAnimZUnknown1011 {
+	unknown0: f32,
+	unknown1: f32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZColor {
 	unknown: f32,
 	rgba: u32,
@@ -320,24 +363,38 @@ struct MaterialAnimZColor {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct MaterialAnimZ {
-	unknown0: u32,
-    unknown1: u32,
-    unknown2: u32,
-    unknown3: u32,
-    unknown4: u32,
-    unknown5: u32,
-    unknown6: u32,
-    unknown7: u32,
-    unknown8: u32,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown0::parse) }")]
+	unknown0s: Vec<MaterialAnimZUnknown0>,
+    unknown2flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown23::parse) }")]
+    unknown2s: Vec<MaterialAnimZUnknown23>,
+    unknown3flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown23::parse) }")]
+    unknown3s: Vec<MaterialAnimZUnknown23>,
+    unknown4flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown4::parse) }")]
+    unknown4s: Vec<MaterialAnimZUnknown4>,
+    unknown5flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown56::parse) }")]
+    unknown5s: Vec<MaterialAnimZUnknown56>,
+    unknown6flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown56::parse) }")]
+    unknown6s: Vec<MaterialAnimZUnknown56>,
+    colorsflag: u16,
 	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZColor::parse) }")]
     colors: Vec<MaterialAnimZColor>,
-    unknown10: u32,
-    unknown11: u32,
-    unknown12: u32,
-    unknown13: u32,
-    unknown14: u32,
-    material_crc32: u32,
-    unknown_crc32: u32,
+    unknown8flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown89::parse) }")]
+    unknown8s: Vec<MaterialAnimZUnknown89>,
+    unknown9flag: u16,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown89::parse) }")]
+    unknown9s: Vec<MaterialAnimZUnknown89>,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown1011::parse) }")]
+    unknown10s: Vec<MaterialAnimZUnknown1011>,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown1011::parse) }")]
+    unknown11s: Vec<MaterialAnimZUnknown1011>,
+    material_crc32: f32,
+    unknown_float: f32,
     unknown15: u8,
 }
 
@@ -696,10 +753,13 @@ struct SoundZHeader {
     friendly_name_crc32: u32,
 	#[serde(skip_serializing)]
     sample_rate: u32,
-	#[serde(skip_serializing)]
-    data_size: u32,
-    sound_type: u16,
-	#[nom(Cond = "i.len() == 2")]
+	#[nom(Cond = "sample_rate != 0")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    data_size: Option<u32>,
+	#[nom(Cond = "sample_rate != 0")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sound_type: Option<u16>,
+	#[nom(Cond = "sample_rate != 0 && i.len() == 2")]
     #[serde(skip_serializing_if = "Option::is_none")]
 	zero: Option<u16>,
 }
@@ -722,12 +782,12 @@ pub fn fuel_fmt_extract_sound_z(header: &[u8], data: &[u8], output_path: &Path) 
 
 	let spec = hound::WavSpec {
 		channels: 1,
-		sample_rate: sound_header.sample_rate,
+		sample_rate: if sound_header.sample_rate != 0 { sound_header.sample_rate } else { 44100 },
 		bits_per_sample: 16,
 		sample_format: hound::SampleFormat::Int,
 	};
 
-	let number_of_samples = sound_header.data_size / (spec.bits_per_sample / 8) as u32;
+	let number_of_samples = data.len() as u32 / (spec.bits_per_sample / 8) as u32;
 
 	let mut parent_writer = hound::WavWriter::create(wav_path, spec).unwrap();
 	let mut writer = parent_writer.get_i16_writer(number_of_samples);
