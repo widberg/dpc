@@ -9,7 +9,7 @@ use nom::number::complete::*;
 use nom::*;
 use hound;
 use std::io::Cursor;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, ByteOrder};
 use image::{dxt::DxtDecoder, dxt::DXTVariant, ImageDecoder, png::PngEncoder, ColorType};
 use zerocopy::{AsBytes};
 
@@ -27,16 +27,11 @@ struct ResourceObjectZ {
 #[nom(Exact)]
 struct ObjectZ {
 	friendly_name_crc32: u32,
-	#[nom(Cond = "i.len() == 94")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-	crc32_or_zero: Option<u32>,
-	#[nom(Cond = "i.len() > 94")]
-	#[nom(LengthCount = "le_u32")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-	crc32s: Option<Vec<u32>>,
-	#[nom(Count = "22")]
-	floats: Vec<f32>,
-	short: u16,
+	crc32_or_zero: u32,
+	#[nom(Count = "90")]
+	bytes: Vec<u8>,
+	#[nom(Count = "i.len() / 2")]
+	shorts: Vec<u16>,
 }
 
 
@@ -853,16 +848,17 @@ struct BitmapZHeaderAlternate {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct BitmapZAlternate {
-	#[nom(PreExec = "let data_size = i.len();")]
 	#[serde(skip_serializing)]
     width: u32,
 	#[serde(skip_serializing)]
     height: u32,
-    zero: u32,
+    zero0: u32,
     unknown0: u32,
+	#[nom(Cond = "LittleEndian::read_u32(&i[0..4]) == 0")]
+    zero1: Option<u32>,
     unknown1: u16,
     unknown2: u8,
-	#[nom(Count = "data_size - 19")]
+	#[nom(Count = "i.len()")]
 	data: Vec<u8>,
 }
 
@@ -887,8 +883,6 @@ pub fn fuel_fmt_extract_bitmap_z(header: &[u8], data: &[u8], output_path: &Path)
 
 		let data_cursor = Cursor::new(&data);
 		let dxt_decoder = DxtDecoder::new(data_cursor, bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
-
-		println!("{} {}", bitmap_header.width, bitmap_header.height);
 
 		let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
 		dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
