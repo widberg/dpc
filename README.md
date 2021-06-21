@@ -1,5 +1,11 @@
 # DPC
 
+Tar analogous utility to work with the DPC file format from Asobo Studio games.
+
+<sup>This repository is a relative of the main [FMTK repository](https://github.com/widberg/fmtk).</sup>
+
+## Help
+
 ```plaintext
 dpc version 0.1.1;452c6d7a015dc87f10545c1793f0d3b6e6f0afbc;x86_64-pc-windows-msvc
 widberg <https://github.com/widberg>
