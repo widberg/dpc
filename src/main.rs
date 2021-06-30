@@ -1,18 +1,21 @@
 use clap::{App, AppSettings, Arg, SubCommand};
 use std::ffi::{OsStr, OsString};
-use std::io::Result;
+use std::io::{self, Result};
 use std::path::Path;
 use std::path::PathBuf;
+use std::fs::File;
 
 pub mod base_dpc;
 pub mod fuel_dpc;
 pub mod fuel_fmt;
 pub mod lz;
+pub mod crc32;
 
 use base_dpc::Options;
 use base_dpc::DPC;
 use fuel_dpc::FuelDPC;
 use lz::LZ;
+use crc32::CRC32;
 
 #[allow(dead_code)]
 mod built_info {
@@ -183,9 +186,64 @@ fn main() -> Result<()> {
 						.conflicts_with("CREATE")
 						.help("extract the file"))
 				.settings(&[AppSettings::ArgRequiredElseHelp]))
+		.subcommand(SubCommand::with_name("crc32")
+				.about("generate name files")
+				.arg(Arg::with_name("INTERACTIVE")
+						.short("I")
+						.long("interactive")
+						.conflicts_with_all(&["INPUT", "OUTPUT"])
+						.help("Run the command in interactive mode"))
+				.arg(Arg::with_name("ALGORITHM")
+						.short("a")
+						.long("algorithm")
+						.takes_value(true)
+						.required(true)
+						.possible_values(&["asobo", "ieee"])
+						.help("The crc32 algorithm to use"))
+				.settings(&[AppSettings::ArgRequiredElseHelp]))
 		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
 		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
         .get_matches_from(wild::args_os());
+
+	if let Some(subcommand_matches) = matches.subcommand_matches("crc32") {
+		if !subcommand_matches.is_present("INTERACTIVE") {
+			let input_path_string = matches.value_of_os("INPUT").unwrap();
+			let input_path = Path::new(input_path_string);
+
+			let output_path = match subcommand_matches.value_of_os("OUTPUT") {
+				Some(output_path_string) => PathBuf::from(output_path_string),
+				None => input_path.with_extension("NPC"),
+			};
+
+			match subcommand_matches.value_of("ALGORITHM") {
+				None => panic!("Algorithm is required"),
+				Some(algorithm) => match algorithm {
+					"asobo" => {
+						crc32::AsoboCRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false)?;
+					}
+					"ieee" => {
+						crc32::IEEECRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false)?;
+					}
+					_ => panic!("bad algorithm"),
+				},
+			};
+		} else {
+			match subcommand_matches.value_of("ALGORITHM") {
+				None => panic!("Algorithm is required"),
+				Some(algorithm) => match algorithm {
+					"asobo" => {
+						crc32::AsoboCRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true)?;
+					}
+					"ieee" => {
+						crc32::IEEECRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true)?;
+					}
+					_ => panic!("bad algorithm"),
+				},
+			};
+		}
+
+		return Ok(());
+	}
 
     if let Some(subcommand_matches) = matches.subcommand_matches("lz") {
         let input_path_string = matches.value_of_os("INPUT").unwrap();

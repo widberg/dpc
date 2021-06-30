@@ -450,6 +450,7 @@ dependencies = [
  "checksumdir",
  "checksums",
  "clap",
+ "crc32fast",
  "dialoguer",
  "hound",
  "image",

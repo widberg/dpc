@@ -321,12 +321,6 @@ struct MaterialAnimZUnknown23 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MaterialAnimZUnknown4 {
-	unknown0: f32,
-	unknown1: f32,
-}
-
-#[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZUnknown56 {
 	unknown0: f32,
 	unknown1: f32,
@@ -367,8 +361,8 @@ struct MaterialAnimZ {
 	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown23::parse) }")]
     unknown3s: Vec<MaterialAnimZUnknown23>,
     unknown4flag: u16,
-	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown4::parse) }")]
-    unknown4s: Vec<MaterialAnimZUnknown4>,
+	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZColor::parse) }")]
+    unknown4s: Vec<MaterialAnimZColor>,
     unknown5flag: u16,
 	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown56::parse) }")]
     unknown5s: Vec<MaterialAnimZUnknown56>,
@@ -388,7 +382,7 @@ struct MaterialAnimZ {
     unknown10s: Vec<MaterialAnimZUnknown1011>,
 	#[nom(Parse = "{ |i| length_count!(i, le_u32, MaterialAnimZUnknown1011::parse) }")]
     unknown11s: Vec<MaterialAnimZUnknown1011>,
-    material_crc32: f32,
+    material_crc32: u32,
     unknown_float: f32,
     unknown15: u8,
 }
