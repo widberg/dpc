@@ -16,6 +16,7 @@ pub mod common;
 pub mod materialobj;
 pub mod collisionvol;
 pub mod lightdata;
+pub mod rotshape;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
