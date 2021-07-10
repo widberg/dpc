@@ -32,6 +32,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use tempdir::TempDir;
 use crate::fuel_fmt;
+use std::fs::metadata;
+
 
 fn calculate_padded_size(unpadded_size: u32) -> u32 {
     return (unpadded_size + 0x7ff) & 0xfffff800;
@@ -699,19 +701,21 @@ impl DPC for FuelDPC {
         for path in fs::read_dir(input_path.as_ref().join("objects"))? {
             let actual_os_path = path.unwrap().path();
             let actual_path: &Path = actual_os_path.as_path();
-            let crc32: u32 = Path::new(actual_path.file_name().unwrap())
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
-                .parse::<u32>()
-                .unwrap();
-            if index.contains_key(&crc32) {
-                panic!("Ambiguous files for crc32 = {}", crc32);
-            }
+            if metadata(actual_path).unwrap().is_file() {
+				let crc32: u32 = Path::new(actual_path.file_name().unwrap())
+					.file_stem()
+					.unwrap()
+					.to_str()
+					.unwrap()
+					.to_string()
+					.parse::<u32>()
+					.unwrap();
+				if index.contains_key(&crc32) {
+					panic!("Ambiguous files for crc32 = {}", crc32);
+				}
 
-            index.insert(crc32, actual_os_path);
+				index.insert(crc32, actual_os_path);
+			}
         }
 
         dpc_file.seek(SeekFrom::Start(2048))?;
@@ -1451,14 +1455,14 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1943824915, "Lod_Z");
         // fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         // fmt_fns.insert(2245010728, "Node_Z");
-        // fmt_fns.insert(2398393906, "CollisionVol_Z");
+        fmt_fns.insert(2398393906, fuel_fmt::collisionvol::fuel_fmt_extract_collision_vol_z);
         // fmt_fns.insert(2906362741, "WorldRef_Z");
         // fmt_fns.insert(3312018398, "Particles_Z");
         // fmt_fns.insert(3412401859, "LodData_Z");
         // fmt_fns.insert(3611002348, "Skel_Z");
         // fmt_fns.insert(3845834591, "GwRoad_Z");
         fmt_fns.insert(849267944, fuel_fmt::fuel_fmt_extract_sound_z);
-        fmt_fns.insert(849861735, fuel_fmt::fuel_fmt_extract_material_obj_z);
+        fmt_fns.insert(849861735, fuel_fmt::materialobj::fuel_fmt_extract_material_obj_z);
         fmt_fns.insert(954499543, fuel_fmt::fuel_fmt_extract_particles_data_z);
         fmt_fns.insert(1114947943, fuel_fmt::fuel_fmt_extract_warp_z);
         fmt_fns.insert(1135194223, fuel_fmt::fuel_fmt_extract_spline_z);

@@ -3,12 +3,16 @@ use crc32fast::Hasher;
 
 pub trait CRC32 {
 	fn hash(name : &[u8]) -> u32;
-	fn generate_names(input : &mut dyn Read, output : &mut dyn Write, flush : bool) -> Result<(), Error> {
+	fn generate_names(input : &mut dyn Read, output : &mut dyn Write, flush : bool, unsigned_option : bool) -> Result<(), Error> {
 		let input_buffer = BufReader::new(input);
 		let mut output_buffer = BufWriter::new(output);
 		for line in input_buffer.lines() {
 			let name = line?;
-			output_buffer.write(format!("{:?} \"{}\"\n", Self::hash(name.as_bytes()) as i32, name).as_bytes())?;
+            if unsigned_option {
+                output_buffer.write(format!("{:?} \"{}\"\n", Self::hash(name.as_bytes()) as u32, name).as_bytes())?;
+            } else {
+                output_buffer.write(format!("{:?} \"{}\"\n", Self::hash(name.as_bytes()) as i32, name).as_bytes())?;
+            }
 			if flush {
 				output_buffer.flush()?;
 			}

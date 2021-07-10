@@ -200,12 +200,17 @@ fn main() -> Result<()> {
 						.required(true)
 						.possible_values(&["asobo", "ieee"])
 						.help("The crc32 algorithm to use"))
+				.arg(Arg::with_name("UNSIGNED")
+					.short("u")
+					.long("unsigned")
+					.help("Use unsigned values"))
 				.settings(&[AppSettings::ArgRequiredElseHelp]))
 		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
 		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
         .get_matches_from(wild::args_os());
 
 	if let Some(subcommand_matches) = matches.subcommand_matches("crc32") {
+		let unsigned_option = subcommand_matches.is_present("UNSIGNED");
 		if !subcommand_matches.is_present("INTERACTIVE") {
 			let input_path_string = matches.value_of_os("INPUT").unwrap();
 			let input_path = Path::new(input_path_string);
@@ -219,10 +224,10 @@ fn main() -> Result<()> {
 				None => panic!("Algorithm is required"),
 				Some(algorithm) => match algorithm {
 					"asobo" => {
-						crc32::AsoboCRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false)?;
+						crc32::AsoboCRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false, unsigned_option)?;
 					}
 					"ieee" => {
-						crc32::IEEECRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false)?;
+						crc32::IEEECRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false, unsigned_option)?;
 					}
 					_ => panic!("bad algorithm"),
 				},
@@ -232,10 +237,10 @@ fn main() -> Result<()> {
 				None => panic!("Algorithm is required"),
 				Some(algorithm) => match algorithm {
 					"asobo" => {
-						crc32::AsoboCRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true)?;
+						crc32::AsoboCRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true, unsigned_option)?;
 					}
 					"ieee" => {
-						crc32::IEEECRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true)?;
+						crc32::IEEECRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true, unsigned_option)?;
 					}
 					_ => panic!("bad algorithm"),
 				},
