@@ -282,12 +282,12 @@ impl DPC for FuelDPC {
         class_names.insert(968261323, "World_Z");
         class_names.insert(1114947943, "Warp_Z");
         class_names.insert(1135194223, "Spline_Z");
-        class_names.insert(1175485833, "Anim_Z");
+        class_names.insert(1175485833, "Animation_Z");
         class_names.insert(1387343541, "Mesh_Z");
         class_names.insert(1391959958, "UserDefine_Z");
         class_names.insert(1396791303, "Skin_Z");
         class_names.insert(1471281566, "Bitmap_Z");
-        class_names.insert(1536002910, "Font_Z");
+        class_names.insert(1536002910, "Fonts_Z");
         class_names.insert(1625945536, "RotShapeData_Z");
         class_names.insert(1706265229, "Surface_Z");
         class_names.insert(1910554652, "SplineGraph_Z");
@@ -1444,10 +1444,10 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(549480509, "Omni_Z");
         // fmt_fns.insert(705810152, "Rtc_Z");
         // fmt_fns.insert(838505646, "GenWorld_Z");
-        // fmt_fns.insert(848525546, "LightData_Z");
+        fmt_fns.insert(848525546, fuel_fmt::lightdata::fuel_fmt_extract_light_data_z);
         // fmt_fns.insert(866453734, "RotShape_Z");
         // fmt_fns.insert(968261323, "World_Z");
-        // fmt_fns.insert(1175485833, "Anim_Z");
+        // fmt_fns.insert(1175485833, "Animation_Z");
         // fmt_fns.insert(1387343541, "Mesh_Z");
         // fmt_fns.insert(1396791303, "Skin_Z");
         // fmt_fns.insert(1706265229, "Surface_Z");
@@ -1468,7 +1468,7 @@ impl DPC for FuelDPC {
         fmt_fns.insert(1135194223, fuel_fmt::fuel_fmt_extract_spline_z);
         fmt_fns.insert(1391959958, fuel_fmt::fuel_fmt_extract_user_define_z);
         fmt_fns.insert(1471281566, fuel_fmt::fuel_fmt_extract_bitmap_z);
-        fmt_fns.insert(1536002910, fuel_fmt::fuel_fmt_extract_font_z);
+        fmt_fns.insert(1536002910, fuel_fmt::fuel_fmt_extract_fonts_z);
         fmt_fns.insert(1625945536, fuel_fmt::fuel_fmt_extract_rot_shape_data_z);
         fmt_fns.insert(2259852416, fuel_fmt::fuel_fmt_extract_binary_z);
         fmt_fns.insert(3626109572, fuel_fmt::fuel_fmt_extract_mesh_data_z);

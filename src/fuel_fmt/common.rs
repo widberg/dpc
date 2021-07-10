@@ -20,6 +20,13 @@ pub struct Vec3f {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
+pub struct Vec3i32 {
+    x: i32,
+    z: i32,
+    y: i32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
 pub struct Vec2f {
     x: f32,
     y: f32,

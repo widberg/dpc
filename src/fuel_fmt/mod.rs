@@ -15,6 +15,7 @@ use zerocopy::{AsBytes};
 pub mod common;
 pub mod materialobj;
 pub mod collisionvol;
+pub mod lightdata;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
@@ -196,7 +197,7 @@ pub fn fuel_fmt_extract_surface_datas_z(header: &[u8], data: &[u8], output_path:
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct FontZCharacter {
+struct FontsZCharacter {
     id: u32,
     material_index: u32,
     point: f32,
@@ -208,20 +209,20 @@ struct FontZCharacter {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct FontZ {
-    #[nom(Parse = "{ |i| length_count!(i, le_u32, FontZCharacter::parse) }")]
-    characters: Vec<FontZCharacter>,
+struct FontsZ {
+    #[nom(Parse = "{ |i| length_count!(i, le_u32, FontsZCharacter::parse) }")]
+    characters: Vec<FontsZCharacter>,
     #[nom(Parse = "{ |i| length_count!(i, le_u32, le_u32) }")]
     material_crc32s: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct FontObject {
+struct FontsObject {
     resource_object: ResourceObjectZ,
-    font: FontZ,
+    fonts: FontsZ,
 }
 
-pub fn fuel_fmt_extract_font_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_fonts_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 
@@ -230,14 +231,14 @@ pub fn fuel_fmt_extract_font_z(header: &[u8], data: &[u8], output_path: &Path) -
         Err(error) => panic!("{}", error),
     };
 
-    let font = match FontZ::parse(&data) {
+    let fonts = match FontsZ::parse(&data) {
         Ok((_, h)) => h,
         Err(error) => panic!("{}", error),
     };
 
-    let object = FontObject {
+    let object = FontsObject {
         resource_object,
-        font,
+        fonts,
     };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
