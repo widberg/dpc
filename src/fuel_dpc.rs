@@ -1460,7 +1460,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(3312018398, "Particles_Z");
         // fmt_fns.insert(3412401859, "LodData_Z");
         // fmt_fns.insert(3611002348, "Skel_Z");
-        // fmt_fns.insert(3845834591, "GwRoad_Z");
+        // fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
         fmt_fns.insert(849267944, fuel_fmt::fuel_fmt_extract_sound_z);
         fmt_fns.insert(849861735, fuel_fmt::materialobj::fuel_fmt_extract_material_obj_z);
         fmt_fns.insert(954499543, fuel_fmt::fuel_fmt_extract_particles_data_z);

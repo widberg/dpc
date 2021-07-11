@@ -18,6 +18,7 @@ pub mod collisionvol;
 pub mod lightdata;
 pub mod rotshape;
 pub mod omni;
+pub mod gwroad;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
