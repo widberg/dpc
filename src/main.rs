@@ -201,7 +201,7 @@ fn main() -> Result<()> {
 						.possible_values(&["asobo", "ieee"])
 						.help("The crc32 algorithm to use"))
 				.arg(Arg::with_name("UNSIGNED")
-					.short("u")
+					.short("U")
 					.long("unsigned")
 					.help("Use unsigned values"))
 				.settings(&[AppSettings::ArgRequiredElseHelp]))

@@ -1451,7 +1451,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1387343541, "Mesh_Z");
         // fmt_fns.insert(1396791303, "Skin_Z");
         // fmt_fns.insert(1706265229, "Surface_Z");
-        // fmt_fns.insert(1910554652, "SplineGraph_Z");
+        fmt_fns.insert(1910554652, fuel_fmt::splinegraph::fuel_fmt_extract_spline_graph_z);
         // fmt_fns.insert(1943824915, "Lod_Z");
         // fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         // fmt_fns.insert(2245010728, "Node_Z");
