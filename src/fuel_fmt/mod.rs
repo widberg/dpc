@@ -23,6 +23,7 @@ pub mod splinegraph;
 pub mod world;
 pub mod worldref;
 pub mod genworld;
+pub mod particles;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 

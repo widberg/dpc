@@ -1448,7 +1448,6 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1706265229, "Surface_Z");
         // fmt_fns.insert(1943824915, "Lod_Z");
         // fmt_fns.insert(2245010728, "Node_Z");
-        // fmt_fns.insert(3312018398, "Particles_Z");
         // fmt_fns.insert(3412401859, "LodData_Z");
         // fmt_fns.insert(3611002348, "Skel_Z");
         // fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
@@ -1456,6 +1455,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
         // fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         // fmt_fns.insert(968261323, fuel_fmt::world::fuel_fmt_extract_world_z);
+        // fmt_fns.insert(3312018398, fuel_fmt::particles::fuel_fmt_extract_particles_z);
         fmt_fns.insert(848525546, fuel_fmt::lightdata::fuel_fmt_extract_light_data_z);
         fmt_fns.insert(866453734, fuel_fmt::rotshape::fuel_fmt_extract_rot_shape_z);
         fmt_fns.insert(1910554652, fuel_fmt::splinegraph::fuel_fmt_extract_spline_graph_z);
