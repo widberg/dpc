@@ -21,6 +21,8 @@ pub mod omni;
 pub mod gwroad;
 pub mod splinegraph;
 pub mod world;
+pub mod worldref;
+pub mod genworld;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
