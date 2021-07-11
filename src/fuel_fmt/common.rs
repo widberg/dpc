@@ -35,7 +35,7 @@ pub struct Vec2f {
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Mat4f {
     #[nom(Count(16))]
-    data: Vec<u32>,
+    data: Vec<f32>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
