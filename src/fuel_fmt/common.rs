@@ -39,7 +39,7 @@ pub struct Mat4f {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-pub struct Quad {
+pub struct Quat {
     x: f32,
     y: f32,
     z: f32,
@@ -54,7 +54,7 @@ pub struct ObjectZ {
     #[nom(Cond = "i.len() != 90", Count = "crc32_or_zero as usize + 1")]
     #[serde(skip_serializing_if = "Option::is_none")]
     crc32s: Option<Vec<u32>>,
-    rot: Quad,
+    rot: Quat,
     transform: Mat4f,
     unknown2: f32,
     unknown0: f32,
