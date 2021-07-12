@@ -30,6 +30,7 @@ pub mod loddata;
 pub mod skel;
 pub mod skin;
 pub mod node;
+pub mod animation;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
