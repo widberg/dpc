@@ -1446,7 +1446,6 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1387343541, "Mesh_Z");
         // fmt_fns.insert(1396791303, "Skin_Z");
         // fmt_fns.insert(2245010728, "Node_Z");
-        // fmt_fns.insert(3611002348, "Skel_Z");
         // fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z);
         // fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         // fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
@@ -1454,6 +1453,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         // fmt_fns.insert(968261323, fuel_fmt::world::fuel_fmt_extract_world_z);
         // fmt_fns.insert(3312018398, fuel_fmt::particles::fuel_fmt_extract_particles_z);
+        fmt_fns.insert(3611002348, fuel_fmt::skel::fuel_fmt_extract_skel_z);
         fmt_fns.insert(3412401859, fuel_fmt::loddata::fuel_fmt_extract_lod_data_z);
         fmt_fns.insert(1706265229, fuel_fmt::surface::fuel_fmt_extract_surface_z);
         fmt_fns.insert(848525546, fuel_fmt::lightdata::fuel_fmt_extract_light_data_z);

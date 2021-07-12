@@ -27,6 +27,7 @@ pub mod particles;
 pub mod surface;
 pub mod lod;
 pub mod loddata;
+pub mod skel;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
