@@ -1442,7 +1442,6 @@ impl DPC for FuelDPC {
 		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
         // fmt_fns.insert(705810152, "Rtc_Z");
-        // fmt_fns.insert(1387343541, "Mesh_Z");
         // fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z);
         // fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         // fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
@@ -1453,6 +1452,7 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(1396791303, fuel_fmt::skin::fuel_fmt_extract_skin_z);
         // fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z);
         // fmt_fns.insert(1175485833, fuel_fmt::animation::fuel_fmt_extract_animation_z);
+        // fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z);
         fmt_fns.insert(3611002348, fuel_fmt::skel::fuel_fmt_extract_skel_z);
         fmt_fns.insert(3412401859, fuel_fmt::loddata::fuel_fmt_extract_lod_data_z);
         fmt_fns.insert(1706265229, fuel_fmt::surface::fuel_fmt_extract_surface_z);
