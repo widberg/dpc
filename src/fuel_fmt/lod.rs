@@ -33,9 +33,9 @@ struct LodZSoundEntry
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct LodZUnknown2 {
-    #[nom(LengthCount(le_u32))]
-    sound_entries: Vec<LodZSoundEntry>,
+struct LodZUnknown4 {
+    a: u32,
+    b: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -45,22 +45,46 @@ struct LodZ {
     unknown0s: Vec<LodZUnknown0>,
     #[nom(LengthCount(le_u32))]
     unknown1s: Vec<LodZUnknown1>,
-    unknown2_count: u32,
-    unknown3_count: u32,
+    unknown2: u32,
+    unknown3: u32,
     u0: f32,
     #[nom(LengthCount(le_u32))]
     skin_crc32s: Vec<u32>,
     u1: u32,
-    u3: u32,
+    #[serde(skip_serializing)]
+    #[allow(dead_code)]
+    sound_entries_option: u32,
+    #[nom(Cond(sound_entries_option != 0))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<LodZUnknown2>,
-    zero: u32,
+    sound_entries: Option<Vec<LodZSoundEntry>>,
+    #[serde(skip_serializing)]
+    #[allow(dead_code)]
+    unknown4_option: u32,
+    #[nom(Cond(unknown4_option != 0))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[nom(LengthCount(le_u32))]
+    unknown4s: Option<Vec<LodZUnknown4>>,
+    unknown5: u32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct LodZAlt {
+    #[nom(Count(i.len()))]
+    data: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
 struct LodObject {
     object: ObjectZ,
     lod: LodZ,
+}
+
+#[derive(Serialize, Deserialize)]
+struct LodObjectAlt {
+    object: ObjectZ,
+    lod: LodZAlt,
 }
 
 pub fn fuel_fmt_extract_lod_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
@@ -74,7 +98,19 @@ pub fn fuel_fmt_extract_lod_z(header: &[u8], data: &[u8], output_path: &Path) ->
 
     let lod = match LodZ::parse(&data) {
         Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
+        Err(_) => match LodZAlt::parse(&data) {
+            Ok((_, lod)) => {
+                let object = LodObjectAlt {
+                    object,
+                    lod,
+                };
+
+                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+                return Ok(());
+            },
+            Err(error) => panic!("{}", error),
+        },
     };
 
     let object = LodObject {

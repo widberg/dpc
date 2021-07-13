@@ -1441,7 +1441,7 @@ impl DPC for FuelDPC {
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
 		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
-        // fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z);
+        fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z);
         // fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         // fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
         // fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
