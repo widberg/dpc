@@ -32,6 +32,7 @@ pub mod skin;
 pub mod node;
 pub mod animation;
 pub mod mesh;
+pub mod rtc;
 
 use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f};
 
