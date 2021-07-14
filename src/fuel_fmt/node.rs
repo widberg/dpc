@@ -27,11 +27,23 @@ struct NodeZ {
     unknown11s: Vec<u16>,
     mat1: Mat4f,
 }
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct NodeZAlt {
+    #[nom(Count(i.len()))]
+    data: Vec<u8>,
+}
 
 #[derive(Serialize, Deserialize)]
 struct NodeObject {
     resource_object: ResourceObjectZ,
     node: NodeZ,
+}
+
+#[derive(Serialize, Deserialize)]
+struct NodeObjectAlt {
+    resource_object: ResourceObjectZ,
+    node: NodeZAlt,
 }
 
 pub fn fuel_fmt_extract_node_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
@@ -45,7 +57,19 @@ pub fn fuel_fmt_extract_node_z(header: &[u8], data: &[u8], output_path: &Path) -
 
     let node = match NodeZ::parse(&data) {
         Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
+        Err(_) => match NodeZAlt::parse(&data) {
+            Ok((_, node)) => {
+                let object = NodeObjectAlt {
+                    resource_object,
+                    node,
+                };
+
+                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+                return Ok(());
+            },
+            Err(error) => panic!("{}", error),
+        },
     };
 
     let object = NodeObject {

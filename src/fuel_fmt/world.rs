@@ -32,8 +32,6 @@ struct WorldZ {
     unknown17s: Vec<u32>,
     #[nom(LengthCount(le_u32))]
     unknowns: Vec<u8>,
-    #[nom(LengthCount(le_u32))]
-    mats: Vec<Mat4f>,
     unknown0: Mat4f,
     #[nom(LengthCount(le_u32))]
     unknown1s: Vec<u32>,
@@ -58,6 +56,8 @@ struct WorldZ {
     unknown11s: Vec<u32>,
     #[nom(LengthCount(le_u32))]
     unknown12s: Vec<u32>,
+    #[nom(LengthCount(le_u32))]
+    unknown13s: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize)]
