@@ -5,25 +5,20 @@ use crate::File;
 use std::io::Result;
 use std::io::Write;
 
-use crate::fuel_fmt::common::{ResourceObjectZ};
+use crate::fuel_fmt::common::{ResourceObjectZ, Vec2f};
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct GwRoadZUnknown00
-{
-    unknown0: u8,
-    unknown1: u8,
-    unknown2: u8,
-    unknown3: u8,
-    unknown4: u8,
+struct GwRoadZPoint {
+    encoded_vec2hf: u32,
+    a: u8,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct GwRoadZUnknown0
-{
-    flag: u8,
-    unknown00_count: u32,
-    #[nom(Count(unknown00_count))]
-    unknown00s: Vec<GwRoadZUnknown00>
+struct GwRoadZRoad {
+    road_type: u8,
+    point_count: u16,
+    #[nom(Count(point_count))]
+    points: Vec<GwRoadZPoint>
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -43,21 +38,17 @@ struct GwRoadZUnknown5 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct GwRoadZ {
-    unknown0_count: u32,
-    unknown1: u32,
-    unknown2: u32,
-    unknown3: u32,
-    unknown4: u32,
-    #[nom(Count(unknown0_count))]
-    unknown0s: Vec<GwRoadZUnknown0>,
+    road_count: u32,
+    gen_road_min: Vec2f,
+    gen_road_max: Vec2f,
+    #[nom(Count(road_count))]
+    roads: Vec<GwRoadZRoad>,
     unknown5_count: u32,
-    unknown6: u32,
-    unknown7: u32,
-    unknown8: u32,
-    unknown9: u32,
+    unknown5_min: Vec2f,
+    unknown5_max: Vec2f,
     #[nom(Count(unknown5_count))]
     unknown5s: Vec<GwRoadZUnknown5>,
-    unknown10: u32,
+    unknown_crc32: u32,
 }
 
 #[derive(Serialize, Deserialize)]
