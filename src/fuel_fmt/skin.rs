@@ -42,10 +42,23 @@ struct SkinZ {
     skin_sections: Vec<SkinZSkinSection>,
 }
 
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct SkinZAlt {
+    #[nom(Count(i.len()))]
+    data: Vec<u8>,
+}
+
 #[derive(Serialize, Deserialize)]
 struct SkinObject {
     object: ObjectZ,
     skin: SkinZ,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SkinObjectAlt {
+    object: ObjectZ,
+    skin: SkinZAlt,
 }
 
 pub fn fuel_fmt_extract_skin_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
@@ -59,7 +72,19 @@ pub fn fuel_fmt_extract_skin_z(header: &[u8], data: &[u8], output_path: &Path) -
 
     let skin = match SkinZ::parse(&data) {
         Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
+        Err(_) => match SkinZAlt::parse(&data) {
+            Ok((_, skin)) => {
+                let object = SkinObjectAlt {
+                    object,
+                    skin,
+                };
+
+                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+                return Ok(());
+            },
+            Err(error) => panic!("{}", error),
+        },
     };
 
     let object = SkinObject {
