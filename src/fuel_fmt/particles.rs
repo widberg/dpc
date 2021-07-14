@@ -85,10 +85,23 @@ struct ParticlesZ {
     unknown3: u16,
 }
 
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+struct ParticlesZAlt {
+    #[nom(Count(i.len()))]
+    data: Vec<u8>,
+}
+
 #[derive(Serialize, Deserialize)]
 struct ParticlesObject {
     object: ObjectZ,
     particles: ParticlesZ,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ParticlesObjectAlt {
+    object: ObjectZ,
+    particles: ParticlesZAlt,
 }
 
 pub fn fuel_fmt_extract_particles_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
@@ -102,7 +115,19 @@ pub fn fuel_fmt_extract_particles_z(header: &[u8], data: &[u8], output_path: &Pa
 
     let particles = match ParticlesZ::parse(&data) {
         Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
+        Err(_) => match ParticlesZAlt::parse(&data) {
+            Ok((_, particles)) => {
+                let object = ParticlesObjectAlt {
+                    object,
+                    particles,
+                };
+
+                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+                return Ok(());
+            },
+            Err(error) => panic!("{}", error),
+        },
     };
 
     let object = ParticlesObject {

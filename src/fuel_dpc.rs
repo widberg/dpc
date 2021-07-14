@@ -1444,14 +1444,14 @@ impl DPC for FuelDPC {
         // fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         // fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
         // fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
-        // fmt_fns.insert(3312018398, fuel_fmt::particles::fuel_fmt_extract_particles_z);
         // fmt_fns.insert(1396791303, fuel_fmt::skin::fuel_fmt_extract_skin_z);
         // fmt_fns.insert(1175485833, fuel_fmt::animation::fuel_fmt_extract_animation_z);
         // fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z);
         // fmt_fns.insert(705810152, fuel_fmt::rtc::fuel_fmt_extract_rtc_z);
+        fmt_fns.insert(3312018398, fuel_fmt::particles::fuel_fmt_extract_particles_z); //
         fmt_fns.insert(968261323, fuel_fmt::world::fuel_fmt_extract_world_z);
-        fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z);
-        fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z);
+        fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z); //
+        fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z); //
         fmt_fns.insert(2204276779, fuel_fmt::fuel_fmt_extract_material_z);
         fmt_fns.insert(3611002348, fuel_fmt::skel::fuel_fmt_extract_skel_z);
         fmt_fns.insert(3412401859, fuel_fmt::loddata::fuel_fmt_extract_lod_data_z);
@@ -1461,13 +1461,13 @@ impl DPC for FuelDPC {
         fmt_fns.insert(1910554652, fuel_fmt::splinegraph::fuel_fmt_extract_spline_graph_z);
         fmt_fns.insert(2398393906, fuel_fmt::collisionvol::fuel_fmt_extract_collision_vol_z);
         fmt_fns.insert(549480509, fuel_fmt::omni::fuel_fmt_extract_omni_z);
-        fmt_fns.insert(849267944, fuel_fmt::fuel_fmt_extract_sound_z);
+        fmt_fns.insert(849267944, fuel_fmt::fuel_fmt_extract_sound_z); //
         fmt_fns.insert(849861735, fuel_fmt::materialobj::fuel_fmt_extract_material_obj_z);
         fmt_fns.insert(954499543, fuel_fmt::fuel_fmt_extract_particles_data_z);
         fmt_fns.insert(1114947943, fuel_fmt::fuel_fmt_extract_warp_z);
         fmt_fns.insert(1135194223, fuel_fmt::fuel_fmt_extract_spline_z);
         fmt_fns.insert(1391959958, fuel_fmt::fuel_fmt_extract_user_define_z);
-        fmt_fns.insert(1471281566, fuel_fmt::fuel_fmt_extract_bitmap_z);
+        fmt_fns.insert(1471281566, fuel_fmt::fuel_fmt_extract_bitmap_z); //
         fmt_fns.insert(1536002910, fuel_fmt::fuel_fmt_extract_fonts_z);
         fmt_fns.insert(1625945536, fuel_fmt::fuel_fmt_extract_rot_shape_data_z);
         fmt_fns.insert(2259852416, fuel_fmt::fuel_fmt_extract_binary_z);
