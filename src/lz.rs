@@ -1,11 +1,12 @@
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use lz4::{Decoder, EncoderBuilder};
 use std::fs::File;
 use std::io;
-use std::io::prelude::*;
 use std::io::Cursor;
+use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::Path;
+
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use lz4::{Decoder, EncoderBuilder};
 
 pub fn lzss_decompress(
     compressed_buffer: &[u8],
@@ -333,15 +334,17 @@ impl LZ for LZLZ4 {
 
 #[cfg(test)]
 mod test {
-    use crate::lz;
-    use byteorder::{LittleEndian, ReadBytesExt};
-    use checksums::hash_file;
-    use checksums::Algorithm;
     use std::fs::File;
     use std::io::Read;
     use std::io::Write;
     use std::path::PathBuf;
+
+    use byteorder::{LittleEndian, ReadBytesExt};
+    use checksums::Algorithm;
+    use checksums::hash_file;
     use test_generator::test_resources;
+
+    use crate::lz;
 
     #[test_resources("data/*.in")]
     fn test_lzss_optimized(path: &str) {

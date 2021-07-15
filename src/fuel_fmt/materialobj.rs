@@ -1,14 +1,14 @@
-use nom_derive::{NomLE, Parse};
-use serde::{Serialize, Deserialize};
-use nom::number::complete::*;
-use nom::*;
-use std::path::Path;
-use crate::File;
 use std::io::Result;
 use std::io::Write;
+use std::path::Path;
 
+use nom::*;
+use nom::number::complete::*;
+use nom_derive::{NomLE, Parse};
+use serde::{Deserialize, Serialize};
+
+use crate::File;
 use crate::fuel_fmt::common::ResourceObjectZ;
-
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialObjZEntry {

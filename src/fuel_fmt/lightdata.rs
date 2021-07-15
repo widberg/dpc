@@ -1,10 +1,11 @@
-use nom_derive::{NomLE, Parse};
-use serde::{Serialize, Deserialize};
-use std::path::Path;
-use crate::File;
 use std::io::Result;
 use std::io::Write;
+use std::path::Path;
 
+use nom_derive::{NomLE, Parse};
+use serde::{Deserialize, Serialize};
+
+use crate::File;
 use crate::fuel_fmt::common::{ResourceObjectZ, Vec3f, Vec3i32};
 
 #[derive(Serialize, Deserialize, NomLE)]

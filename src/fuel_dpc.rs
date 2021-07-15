@@ -1,18 +1,3 @@
-use crate::base_dpc;
-use crate::lz;
-use base_dpc::Options;
-use base_dpc::DPC;
-use binwrite::BinWrite;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use clap::{App, AppSettings, Arg};
-use dialoguer::Select;
-use indicatif::ProgressBar;
-use itertools::Itertools;
-use nom::number::complete::*;
-use nom::*;
-use nom_derive::{Nom, NomLE, Parse};
-use serde::Deserialize;
-use serde::Serialize;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -20,20 +5,37 @@ use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
-use std::io::prelude::*;
+use std::fs::metadata;
 use std::io::Cursor;
 use std::io::Error;
 use std::io::ErrorKind;
+use std::io::prelude::*;
 use std::io::Read;
 use std::io::Result;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-use tempdir::TempDir;
-use crate::fuel_fmt;
-use std::fs::metadata;
 
+use binwrite::BinWrite;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use clap::{App, AppSettings, Arg};
+use dialoguer::Select;
+use indicatif::ProgressBar;
+use itertools::Itertools;
+use nom::*;
+use nom::number::complete::*;
+use nom_derive::{Nom, NomLE, Parse};
+use serde::Deserialize;
+use serde::Serialize;
+use tempdir::TempDir;
+
+use base_dpc::DPC;
+use base_dpc::Options;
+
+use crate::base_dpc;
+use crate::fuel_fmt;
+use crate::lz;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32 {
     return (unpadded_size + 0x7ff) & 0xfffff800;
@@ -1441,8 +1443,8 @@ impl DPC for FuelDPC {
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
 		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
+        fmt_fns.insert(705810152, fuel_fmt::rtc::fuel_fmt_extract_rtc_z);
         // fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z);
-        // fmt_fns.insert(705810152, fuel_fmt::rtc::fuel_fmt_extract_rtc_z);
         fmt_fns.insert(1175485833, fuel_fmt::animation::fuel_fmt_extract_animation_z);
         fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
@@ -1518,16 +1520,18 @@ impl DPC for FuelDPC {
 
 #[cfg(test)]
 mod test {
-    use crate::base_dpc::Options;
-    use crate::base_dpc::DPC;
-    use crate::fuel_dpc::FuelDPC;
-    use checksumdir::checksumdir;
-    use checksums::hash_file;
-    use checksums::Algorithm;
     use std::ffi::OsStr;
     use std::path::Path;
+
+    use checksumdir::checksumdir;
+    use checksums::Algorithm;
+    use checksums::hash_file;
     use tempdir::TempDir;
     use test_generator::test_resources;
+
+    use crate::base_dpc::DPC;
+    use crate::base_dpc::Options;
+    use crate::fuel_dpc::FuelDPC;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_validate(path: &str) {

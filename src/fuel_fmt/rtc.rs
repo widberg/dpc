@@ -1,25 +1,26 @@
-use nom_derive::{NomLE, Parse};
-use serde::{Serialize, Deserialize};
-use std::path::Path;
-use crate::File;
 use std::io::Result;
 use std::io::Write;
-use nom::number::complete::*;
+use std::path::Path;
 
-use crate::fuel_fmt::common::{ResourceObjectZ};
+use nom::number::complete::*;
+use nom_derive::{NomLE, Parse};
+use serde::{Deserialize, Serialize};
+
+use crate::File;
+use crate::fuel_fmt::common::ResourceObjectZ;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown2 {
-    unknown0: u16,
-    unknown1: u16,
-    unknown2: u16,
+    unknown0: u32,
+    unknown1: u32,
+    unknown2: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown3Unknown
 {
-    unknown0: u16,
-    unknown1: u16,
+    unknown0: u32,
+    unknown1: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -95,28 +96,37 @@ struct RtcZUnknown2 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown4 {
-    unknown0: u32,
-    unknown1: u16,
-}
-
-#[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown5Unknown {
+struct RtcZUnknown4RtcZUnknown5Unknown {
     unknown0: u32,
     unknown1: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown5 {
+struct RtcZUnknown4RtcZUnknown5 {
     #[nom(Count(3))]
-    unknowns: Vec<RtcZUnknown5Unknown>,
+    unknowns: Vec<RtcZUnknown4RtcZUnknown5Unknown>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown6 {
+struct RtcZUnknown4RtcZUnknown6 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct RtcZUnknown4 {
+    unknown0: u32,
+    unknown1: u16,
+    unknown5flag: u16,
+    #[nom(LengthCount(le_u32))]
+    unknown5s: Vec<RtcZUnknown4RtcZUnknown5>,
+    unknown6flag: u16,
+    #[nom(LengthCount(le_u32))]
+    unknown6s: Vec<RtcZUnknown4RtcZUnknown6>,
+    unknown7flag: u16,
+    #[nom(LengthCount(le_u32))]
+    unknown7s: Vec<RtcZUnknown4RtcZUnknown6>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -169,15 +179,6 @@ struct RtcZ {
     unknown3s: Vec<u32>,
     #[nom(LengthCount(le_u32))]
     unknown4s: Vec<RtcZUnknown4>,
-    unknown5flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown5s: Vec<RtcZUnknown5>,
-    unknown6flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown6s: Vec<RtcZUnknown6>,
-    unknown7flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<RtcZUnknown6>,
     #[nom(LengthCount(le_u32))]
     unknown8s: Vec<RtcZUnknown8>,
     #[nom(LengthCount(le_u32))]

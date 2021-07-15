@@ -1,8 +1,9 @@
-use clap::ArgMatches;
 use std::convert::From;
 use std::ffi::OsStr;
 use std::io::Result;
 use std::path::Path;
+
+use clap::ArgMatches;
 
 #[derive(Clone, Copy)]
 pub struct Options {

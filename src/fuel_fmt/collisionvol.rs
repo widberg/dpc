@@ -1,11 +1,12 @@
-use nom_derive::{NomLE, Parse};
-use serde::{Serialize, Deserialize};
-use std::path::Path;
-use crate::File;
 use std::io::Result;
 use std::io::Write;
+use std::path::Path;
 
-use crate::fuel_fmt::common::{ObjectZ, Mat4f};
+use nom_derive::{NomLE, Parse};
+use serde::{Deserialize, Serialize};
+
+use crate::File;
+use crate::fuel_fmt::common::{Mat4f, ObjectZ};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]

@@ -1,21 +1,22 @@
-use clap::{App, AppSettings, Arg, SubCommand};
 use std::ffi::{OsStr, OsString};
+use std::fs::File;
 use std::io::{self, Result};
 use std::path::Path;
 use std::path::PathBuf;
-use std::fs::File;
+
+use clap::{App, AppSettings, Arg, SubCommand};
+
+use base_dpc::DPC;
+use base_dpc::Options;
+use crc32::CRC32;
+use fuel_dpc::FuelDPC;
+use lz::LZ;
 
 pub mod base_dpc;
 pub mod fuel_dpc;
 pub mod fuel_fmt;
 pub mod lz;
 pub mod crc32;
-
-use base_dpc::Options;
-use base_dpc::DPC;
-use fuel_dpc::FuelDPC;
-use lz::LZ;
-use crc32::CRC32;
 
 #[allow(dead_code)]
 mod built_info {

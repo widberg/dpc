@@ -1,4 +1,5 @@
-use std::io::{BufReader, BufWriter, Error, Read, Write, BufRead};
+use std::io::{BufRead, BufReader, BufWriter, Error, Read, Write};
+
 use crc32fast::Hasher;
 
 pub trait CRC32 {

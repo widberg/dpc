@@ -1,6 +1,6 @@
-pub use nom_derive::{NomLE};
-pub use serde::{Serialize, Deserialize};
 pub use nom::number::complete::*;
+pub use nom_derive::NomLE;
+pub use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]

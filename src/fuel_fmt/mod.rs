@@ -1,16 +1,19 @@
-use std::path::Path;
 use std::fs::File;
-use std::io::Result;
-use serde::{Serialize, Deserialize};
-use nom_derive::{NomLE, Parse};
-use std::io::Write;
-use nom::number::complete::*;
-use nom::*;
-use hound;
 use std::io::Cursor;
-use byteorder::{LittleEndian, ReadBytesExt, ByteOrder};
-use image::{dxt::DxtDecoder, dxt::DXTVariant, ImageDecoder, png::PngEncoder, ColorType};
-use zerocopy::{AsBytes};
+use std::io::Result;
+use std::io::Write;
+use std::path::Path;
+
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
+use hound;
+use image::{ColorType, dxt::DxtDecoder, dxt::DXTVariant, ImageDecoder, png::PngEncoder};
+use nom::*;
+use nom::number::complete::*;
+use nom_derive::{NomLE, Parse};
+use serde::{Deserialize, Serialize};
+use zerocopy::AsBytes;
+
+use crate::fuel_fmt::common::{ObjectZ, ResourceObjectZ, Vec2f, Vec3f, Vec4f};
 
 pub mod common;
 pub mod materialobj;
@@ -33,8 +36,6 @@ pub mod node;
 pub mod animation;
 pub mod mesh;
 pub mod rtc;
-
-use crate::fuel_fmt::common::{ResourceObjectZ, ObjectZ, Vec3f, Vec2f, Vec4f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
