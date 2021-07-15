@@ -42,6 +42,7 @@ struct WorldRefZ {
     unknown8s: Vec<u8>,
     #[nom(LengthCount(le_u32))]
     unknown9s: Vec<u32>,
+    zero: u32,
 }
 
 #[derive(Serialize, Deserialize)]
