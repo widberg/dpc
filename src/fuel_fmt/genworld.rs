@@ -9,11 +9,17 @@ use nom::number::complete::*;
 use crate::fuel_fmt::common::{ObjectZ, Mat4f};
 
 #[derive(Serialize, Deserialize, NomLE)]
+struct GenWorldZUnknown7Unknown {
+    #[nom(LengthCount(le_u32))]
+    unknown0s: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown7 {
     #[nom(LengthCount(le_u32))]
     unknown0s: Vec<u8>,
     #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<u8>,
+    unknown1s: Vec<GenWorldZUnknown7Unknown>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
