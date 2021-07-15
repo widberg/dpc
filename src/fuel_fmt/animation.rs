@@ -83,16 +83,22 @@ struct AnimationZ {
     unknown5flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown5s: Vec<AnimationZUnknown5>,
+    unknown6flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown6s: Vec<AnimationZUnknown5>,
+    unknown7flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown7s: Vec<AnimationZUnknown2>,
+    unknown8flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown8s: Vec<AnimationZUnknown2>,
+    unknown9flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown9s: Vec<AnimationZUnknown5>,
+    unknown10flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown10s: Vec<AnimationZUnknown5>,
+    unknown11flag: u16,
     #[nom(LengthCount(le_u32))]
     unknown11s: Vec<AnimationZUnknown5>,
     #[nom(LengthCount(le_u32))]

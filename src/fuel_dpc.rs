@@ -1441,10 +1441,10 @@ impl DPC for FuelDPC {
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
 		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
-        fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z); // CHALGE1, CHALGE2, USA1
-        // fmt_fns.insert(1175485833, fuel_fmt::animation::fuel_fmt_extract_animation_z);
         // fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z);
         // fmt_fns.insert(705810152, fuel_fmt::rtc::fuel_fmt_extract_rtc_z);
+        fmt_fns.insert(1175485833, fuel_fmt::animation::fuel_fmt_extract_animation_z);
+        fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
         fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
         fmt_fns.insert(1396791303, fuel_fmt::skin::fuel_fmt_extract_skin_z); //
