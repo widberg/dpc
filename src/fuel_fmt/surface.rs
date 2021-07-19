@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{ObjectZ, Quat, Vec3f};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct SurfaceZUnknown2 {
@@ -100,10 +100,7 @@ pub fn fuel_fmt_extract_surface_z(header: &[u8], data: &[u8], output_path: &Path
         Err(error) => panic!("{}", error),
     };
 
-    let object = SurfaceObject {
-        object,
-        surface,
-    };
+    let object = SurfaceObject { object, surface };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

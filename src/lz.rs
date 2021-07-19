@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io;
-use std::io::Cursor;
 use std::io::prelude::*;
+use std::io::Cursor;
 use std::io::SeekFrom;
 use std::path::Path;
 
@@ -340,8 +340,8 @@ mod test {
     use std::path::PathBuf;
 
     use byteorder::{LittleEndian, ReadBytesExt};
-    use checksums::Algorithm;
     use checksums::hash_file;
+    use checksums::Algorithm;
     use test_generator::test_resources;
 
     use crate::lz;

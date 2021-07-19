@@ -5,8 +5,8 @@ use std::path::Path;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{ResourceObjectZ, Vec2f};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GwRoadZPoint {
@@ -19,7 +19,7 @@ struct GwRoadZRoad {
     road_type: u8,
     point_count: u16,
     #[nom(Count(point_count))]
-    points: Vec<GwRoadZPoint>
+    points: Vec<GwRoadZPoint>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]

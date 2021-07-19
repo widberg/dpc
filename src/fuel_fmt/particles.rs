@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown1 {
@@ -17,8 +17,7 @@ struct ParticlesZUnknown1 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct ParticlesZUnknown2
-{
+struct ParticlesZUnknown2 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
@@ -27,15 +26,13 @@ struct ParticlesZUnknown2
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct ParticlesZUnknown4
-{
+struct ParticlesZUnknown4 {
     unknown0: u32,
     unknown1: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct ParticlesZUnknown5
-{
+struct ParticlesZUnknown5 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
@@ -118,23 +115,17 @@ pub fn fuel_fmt_extract_particles_z(header: &[u8], data: &[u8], output_path: &Pa
         Ok((_, h)) => h,
         Err(_) => match ParticlesZAlt::parse(&data) {
             Ok((_, particles)) => {
-                let object = ParticlesObjectAlt {
-                    object,
-                    particles,
-                };
+                let object = ParticlesObjectAlt { object, particles };
 
                 output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
                 return Ok(());
-            },
+            }
             Err(error) => panic!("{}", error),
         },
     };
 
-    let object = ParticlesObject {
-        object,
-        particles,
-    };
+    let object = ParticlesObject { object, particles };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

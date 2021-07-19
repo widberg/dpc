@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::ObjectZ;
+use crate::File;
 
 static mut SKIN_DATA_COUNT: u32 = 0;
 
@@ -75,23 +75,17 @@ pub fn fuel_fmt_extract_skin_z(header: &[u8], data: &[u8], output_path: &Path) -
         Ok((_, h)) => h,
         Err(_) => match SkinZAlt::parse(&data) {
             Ok((_, skin)) => {
-                let object = SkinObjectAlt {
-                    object,
-                    skin,
-                };
+                let object = SkinObjectAlt { object, skin };
 
                 output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
                 return Ok(());
-            },
+            }
             Err(error) => panic!("{}", error),
         },
     };
 
-    let object = SkinObject {
-        object,
-        skin,
-    };
+    let object = SkinObject { object, skin };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{ResourceObjectZ, Vec3f};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown0 {
@@ -16,8 +16,7 @@ struct AnimationZUnknown0 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct AnimationZUnknown
-{
+struct AnimationZUnknown {
     unknown0: u32,
     unknown1: u32,
 }
@@ -41,7 +40,7 @@ struct AnimationZUnknown1 {
 struct AnimationZUnknown4 {
     unknown0: u32,
     #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<AnimationZUnknown1>
+    unknown1s: Vec<AnimationZUnknown1>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]

@@ -6,36 +6,36 @@ use std::path::Path;
 
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use hound;
-use image::{ColorType, dxt::DxtDecoder, dxt::DXTVariant, ImageDecoder, png::PngEncoder};
-use nom::*;
+use image::{dxt::DXTVariant, dxt::DxtDecoder, png::PngEncoder, ColorType, ImageDecoder};
 use nom::number::complete::*;
+use nom::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 use zerocopy::AsBytes;
 
 use crate::fuel_fmt::common::{ObjectZ, ResourceObjectZ, Vec2f, Vec3f, Vec4f};
 
-pub mod common;
-pub mod materialobj;
+pub mod animation;
 pub mod collisionvol;
-pub mod lightdata;
-pub mod rotshape;
-pub mod omni;
-pub mod gwroad;
-pub mod splinegraph;
-pub mod world;
-pub mod worldref;
+pub mod common;
 pub mod genworld;
-pub mod particles;
-pub mod surface;
+pub mod gwroad;
+pub mod lightdata;
 pub mod lod;
 pub mod loddata;
+pub mod materialobj;
+pub mod mesh;
+pub mod node;
+pub mod omni;
+pub mod particles;
+pub mod rotshape;
+pub mod rtc;
 pub mod skel;
 pub mod skin;
-pub mod node;
-pub mod animation;
-pub mod mesh;
-pub mod rtc;
+pub mod splinegraph;
+pub mod surface;
+pub mod world;
+pub mod worldref;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -163,7 +163,10 @@ pub fn fuel_fmt_extract_material_z(header: &[u8], data: &[u8], output_path: &Pat
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct UserDefineZ {
-    #[nom(Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[..]).to_string()", Parse = "|i| length_count!(i, le_u32, le_u8)")]
+    #[nom(
+        Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[..]).to_string()",
+        Parse = "|i| length_count!(i, le_u32, le_u8)"
+    )]
     data: String,
 }
 
@@ -173,7 +176,11 @@ struct UserDefineObject {
     user_define: UserDefineZ,
 }
 
-pub fn fuel_fmt_extract_user_define_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_user_define_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 
@@ -199,7 +206,10 @@ pub fn fuel_fmt_extract_user_define_z(header: &[u8], data: &[u8], output_path: &
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GameObjZChild {
-    #[nom(Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[0..x.len() - 1]).to_string()", Parse = "|i| length_count!(i, le_u32, le_u8)")]
+    #[nom(
+        Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[0..x.len() - 1]).to_string()",
+        Parse = "|i| length_count!(i, le_u32, le_u8)"
+    )]
     string: String,
     is_in_world: u32,
     #[nom(LengthCount = "le_u32")]
@@ -243,7 +253,6 @@ pub fn fuel_fmt_extract_game_obj_z(header: &[u8], data: &[u8], output_path: &Pat
     Ok(())
 }
 
-
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct SurfaceDatasZ {
@@ -256,7 +265,11 @@ struct SurfaceDatasObject {
     surface_datas: SurfaceDatasZ,
 }
 
-pub fn fuel_fmt_extract_surface_datas_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_surface_datas_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 
@@ -416,7 +429,11 @@ struct MaterialAnimObject {
     material_anim: MaterialAnimZ,
 }
 
-pub fn fuel_fmt_extract_material_anim_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_material_anim_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 
@@ -496,7 +513,11 @@ struct RotShapeDataObject {
     rot_shape_data: RotShapeDataZ,
 }
 
-pub fn fuel_fmt_extract_rot_shape_data_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_rot_shape_data_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 
@@ -541,7 +562,11 @@ struct ParticlesDataObject {
     particles_data: ParticlesDataZ,
 }
 
-pub fn fuel_fmt_extract_particles_data_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_particles_data_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 
@@ -582,9 +607,7 @@ pub fn fuel_fmt_extract_binary_z(header: &[u8], data: &[u8], output_path: &Path)
         Err(error) => panic!("{}", error),
     };
 
-    let object = BinaryObject {
-        resource_object,
-    };
+    let object = BinaryObject { resource_object };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
@@ -621,10 +644,7 @@ pub fn fuel_fmt_extract_camera_z(header: &[u8], data: &[u8], output_path: &Path)
         Err(error) => panic!("{}", error),
     };
 
-    let object = CameraObject {
-        object,
-        camera,
-    };
+    let object = CameraObject { object, camera };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
@@ -721,10 +741,7 @@ pub fn fuel_fmt_extract_spline_z(header: &[u8], data: &[u8], output_path: &Path)
         Err(error) => panic!("{}", error),
     };
 
-    let object = SplineObject {
-        object,
-        spline,
-    };
+    let object = SplineObject { object, spline };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
@@ -766,7 +783,11 @@ pub fn fuel_fmt_extract_sound_z(header: &[u8], data: &[u8], output_path: &Path) 
 
     let spec = hound::WavSpec {
         channels: 1,
-        sample_rate: if sound_header.sample_rate != 0 { sound_header.sample_rate } else { 44100 },
+        sample_rate: if sound_header.sample_rate != 0 {
+            sound_header.sample_rate
+        } else {
+            44100
+        },
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };
@@ -782,9 +803,7 @@ pub fn fuel_fmt_extract_sound_z(header: &[u8], data: &[u8], output_path: &Path) 
         writer.write_sample(data_cursor.read_i16::<LittleEndian>()?);
     }
 
-    let object = SoundObject {
-        sound_header,
-    };
+    let object = SoundObject { sound_header };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
@@ -871,17 +890,36 @@ pub fn fuel_fmt_extract_bitmap_z(header: &[u8], data: &[u8], output_path: &Path)
         };
 
         let data_cursor = Cursor::new(&data);
-        let dxt_decoder = DxtDecoder::new(data_cursor, bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
+        let dxt_decoder = DxtDecoder::new(
+            data_cursor,
+            bitmap_header.width,
+            bitmap_header.height,
+            if bitmap_header.dxt_version0 == 14 {
+                DXTVariant::DXT1
+            } else {
+                DXTVariant::DXT5
+            },
+        )
+        .unwrap();
 
         let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
         dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
 
         let png_encoder = PngEncoder::new(output_png_file);
-        png_encoder.encode(buf.as_bytes(), bitmap_header.width, bitmap_header.height, if bitmap_header.dxt_version0 == 14 { ColorType::Rgb8 } else { ColorType::Rgba8 }).unwrap();
+        png_encoder
+            .encode(
+                buf.as_bytes(),
+                bitmap_header.width,
+                bitmap_header.height,
+                if bitmap_header.dxt_version0 == 14 {
+                    ColorType::Rgb8
+                } else {
+                    ColorType::Rgba8
+                },
+            )
+            .unwrap();
 
-        let object = BitmapObject {
-            bitmap_header,
-        };
+        let object = BitmapObject { bitmap_header };
 
         output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
     } else {
@@ -897,16 +935,44 @@ pub fn fuel_fmt_extract_bitmap_z(header: &[u8], data: &[u8], output_path: &Path)
 
         if bitmap_header.dxt_version0 == 7 {
             let png_encoder = PngEncoder::new(output_png_file);
-            png_encoder.encode(bitmap.data.as_bytes(), bitmap.width, bitmap.height, ColorType::L16).unwrap();
+            png_encoder
+                .encode(
+                    bitmap.data.as_bytes(),
+                    bitmap.width,
+                    bitmap.height,
+                    ColorType::L16,
+                )
+                .unwrap();
         } else {
             let data_cursor = Cursor::new(&bitmap.data[..]);
-            let dxt_decoder = DxtDecoder::new(data_cursor, bitmap.width, bitmap.height, if bitmap_header.dxt_version0 == 14 { DXTVariant::DXT1 } else { DXTVariant::DXT5 }).unwrap();
+            let dxt_decoder = DxtDecoder::new(
+                data_cursor,
+                bitmap.width,
+                bitmap.height,
+                if bitmap_header.dxt_version0 == 14 {
+                    DXTVariant::DXT1
+                } else {
+                    DXTVariant::DXT5
+                },
+            )
+            .unwrap();
 
             let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
             dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
 
             let png_encoder = PngEncoder::new(output_png_file);
-            png_encoder.encode(buf.as_bytes(), bitmap.width, bitmap.height, if bitmap_header.dxt_version0 == 14 { ColorType::Rgb8 } else { ColorType::Rgba8 }).unwrap();
+            png_encoder
+                .encode(
+                    buf.as_bytes(),
+                    bitmap.width,
+                    bitmap.height,
+                    if bitmap_header.dxt_version0 == 14 {
+                        ColorType::Rgb8
+                    } else {
+                        ColorType::Rgba8
+                    },
+                )
+                .unwrap();
         }
 
         let object = BitmapObjectAlternate {

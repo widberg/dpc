@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::ResourceObjectZ;
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]

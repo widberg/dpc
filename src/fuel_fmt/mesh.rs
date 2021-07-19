@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
+use crate::fuel_fmt::common::{Mat4f, Quat, Vec3f};
 use crate::File;
-use crate::fuel_fmt::common::{Vec3f, Mat4f, Quat};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown0 {
@@ -67,8 +67,7 @@ struct MeshZSubMesh {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MeshZIndices
-{
+struct MeshZIndices {
     index_count: u32,
     vertex_group_crc32: u32,
     #[nom(Count(index_count))]
@@ -95,8 +94,7 @@ struct MeshZUnknown11 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MeshZUnknown13Unknown1
-{
+struct MeshZUnknown13Unknown1 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
@@ -309,23 +307,17 @@ pub fn fuel_fmt_extract_mesh_z(header: &[u8], data: &[u8], output_path: &Path) -
         Ok((_, h)) => h,
         Err(_) => match MeshZAlt::parse(&data) {
             Ok((_, mesh)) => {
-                let object = MeshObjectAlt {
-                    mesh_header,
-                    mesh,
-                };
+                let object = MeshObjectAlt { mesh_header, mesh };
 
                 output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
                 return Ok(());
-            },
+            }
             Err(error) => panic!("{}", error),
         },
     };
 
-    let object = MeshObject {
-        mesh_header,
-        mesh,
-    };
+    let object = MeshObject { mesh_header, mesh };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

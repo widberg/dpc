@@ -6,12 +6,11 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{ObjectZ, Vec3f};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct SplineGraphZUnknown
-{
+struct SplineGraphZUnknown {
     #[nom(Count(60))]
     data: Vec<u8>,
 }
@@ -54,7 +53,11 @@ struct SplineGraphObject {
     spline_graph: SplineGraphZ,
 }
 
-pub fn fuel_fmt_extract_spline_graph_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_spline_graph_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 

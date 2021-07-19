@@ -6,12 +6,11 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct WorldRefZUnknown7
-{
+struct WorldRefZUnknown7 {
     unknown0: u32,
     unknown1: u32,
 }
@@ -66,10 +65,7 @@ pub fn fuel_fmt_extract_world_ref_z(header: &[u8], data: &[u8], output_path: &Pa
         Err(error) => panic!("{}", error),
     };
 
-    let object = WorldRefObject {
-        object,
-        world_ref,
-    };
+    let object = WorldRefObject { object, world_ref };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

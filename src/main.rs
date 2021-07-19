@@ -6,17 +6,17 @@ use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 
-use base_dpc::DPC;
 use base_dpc::Options;
+use base_dpc::DPC;
 use crc32::CRC32;
 use fuel_dpc::FuelDPC;
 use lz::LZ;
 
 pub mod base_dpc;
+pub mod crc32;
 pub mod fuel_dpc;
 pub mod fuel_fmt;
 pub mod lz;
-pub mod crc32;
 
 #[allow(dead_code)]
 mod built_info {
@@ -210,46 +210,66 @@ fn main() -> Result<()> {
 		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
         .get_matches_from(wild::args_os());
 
-	if let Some(subcommand_matches) = matches.subcommand_matches("crc32") {
-		let unsigned_option = subcommand_matches.is_present("UNSIGNED");
-		if !subcommand_matches.is_present("INTERACTIVE") {
-			let input_path_string = matches.value_of_os("INPUT").unwrap();
-			let input_path = Path::new(input_path_string);
+    if let Some(subcommand_matches) = matches.subcommand_matches("crc32") {
+        let unsigned_option = subcommand_matches.is_present("UNSIGNED");
+        if !subcommand_matches.is_present("INTERACTIVE") {
+            let input_path_string = matches.value_of_os("INPUT").unwrap();
+            let input_path = Path::new(input_path_string);
 
-			let output_path = match subcommand_matches.value_of_os("OUTPUT") {
-				Some(output_path_string) => PathBuf::from(output_path_string),
-				None => input_path.with_extension("NPC"),
-			};
+            let output_path = match subcommand_matches.value_of_os("OUTPUT") {
+                Some(output_path_string) => PathBuf::from(output_path_string),
+                None => input_path.with_extension("NPC"),
+            };
 
-			match subcommand_matches.value_of("ALGORITHM") {
-				None => panic!("Algorithm is required"),
-				Some(algorithm) => match algorithm {
-					"asobo" => {
-						crc32::AsoboCRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false, unsigned_option)?;
-					}
-					"ieee" => {
-						crc32::IEEECRC32::generate_names(&mut File::open(input_path)?, &mut File::create(output_path)?, false, unsigned_option)?;
-					}
-					_ => panic!("bad algorithm"),
-				},
-			};
-		} else {
-			match subcommand_matches.value_of("ALGORITHM") {
-				None => panic!("Algorithm is required"),
-				Some(algorithm) => match algorithm {
-					"asobo" => {
-						crc32::AsoboCRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true, unsigned_option)?;
-					}
-					"ieee" => {
-						crc32::IEEECRC32::generate_names(&mut io::stdin(), &mut io::stdout(), true, unsigned_option)?;
-					}
-					_ => panic!("bad algorithm"),
-				},
-			};
-		}
+            match subcommand_matches.value_of("ALGORITHM") {
+                None => panic!("Algorithm is required"),
+                Some(algorithm) => match algorithm {
+                    "asobo" => {
+                        crc32::AsoboCRC32::generate_names(
+                            &mut File::open(input_path)?,
+                            &mut File::create(output_path)?,
+                            false,
+                            unsigned_option,
+                        )?;
+                    }
+                    "ieee" => {
+                        crc32::IEEECRC32::generate_names(
+                            &mut File::open(input_path)?,
+                            &mut File::create(output_path)?,
+                            false,
+                            unsigned_option,
+                        )?;
+                    }
+                    _ => panic!("bad algorithm"),
+                },
+            };
+        } else {
+            match subcommand_matches.value_of("ALGORITHM") {
+                None => panic!("Algorithm is required"),
+                Some(algorithm) => match algorithm {
+                    "asobo" => {
+                        crc32::AsoboCRC32::generate_names(
+                            &mut io::stdin(),
+                            &mut io::stdout(),
+                            true,
+                            unsigned_option,
+                        )?;
+                    }
+                    "ieee" => {
+                        crc32::IEEECRC32::generate_names(
+                            &mut io::stdin(),
+                            &mut io::stdout(),
+                            true,
+                            unsigned_option,
+                        )?;
+                    }
+                    _ => panic!("bad algorithm"),
+                },
+            };
+        }
 
-		return Ok(());
-	}
+        return Ok(());
+    }
 
     if let Some(subcommand_matches) = matches.subcommand_matches("lz") {
         let input_path_string = matches.value_of_os("INPUT").unwrap();
@@ -295,7 +315,7 @@ fn main() -> Result<()> {
         None => vec![],
     };
 
-	if let Some(subcommand_matches) = matches.subcommand_matches("obj") {
+    if let Some(subcommand_matches) = matches.subcommand_matches("obj") {
         let input_path_string = matches.value_of_os("INPUT").unwrap();
         let mut input_path = Path::new(input_path_string);
 
@@ -304,52 +324,56 @@ fn main() -> Result<()> {
             None => input_path,
         };
 
-		let dpc = match subcommand_matches.value_of("GAME") {
-			None => panic!("Game is required"), // default to fuel until other games are supported
-			Some(game) => match game {
-				"fuel" => FuelDPC::new(&options, &custom_args),
-				_ => panic!("bad game"),
-			},
-		};
+        let dpc = match subcommand_matches.value_of("GAME") {
+            None => panic!("Game is required"), // default to fuel until other games are supported
+            Some(game) => match game {
+                "fuel" => FuelDPC::new(&options, &custom_args),
+                _ => panic!("bad game"),
+            },
+        };
 
-		if subcommand_matches.is_present("COMPRESS") {
-			dpc.compress_object(&input_path, &output_path)?;
-			input_path = output_path;
-		} else if subcommand_matches.is_present("DECOMPRESS") {
-			dpc.decompress_object(&input_path, &output_path)?;
-			input_path = output_path;
-		}
-		
-		if subcommand_matches.is_present("SPLIT") {
-			dpc.split_object(&input_path, &output_path)?;
-		}
+        if subcommand_matches.is_present("COMPRESS") {
+            dpc.compress_object(&input_path, &output_path)?;
+            input_path = output_path;
+        } else if subcommand_matches.is_present("DECOMPRESS") {
+            dpc.decompress_object(&input_path, &output_path)?;
+            input_path = output_path;
+        }
+
+        if subcommand_matches.is_present("SPLIT") {
+            dpc.split_object(&input_path, &output_path)?;
+        }
 
         return Ok(());
     }
 
-	if let Some(subcommand_matches) = matches.subcommand_matches("fmt") {
+    if let Some(subcommand_matches) = matches.subcommand_matches("fmt") {
         let input_path_string = matches.value_of_os("INPUT").unwrap();
         let input_path = Path::new(input_path_string);
-		let mut t = OsString::new();
+        let mut t = OsString::new();
 
         let output_path = match matches.value_of_os("OUTPUT") {
             Some(output_path_string) => Path::new(output_path_string),
-            None => { t.push(input_path.as_os_str()); t.push(".d"); Path::new(&t) },
+            None => {
+                t.push(input_path.as_os_str());
+                t.push(".d");
+                Path::new(&t)
+            }
         };
 
-		let dpc = match subcommand_matches.value_of("GAME") {
-			None => panic!("Game is required"), // default to fuel until other games are supported
-			Some(game) => match game {
-				"fuel" => FuelDPC::new(&options, &custom_args),
-				_ => panic!("bad game"),
-			},
-		};
+        let dpc = match subcommand_matches.value_of("GAME") {
+            None => panic!("Game is required"), // default to fuel until other games are supported
+            Some(game) => match game {
+                "fuel" => FuelDPC::new(&options, &custom_args),
+                _ => panic!("bad game"),
+            },
+        };
 
-		if subcommand_matches.is_present("CREATE") {
-			dpc.fmt_create(&input_path, &output_path)?;
-		} else if subcommand_matches.is_present("EXTRACT") {
-			dpc.fmt_extract(&input_path, &output_path)?;
-		}
+        if subcommand_matches.is_present("CREATE") {
+            dpc.fmt_create(&input_path, &output_path)?;
+        } else if subcommand_matches.is_present("EXTRACT") {
+            dpc.fmt_extract(&input_path, &output_path)?;
+        }
 
         return Ok(());
     }

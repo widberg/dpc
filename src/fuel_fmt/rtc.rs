@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::ResourceObjectZ;
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown2 {
@@ -17,8 +17,7 @@ struct RtcZUnknown1Unknown2 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown1Unknown3Unknown
-{
+struct RtcZUnknown1Unknown3Unknown {
     unknown0: u32,
     unknown1: u32,
 }
@@ -30,8 +29,7 @@ struct RtcZUnknown1Unknown3 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown1Unknown5Unknown1
-{
+struct RtcZUnknown1Unknown5Unknown1 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
@@ -160,8 +158,7 @@ struct RtcZUnknown12Unknown1 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct RtcZUnknown12
-{
+struct RtcZUnknown12 {
     unknown0: u32,
     #[nom(LengthCount(le_u32))]
     unknown1s: Vec<RtcZUnknown12Unknown1>,

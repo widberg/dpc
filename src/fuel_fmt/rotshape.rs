@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{ObjectZ, Vec2f, Vec3f};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -47,10 +47,7 @@ pub fn fuel_fmt_extract_rot_shape_z(header: &[u8], data: &[u8], output_path: &Pa
         Err(error) => panic!("{}", error),
     };
 
-    let object = RotShapeObject {
-        object,
-        rot_shape,
-    };
+    let object = RotShapeObject { object, rot_shape };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

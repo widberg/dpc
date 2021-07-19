@@ -5,8 +5,8 @@ use std::path::Path;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::ObjectZ;
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -37,10 +37,7 @@ pub fn fuel_fmt_extract_omni_z(header: &[u8], data: &[u8], output_path: &Path) -
         Err(error) => panic!("{}", error),
     };
 
-    let object = OmniObject {
-        object,
-        omni,
-    };
+    let object = OmniObject { object, omni };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

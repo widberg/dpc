@@ -5,8 +5,8 @@ use std::path::Path;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{ResourceObjectZ, Vec3f, Vec3i32};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]

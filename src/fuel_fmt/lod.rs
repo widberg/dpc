@@ -6,8 +6,8 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct LodZUnknown0 {
@@ -27,8 +27,7 @@ struct LodZUnknown1 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct LodZSoundEntry
-{
+struct LodZSoundEntry {
     id: u32,
     sound_crc32: u32,
 }
@@ -101,23 +100,17 @@ pub fn fuel_fmt_extract_lod_z(header: &[u8], data: &[u8], output_path: &Path) ->
         Ok((_, h)) => h,
         Err(_) => match LodZAlt::parse(&data) {
             Ok((_, lod)) => {
-                let object = LodObjectAlt {
-                    object,
-                    lod,
-                };
+                let object = LodObjectAlt { object, lod };
 
                 output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
                 return Ok(());
-            },
+            }
             Err(error) => panic!("{}", error),
         },
     };
 
-    let object = LodObject {
-        object,
-        lod,
-    };
+    let object = LodObject { object, lod };
 
     output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 

@@ -5,8 +5,8 @@ use std::path::Path;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -26,7 +26,11 @@ struct CollisionVolObject {
     collision_vol: CollisionVolZ,
 }
 
-pub fn fuel_fmt_extract_collision_vol_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
+pub fn fuel_fmt_extract_collision_vol_z(
+    header: &[u8],
+    data: &[u8],
+    output_path: &Path,
+) -> Result<()> {
     let json_path = output_path.join("object.json");
     let mut output_file = File::create(json_path)?;
 

@@ -6,12 +6,11 @@ use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::File;
 use crate::fuel_fmt::common::{Mat4f, ResourceObjectZ};
+use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct WorldZUnknown2
-{
+struct WorldZUnknown2 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,

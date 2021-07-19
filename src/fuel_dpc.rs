@@ -4,12 +4,12 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::File;
 use std::fs::metadata;
+use std::fs::File;
+use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::Error;
 use std::io::ErrorKind;
-use std::io::prelude::*;
 use std::io::Read;
 use std::io::Result;
 use std::io::SeekFrom;
@@ -23,15 +23,15 @@ use clap::{App, AppSettings, Arg};
 use dialoguer::Select;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use nom::*;
 use nom::number::complete::*;
+use nom::*;
 use nom_derive::{Nom, NomLE, Parse};
 use serde::Deserialize;
 use serde::Serialize;
 use tempdir::TempDir;
 
-use base_dpc::DPC;
 use base_dpc::Options;
+use base_dpc::DPC;
 
 use crate::base_dpc;
 use crate::fuel_fmt;
@@ -209,7 +209,7 @@ struct PrimaryHeader<'a> {
 pub struct FuelDPC {
     options: Options,
     unoptimized_pool: bool,
-	no_pool: bool,
+    no_pool: bool,
     version_lookup: HashMap<String, (u32, u32, u32)>,
 }
 
@@ -450,7 +450,11 @@ impl DPC for FuelDPC {
                 // a += object.header.data_size + 24;
 
                 if !crc32s.contains(&object.header.crc32) {
-					let object_file_path = objects_path.join(format!("{}.{}", object.header.crc32, class_names.get(&object.header.class_crc32).unwrap()));
+                    let object_file_path = objects_path.join(format!(
+                        "{}.{}",
+                        object.header.crc32,
+                        class_names.get(&object.header.class_crc32).unwrap()
+                    ));
                     let mut object_file = File::create(&object_file_path)?;
                     let mut oh = object.header;
                     if self.options.is_lz && object.header.compressed_size != 0 {
@@ -477,16 +481,20 @@ impl DPC for FuelDPC {
                         object_file.write(&object.data)?;
                     }
 
-					if oh.data_size > oh.class_object_size && self.options.is_recursive {
-						pb.println(format!("Extracting {}", oh.crc32));
-						let mut t = OsString::new();
-						t.push(object_file_path.as_os_str());
-						t.push(".d");
-						match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
-							Ok(_) => (),
-							Err(ref e) => if e.kind() != ErrorKind::Other { panic!("{}: {}", oh.crc32, e); },
-						}
-					}
+                    if oh.data_size > oh.class_object_size && self.options.is_recursive {
+                        pb.println(format!("Extracting {}", oh.crc32));
+                        let mut t = OsString::new();
+                        t.push(object_file_path.as_os_str());
+                        t.push(".d");
+                        match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
+                            Ok(_) => (),
+                            Err(ref e) => {
+                                if e.kind() != ErrorKind::Other {
+                                    panic!("{}: {}", oh.crc32, e);
+                                }
+                            }
+                        }
+                    }
 
                     crc32s.insert(object.header.crc32);
 
@@ -568,17 +576,16 @@ impl DPC for FuelDPC {
             for pool_object in pool_objects.iter() {
                 pb.println(format!("Processing {}", pool_object.header.crc32));
 
-				let object_file_path = objects_path.join(format!(
-					"{}.{}",
-					pool_object.header.crc32,
-					class_names.get(&pool_object.header.class_crc32).unwrap()
-				));
+                let object_file_path = objects_path.join(format!(
+                    "{}.{}",
+                    pool_object.header.crc32,
+                    class_names.get(&pool_object.header.class_crc32).unwrap()
+                ));
 
-                let mut object_file =
-                    std::fs::OpenOptions::new()
-                        .read(true)
-                        .write(true)
-                        .open(&object_file_path)?;
+                let mut object_file = std::fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(&object_file_path)?;
 
                 let mut oh = global_object_headers
                     .get(&pool_object.header.crc32)
@@ -619,16 +626,20 @@ impl DPC for FuelDPC {
                 object_file.seek(SeekFrom::Start(0))?;
                 oh.write(&mut object_file)?;
 
-				if self.options.is_recursive {
-					pb.println(format!("Extracting {}", oh.crc32));
-					let mut t = OsString::new();
-					t.push(object_file_path.as_os_str());
-					t.push(".d");
-					match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
-						Ok(_) => (),
-						Err(ref e) => if e.kind() != ErrorKind::Other { panic!("{}: {}", oh.crc32, e); },
-					}
-				}
+                if self.options.is_recursive {
+                    pb.println(format!("Extracting {}", oh.crc32));
+                    let mut t = OsString::new();
+                    t.push(object_file_path.as_os_str());
+                    t.push(".d");
+                    match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
+                        Ok(_) => (),
+                        Err(ref e) => {
+                            if e.kind() != ErrorKind::Other {
+                                panic!("{}: {}", oh.crc32, e);
+                            }
+                        }
+                    }
+                }
 
                 pb.inc(1);
             }
@@ -687,14 +698,14 @@ impl DPC for FuelDPC {
 
         let mut manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
 
-		if self.no_pool {
-			manifest_json.header.pool_manifest_unused = 0;
-			manifest_json.pool = None;
-		}
+        if self.no_pool {
+            manifest_json.header.pool_manifest_unused = 0;
+            manifest_json.pool = None;
+        }
 
-		if manifest_json.pool.is_some() && !self.options.is_unsafe {
-			panic!("Creating a DPC with a pool is unsafe. Either add the -u/--unsafe main option to do it anyway or -- -n/--no-pool custom argument to move pool objects to blocks.");
-		}
+        if manifest_json.pool.is_some() && !self.options.is_unsafe {
+            panic!("Creating a DPC with a pool is unsafe. Either add the -u/--unsafe main option to do it anyway or -- -n/--no-pool custom argument to move pool objects to blocks.");
+        }
 
         let mut dpc_file = File::create(output_path.as_ref())?;
 
@@ -704,20 +715,20 @@ impl DPC for FuelDPC {
             let actual_os_path = path.unwrap().path();
             let actual_path: &Path = actual_os_path.as_path();
             if metadata(actual_path).unwrap().is_file() {
-				let crc32: u32 = Path::new(actual_path.file_name().unwrap())
-					.file_stem()
-					.unwrap()
-					.to_str()
-					.unwrap()
-					.to_string()
-					.parse::<u32>()
-					.unwrap();
-				if index.contains_key(&crc32) {
-					panic!("Ambiguous files for crc32 = {}", crc32);
-				}
+                let crc32: u32 = Path::new(actual_path.file_name().unwrap())
+                    .file_stem()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string()
+                    .parse::<u32>()
+                    .unwrap();
+                if index.contains_key(&crc32) {
+                    panic!("Ambiguous files for crc32 = {}", crc32);
+                }
 
-				index.insert(crc32, actual_os_path);
-			}
+                index.insert(crc32, actual_os_path);
+            }
         }
 
         dpc_file.seek(SeekFrom::Start(2048))?;
@@ -1334,123 +1345,141 @@ impl DPC for FuelDPC {
 
         Ok(())
     }
-	
+
     fn compress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-		let mut input_file = File::open(input_path)?;
-		let mut output_file = File::create(output_path)?;
+        let mut input_file = File::open(input_path)?;
+        let mut output_file = File::create(output_path)?;
 
-		let mut object_header_buffer = [0; 24];
-		input_file.read(&mut object_header_buffer)?;
+        let mut object_header_buffer = [0; 24];
+        input_file.read(&mut object_header_buffer)?;
 
-		let mut object_header = match ObjectHeader::parse(&object_header_buffer) {
-			Ok((_, h)) => h,
-			Err(error) => panic!("{}", error),
-		};
+        let mut object_header = match ObjectHeader::parse(&object_header_buffer) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
 
-		if object_header.compressed_size != 0 {
-			panic!("Already compressed");
-		}
+        if object_header.compressed_size != 0 {
+            panic!("Already compressed");
+        }
 
-		let mut class_object_data = vec![0; object_header.class_object_size as usize];
-		input_file.read(&mut class_object_data)?;
+        let mut class_object_data = vec![0; object_header.class_object_size as usize];
+        input_file.read(&mut class_object_data)?;
 
-		let mut decompressed_buffer = vec![0; object_header.decompressed_size as usize];
-		input_file.read(&mut decompressed_buffer)?;
+        let mut decompressed_buffer = vec![0; object_header.decompressed_size as usize];
+        input_file.read(&mut decompressed_buffer)?;
 
-		let mut compressed_buffer = vec![0; object_header.decompressed_size as usize * 2];
+        let mut compressed_buffer = vec![0; object_header.decompressed_size as usize * 2];
 
-		let compressed_len = lz::lzss_compress_optimized(&decompressed_buffer[..], object_header.decompressed_size as usize, &mut compressed_buffer[..], object_header.decompressed_size as usize * 2)?;
-		compressed_buffer.resize(compressed_len, 0);
+        let compressed_len = lz::lzss_compress_optimized(
+            &decompressed_buffer[..],
+            object_header.decompressed_size as usize,
+            &mut compressed_buffer[..],
+            object_header.decompressed_size as usize * 2,
+        )?;
+        compressed_buffer.resize(compressed_len, 0);
 
-		object_header.compressed_size = compressed_len as u32 + 8;
-		object_header.data_size = object_header.class_object_size + object_header.compressed_size;
+        object_header.compressed_size = compressed_len as u32 + 8;
+        object_header.data_size = object_header.class_object_size + object_header.compressed_size;
 
-		object_header.write(&mut output_file)?;
-		output_file.write(&class_object_data)?;
-		output_file.write_u32::<LittleEndian>(object_header.decompressed_size)?;
-		output_file.write_u32::<LittleEndian>(object_header.compressed_size)?;
-		output_file.write(&compressed_buffer)?;
+        object_header.write(&mut output_file)?;
+        output_file.write(&class_object_data)?;
+        output_file.write_u32::<LittleEndian>(object_header.decompressed_size)?;
+        output_file.write_u32::<LittleEndian>(object_header.compressed_size)?;
+        output_file.write(&compressed_buffer)?;
 
-		Ok(())
-	}
+        Ok(())
+    }
 
     fn decompress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-		let mut input_file = File::open(input_path)?;
-		let mut output_file = File::create(output_path)?;
+        let mut input_file = File::open(input_path)?;
+        let mut output_file = File::create(output_path)?;
 
-		let mut object_header_buffer = [0; 24];
-		input_file.read(&mut object_header_buffer)?;
+        let mut object_header_buffer = [0; 24];
+        input_file.read(&mut object_header_buffer)?;
 
-		let mut object_header = match ObjectHeader::parse(&object_header_buffer) {
-			Ok((_, h)) => h,
-			Err(error) => panic!("{}", error),
-		};
+        let mut object_header = match ObjectHeader::parse(&object_header_buffer) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
 
-		if object_header.compressed_size == 0 {
-			panic!("Already decompressed");
-		}
+        if object_header.compressed_size == 0 {
+            panic!("Already decompressed");
+        }
 
-		let mut class_object_data = vec![0; object_header.class_object_size as usize];
-		input_file.read(&mut class_object_data)?;
+        let mut class_object_data = vec![0; object_header.class_object_size as usize];
+        input_file.read(&mut class_object_data)?;
 
-		let mut decompressed_buffer = vec![0; object_header.decompressed_size as usize];
-		let mut compressed_buffer = vec![0; object_header.compressed_size as usize];
-		input_file.seek(SeekFrom::Current(8))?;
-		input_file.read(&mut compressed_buffer)?;
+        let mut decompressed_buffer = vec![0; object_header.decompressed_size as usize];
+        let mut compressed_buffer = vec![0; object_header.compressed_size as usize];
+        input_file.seek(SeekFrom::Current(8))?;
+        input_file.read(&mut compressed_buffer)?;
 
-		lz::lzss_decompress(&compressed_buffer[..], object_header.compressed_size as usize, &mut decompressed_buffer[..], object_header.decompressed_size as usize, false)?;
+        lz::lzss_decompress(
+            &compressed_buffer[..],
+            object_header.compressed_size as usize,
+            &mut decompressed_buffer[..],
+            object_header.decompressed_size as usize,
+            false,
+        )?;
 
-		object_header.compressed_size = 0;
-		object_header.data_size = object_header.class_object_size + object_header.decompressed_size;
+        object_header.compressed_size = 0;
+        object_header.data_size = object_header.class_object_size + object_header.decompressed_size;
 
-		object_header.write(&mut output_file)?;
-		output_file.write(&class_object_data)?;
-		output_file.write(&decompressed_buffer)?;
+        object_header.write(&mut output_file)?;
+        output_file.write(&class_object_data)?;
+        output_file.write(&decompressed_buffer)?;
 
-		Ok(())
-	}
+        Ok(())
+    }
 
-	fn split_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-		let mut header_path = output_path.as_ref().to_path_buf();
-		header_path.push(".header");
-		let mut header_file = File::create(header_path)?;
+    fn split_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+        let mut header_path = output_path.as_ref().to_path_buf();
+        header_path.push(".header");
+        let mut header_file = File::create(header_path)?;
 
-		let mut data_path = output_path.as_ref().to_path_buf();
-		data_path.push(".data");
-		let mut data_file = File::create(data_path)?;
+        let mut data_path = output_path.as_ref().to_path_buf();
+        data_path.push(".data");
+        let mut data_file = File::create(data_path)?;
 
-		let mut input_file = File::open(input_path)?;
+        let mut input_file = File::open(input_path)?;
 
-		let mut object_header_buffer = [0; 24];
-		input_file.read(&mut object_header_buffer)?;
+        let mut object_header_buffer = [0; 24];
+        input_file.read(&mut object_header_buffer)?;
 
-		let object_header = match ObjectHeader::parse(&object_header_buffer) {
-			Ok((_, h)) => h,
-			Err(error) => panic!("{}", error),
-		};
+        let object_header = match ObjectHeader::parse(&object_header_buffer) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
 
-		let mut header_buffer = vec![0; object_header.class_object_size as usize];
-		input_file.read(&mut header_buffer)?;
-		header_file.write(&header_buffer)?;
+        let mut header_buffer = vec![0; object_header.class_object_size as usize];
+        input_file.read(&mut header_buffer)?;
+        header_file.write(&header_buffer)?;
 
-		let mut data_buffer = vec![0; object_header.data_size as usize - object_header.class_object_size as usize];
-		input_file.read(&mut data_buffer)?;
-		data_file.write(&data_buffer)?;
+        let mut data_buffer =
+            vec![0; object_header.data_size as usize - object_header.class_object_size as usize];
+        input_file.read(&mut data_buffer)?;
+        data_file.write(&data_buffer)?;
 
-		Ok(())
-	}
-	
+        Ok(())
+    }
+
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-		type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
+        type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
         fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z); //
         fmt_fns.insert(705810152, fuel_fmt::rtc::fuel_fmt_extract_rtc_z);
-        fmt_fns.insert(1175485833, fuel_fmt::animation::fuel_fmt_extract_animation_z);
+        fmt_fns.insert(
+            1175485833,
+            fuel_fmt::animation::fuel_fmt_extract_animation_z,
+        );
         fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
         fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
         fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
         fmt_fns.insert(1396791303, fuel_fmt::skin::fuel_fmt_extract_skin_z); //
-        fmt_fns.insert(3312018398, fuel_fmt::particles::fuel_fmt_extract_particles_z); //
+        fmt_fns.insert(
+            3312018398,
+            fuel_fmt::particles::fuel_fmt_extract_particles_z,
+        ); //
         fmt_fns.insert(968261323, fuel_fmt::world::fuel_fmt_extract_world_z);
         fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z); //
         fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z); //
@@ -1458,13 +1487,25 @@ impl DPC for FuelDPC {
         fmt_fns.insert(3611002348, fuel_fmt::skel::fuel_fmt_extract_skel_z);
         fmt_fns.insert(3412401859, fuel_fmt::loddata::fuel_fmt_extract_lod_data_z);
         fmt_fns.insert(1706265229, fuel_fmt::surface::fuel_fmt_extract_surface_z);
-        fmt_fns.insert(848525546, fuel_fmt::lightdata::fuel_fmt_extract_light_data_z);
+        fmt_fns.insert(
+            848525546,
+            fuel_fmt::lightdata::fuel_fmt_extract_light_data_z,
+        );
         fmt_fns.insert(866453734, fuel_fmt::rotshape::fuel_fmt_extract_rot_shape_z);
-        fmt_fns.insert(1910554652, fuel_fmt::splinegraph::fuel_fmt_extract_spline_graph_z);
-        fmt_fns.insert(2398393906, fuel_fmt::collisionvol::fuel_fmt_extract_collision_vol_z);
+        fmt_fns.insert(
+            1910554652,
+            fuel_fmt::splinegraph::fuel_fmt_extract_spline_graph_z,
+        );
+        fmt_fns.insert(
+            2398393906,
+            fuel_fmt::collisionvol::fuel_fmt_extract_collision_vol_z,
+        );
         fmt_fns.insert(549480509, fuel_fmt::omni::fuel_fmt_extract_omni_z);
         fmt_fns.insert(849267944, fuel_fmt::fuel_fmt_extract_sound_z); //
-        fmt_fns.insert(849861735, fuel_fmt::materialobj::fuel_fmt_extract_material_obj_z);
+        fmt_fns.insert(
+            849861735,
+            fuel_fmt::materialobj::fuel_fmt_extract_material_obj_z,
+        );
         fmt_fns.insert(954499543, fuel_fmt::fuel_fmt_extract_particles_data_z);
         fmt_fns.insert(1114947943, fuel_fmt::fuel_fmt_extract_warp_z);
         fmt_fns.insert(1135194223, fuel_fmt::fuel_fmt_extract_spline_z);
@@ -1479,43 +1520,49 @@ impl DPC for FuelDPC {
         fmt_fns.insert(4096629181, fuel_fmt::fuel_fmt_extract_game_obj_z);
         fmt_fns.insert(4240844041, fuel_fmt::fuel_fmt_extract_camera_z);
 
-		fs::create_dir_all(output_path)?;
+        fs::create_dir_all(output_path)?;
 
-		let mut input_file = File::open(input_path)?;
+        let mut input_file = File::open(input_path)?;
 
-		let mut object_header_buffer = [0; 24];
-		input_file.read(&mut object_header_buffer)?;
+        let mut object_header_buffer = [0; 24];
+        input_file.read(&mut object_header_buffer)?;
 
-		let object_header = match ObjectHeader::parse(&object_header_buffer) {
-			Ok((_, h)) => h,
-			Err(error) => panic!("{}", error),
-		};
+        let object_header = match ObjectHeader::parse(&object_header_buffer) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
 
-		if let Some(fmt_fn) = fmt_fns.get(&object_header.class_crc32) {
-			let mut header = vec![0; object_header.class_object_size as usize];
-			input_file.read(&mut header)?;
+        if let Some(fmt_fn) = fmt_fns.get(&object_header.class_crc32) {
+            let mut header = vec![0; object_header.class_object_size as usize];
+            input_file.read(&mut header)?;
 
-			let mut data = vec![0; object_header.decompressed_size as usize];
+            let mut data = vec![0; object_header.decompressed_size as usize];
 
-			if object_header.compressed_size != 0 {
-				let mut compresssed_data = vec![0; object_header.compressed_size as usize];
-				input_file.read(&mut compresssed_data)?;
-				lz::lzss_decompress(&compresssed_data[..], object_header.compressed_size as usize, &mut data[..], object_header.decompressed_size as usize, false)?;
-			} else {
-				input_file.read(&mut data)?;
-			}
+            if object_header.compressed_size != 0 {
+                let mut compresssed_data = vec![0; object_header.compressed_size as usize];
+                input_file.read(&mut compresssed_data)?;
+                lz::lzss_decompress(
+                    &compresssed_data[..],
+                    object_header.compressed_size as usize,
+                    &mut data[..],
+                    object_header.decompressed_size as usize,
+                    false,
+                )?;
+            } else {
+                input_file.read(&mut data)?;
+            }
 
-			fmt_fn(&header, &data, output_path.as_ref())?;
-		} else {
-			return Err(Error::new(ErrorKind::Other, "unsupported format"));
-		}
+            fmt_fn(&header, &data, output_path.as_ref())?;
+        } else {
+            return Err(Error::new(ErrorKind::Other, "unsupported format"));
+        }
 
-		Ok(())
-	}
+        Ok(())
+    }
 
     fn fmt_create<P: AsRef<Path>>(&self, _input_path: &P, _output_path: &P) -> Result<()> {
-		Ok(())
-	}
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -1524,13 +1571,13 @@ mod test {
     use std::path::Path;
 
     use checksumdir::checksumdir;
-    use checksums::Algorithm;
     use checksums::hash_file;
+    use checksums::Algorithm;
     use tempdir::TempDir;
     use test_generator::test_resources;
 
-    use crate::base_dpc::DPC;
     use crate::base_dpc::Options;
+    use crate::base_dpc::DPC;
     use crate::fuel_dpc::FuelDPC;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
@@ -1542,7 +1589,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: false,
                 is_optimization: false,
-				is_recursive: false,
+                is_recursive: false,
             },
             &vec![],
         );
@@ -1566,7 +1613,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: false,
                 is_optimization: false,
-				is_recursive: false,
+                is_recursive: false,
             },
             &vec![],
         );
@@ -1587,7 +1634,7 @@ mod test {
         tmp_dir.close().expect("Failed to delete temp_dir");
     }
 
-	#[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
         let dpc = FuelDPC::new(
             &Options {
@@ -1596,7 +1643,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: true,
                 is_optimization: false,
-				is_recursive: true,
+                is_recursive: true,
             },
             &vec![],
         );
@@ -1620,7 +1667,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: true,
                 is_optimization: true,
-				is_recursive: false,
+                is_recursive: false,
             },
             &vec![&OsStr::new("--unoptimized-pool")],
         );
@@ -1653,7 +1700,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: true,
                 is_optimization: false,
-				is_recursive: false,
+                is_recursive: false,
             },
             &vec![],
         );
@@ -1665,7 +1712,7 @@ mod test {
                 is_unsafe: false,
                 is_lz: false,
                 is_optimization: false,
-				is_recursive: false,
+                is_recursive: false,
             },
             &vec![],
         );
