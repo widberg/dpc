@@ -9,7 +9,6 @@ use clap::{App, AppSettings, Arg, SubCommand};
 use base_dpc::Options;
 use base_dpc::DPC;
 use fuel_dpc::FuelDPC;
-use lz::LZ;
 
 pub mod base_dpc;
 pub mod crc32;
@@ -41,6 +40,7 @@ fn main() -> Result<()> {
     }
 
     let crc32_subcommand = crc32::CRC32SubCommand::new();
+    let lz_subcommand = lz::LZSubCommand::new();
 
     let matches = App::new("dpc")
         .version(version_string.as_str())
@@ -115,30 +115,7 @@ fn main() -> Result<()> {
 				.last(true)
 				.required(false)
 				.help("Supply arguments directly to the dpc backend"))
-		.subcommand(SubCommand::with_name("lz")
-				.about("Used to compress raw files")
-				.arg(Arg::with_name("ALGORITHM")
-						.short("a")
-						.long("algorithm")
-						.takes_value(true)
-						.required(true)
-						.requires("INPUT")
-						.possible_values(&["lzss", "lz4"])
-						.help("The algorithm the raw file should be compatible with"))
-				.arg(Arg::with_name("COMPRESS")
-						.short("c")
-						.long("compress")
-						.requires("INPUT")
-						.conflicts_with("DECOMPRESS")
-						.help("compress the file"))
-				.arg(Arg::with_name("DECOMPRESS")
-						.short("d")
-						.long("decompress")
-						.requires("INPUT")
-						.conflicts_with("COMPRESS")
-						.help("decompress the file"))
-				.after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
-				.settings(&[AppSettings::ArgRequiredElseHelp]))
+		.subcommand(lz_subcommand.subcommand())
 		.subcommand(SubCommand::with_name("obj")
 				.about("Used to compress object files")
 				.arg(Arg::with_name("GAME")
@@ -198,40 +175,7 @@ fn main() -> Result<()> {
     }
 
     if let Some(subcommand_matches) = matches.subcommand_matches("lz") {
-        let input_path_string = matches.value_of_os("INPUT").unwrap();
-        let input_path = Path::new(input_path_string);
-
-        let output_path = match subcommand_matches.value_of_os("OUTPUT") {
-            Some(output_path_string) => PathBuf::from(output_path_string),
-            None => input_path.with_extension(if subcommand_matches.is_present("COMPRESS") {
-                "comp"
-            } else {
-                "uncomp"
-            }),
-        };
-
-        match subcommand_matches.value_of("ALGORITHM") {
-            None => panic!("Algorithm is required"),
-            Some(algorithm) => match algorithm {
-                "lzss" => {
-                    if subcommand_matches.is_present("COMPRESS") {
-                        lz::LZLZSS::compress(&input_path, &output_path.as_path())?;
-                    } else {
-                        lz::LZLZSS::decompress(&input_path, &output_path.as_path())?;
-                    }
-                }
-                "lz4" => {
-                    if subcommand_matches.is_present("COMPRESS") {
-                        lz::LZLZ4::compress(&input_path, &output_path.as_path())?;
-                    } else {
-                        lz::LZLZ4::decompress(&input_path, &output_path.as_path())?;
-                    }
-                }
-                _ => panic!("bad algorithm"),
-            },
-        };
-
-        return Ok(());
+        return lz_subcommand.execute(&matches, subcommand_matches);
     }
 
     let options = Options::from(&matches);

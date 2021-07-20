@@ -4,9 +4,13 @@ use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;
 use std::path::Path;
+use std::path::PathBuf;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use lz4::{Decoder, EncoderBuilder};
+use std::collections::HashMap;
+use clap::{App, SubCommand, Arg, AppSettings, ArgMatches};
+use itertools::Itertools;
 
 pub fn lzss_decompress(
     compressed_buffer: &[u8],
@@ -207,19 +211,22 @@ pub fn lzss_compress_optimized(
 
 pub trait LZ {
     fn decompress_internal(
+        self: &Self,
         compressed_buffer: &Vec<u8>,
         decompressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error>;
     fn compress_internal(
+        self: &Self,
         decompressed_buffer: &Vec<u8>,
         compressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error>;
-    fn decompress<P: AsRef<Path>>(
-        compressed_path: &P,
-        decompressed_path: &P,
+    fn decompress(
+        self: &Self,
+        compressed_path: &Path,
+        decompressed_path: &Path,
     ) -> Result<(), io::Error> {
-        let mut compressed_file = File::open(compressed_path.as_ref())?;
-        let mut decompressed_file = File::create(decompressed_path.as_ref())?;
+        let mut compressed_file = File::open(compressed_path)?;
+        let mut decompressed_file = File::create(decompressed_path)?;
 
         let decompressed_len = compressed_file.read_u32::<LittleEndian>()? as usize;
         let compressed_len = compressed_file.read_u32::<LittleEndian>()? as usize - 8;
@@ -229,19 +236,20 @@ pub trait LZ {
 
         compressed_file.read(&mut compressed_buffer)?;
 
-        Self::decompress_internal(&compressed_buffer, &mut decompressed_buffer)?;
+        self.decompress_internal(&compressed_buffer, &mut decompressed_buffer)?;
 
         decompressed_file.write(&decompressed_buffer)?;
 
         Ok(())
     }
 
-    fn compress<P: AsRef<Path>>(
-        decompressed_path: &P,
-        compressed_path: &P,
+    fn compress(
+        self: &Self,
+        decompressed_path: &Path,
+        compressed_path: &Path,
     ) -> Result<(), io::Error> {
-        let mut decompressed_file = File::open(decompressed_path.as_ref())?;
-        let mut compressed_file = File::create(compressed_path.as_ref())?;
+        let mut decompressed_file = File::open(decompressed_path)?;
+        let mut compressed_file = File::create(compressed_path)?;
 
         let mut decompressed_buffer = vec![];
 
@@ -249,7 +257,7 @@ pub trait LZ {
 
         let mut compressed_buffer = vec![0; decompressed_buffer.len() * 2];
 
-        Self::compress_internal(&decompressed_buffer, &mut compressed_buffer)?;
+        self.compress_internal(&decompressed_buffer, &mut compressed_buffer)?;
 
         compressed_file.write_u32::<LittleEndian>(decompressed_buffer.len() as u32)?;
         compressed_file.write_u32::<LittleEndian>(compressed_buffer.len() as u32 + 8)?;
@@ -264,6 +272,7 @@ pub struct LZLZSS {}
 
 impl LZ for LZLZSS {
     fn decompress_internal(
+        self: &Self,
         compressed_buffer: &Vec<u8>,
         decompressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error> {
@@ -281,6 +290,7 @@ impl LZ for LZLZSS {
     }
 
     fn compress_internal(
+        self: &Self,
         decompressed_buffer: &Vec<u8>,
         compressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error> {
@@ -304,6 +314,7 @@ pub struct LZLZ4 {}
 
 impl LZ for LZLZ4 {
     fn decompress_internal(
+        self: &Self,
         compressed_buffer: &Vec<u8>,
         decompressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error> {
@@ -317,6 +328,7 @@ impl LZ for LZLZ4 {
     }
 
     fn compress_internal(
+        self: &Self,
         decompressed_buffer: &Vec<u8>,
         compressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error> {
@@ -407,5 +419,86 @@ mod test {
             hash_file(&good_path.as_path(), Algorithm::SHA1),
             hash_file(&out_path.as_path(), Algorithm::SHA1)
         );
+    }
+}
+
+pub struct LZSubCommand<'a> {
+    algorithms: HashMap<&'a str, &'a dyn LZ>,
+}
+
+impl LZSubCommand<'_> {
+    pub fn new<'a>() -> LZSubCommand<'a> {
+        let mut algorithms: HashMap<&str, &dyn LZ> = HashMap::new();
+
+        algorithms.insert("lzss", &LZLZSS {});
+        algorithms.insert("lz4", &LZLZ4 {});
+
+        LZSubCommand { algorithms }
+    }
+
+    pub fn subcommand(self: &Self) -> App {
+        SubCommand::with_name("lz")
+            .about("Used to compress raw files")
+            .arg(Arg::with_name("ALGORITHM")
+                .short("a")
+                .long("algorithm")
+                .takes_value(true)
+                .required(true)
+                .requires("INPUT")
+                .possible_values(
+                    self.algorithms
+                        .keys()
+                        .map(|x| x.clone())
+                        .collect_vec()
+                        .as_slice()
+                )
+                .help("The algorithm the raw file should be compatible with"))
+            .arg(Arg::with_name("COMPRESS")
+                .short("c")
+                .long("compress")
+                .requires("INPUT")
+                .conflicts_with("DECOMPRESS")
+                .help("compress the file"))
+            .arg(Arg::with_name("DECOMPRESS")
+                .short("d")
+                .long("decompress")
+                .requires("INPUT")
+                .conflicts_with("COMPRESS")
+                .help("decompress the file"))
+            .after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
+            .settings(&[AppSettings::ArgRequiredElseHelp])
+    }
+
+    pub fn execute(
+        self: &Self,
+        matches: &ArgMatches,
+        subcommand_matches: &ArgMatches,
+    ) -> Result<(), io::Error> {
+        let input_path_string = matches.value_of_os("INPUT").unwrap();
+        let input_path = Path::new(input_path_string);
+
+        let output_path = match subcommand_matches.value_of_os("OUTPUT") {
+            Some(output_path_string) => PathBuf::from(output_path_string),
+            None => input_path.with_extension(if subcommand_matches.is_present("COMPRESS") {
+                "comp"
+            } else {
+                "uncomp"
+            }),
+        };
+
+        match subcommand_matches.value_of("ALGORITHM") {
+            None => panic!("Algorithm is required"),
+            Some(algorithm) => if let Some(lz_implementation) = self.algorithms.get(algorithm) {
+                if subcommand_matches.is_present("COMPRESS") {
+                    lz_implementation.compress(&input_path, &output_path.as_path())?;
+                } else {
+                    lz_implementation.decompress(&input_path, &output_path.as_path())?;
+                }
+            } else {
+                panic!("bad algorithm")
+            },
+        };
+
+        Ok(())
     }
 }

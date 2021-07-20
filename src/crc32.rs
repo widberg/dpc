@@ -169,7 +169,7 @@ impl CRC32SubCommand<'_> {
                             .keys()
                             .map(|x| x.clone())
                             .collect_vec()
-                            .as_slice(),
+                            .as_slice()
                     )
                     .help("The crc32 algorithm to use"),
             )
