@@ -1,12 +1,7 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, PascalArray, ResourceObjectZ, Vec3f};
-use crate::File;
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, PascalArray, ResourceObjectZ, Vec3f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown0 {
@@ -59,7 +54,7 @@ struct AnimationZUnknown12 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct AnimationZ {
+pub struct AnimationZ {
     a: f32,
     b: f32,
     c: u16,
@@ -91,32 +86,4 @@ struct AnimationZ {
     unknown15s: PascalArray<AnimationZUnknown5>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct AnimationObject {
-    resource_object: ResourceObjectZ,
-    animation: AnimationZ,
-}
-
-pub fn fuel_fmt_extract_animation_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let resource_object = match ResourceObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let animation = match AnimationZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let object = AnimationObject {
-        resource_object,
-        animation,
-    };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type AnimationObjectFormat = FUELObjectFormat<ResourceObjectZ, AnimationZ>;

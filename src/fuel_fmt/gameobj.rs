@@ -1,14 +1,9 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
 use nom::number::complete::*;
 use nom::*;
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{PascalArray, ResourceObjectZ};
-use crate::File;
+use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, ResourceObjectZ};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GameObjZChild {
@@ -23,36 +18,8 @@ struct GameObjZChild {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct GameObjZ {
+pub struct GameObjZ {
     children: PascalArray<GameObjZChild>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct GameObjObject {
-    resource_object: ResourceObjectZ,
-    game_obj: GameObjZ,
-}
-
-pub fn fuel_fmt_extract_game_obj_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let resource_object = match ResourceObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let game_obj = match GameObjZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let object = GameObjObject {
-        resource_object,
-        game_obj,
-    };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type GameObjObjectFormat = FUELObjectFormat<ResourceObjectZ, GameObjZ>;

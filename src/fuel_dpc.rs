@@ -36,6 +36,7 @@ use base_dpc::DPC;
 use crate::base_dpc;
 use crate::fuel_fmt;
 use crate::lz;
+use std::option::Option::Some;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32 {
     return (unpadded_size + 0x7ff) & 0xfffff800;
@@ -631,14 +632,7 @@ impl DPC for FuelDPC {
                     let mut t = OsString::new();
                     t.push(object_file_path.as_os_str());
                     t.push(".d");
-                    match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
-                        Ok(_) => (),
-                        Err(ref e) => {
-                            if e.kind() != ErrorKind::Other {
-                                panic!("{}: {}", oh.crc32, e);
-                            }
-                        }
-                    }
+                    self.fmt_extract(&object_file_path, &PathBuf::from(&t))?;
                 }
 
                 pb.inc(1);
@@ -1467,73 +1461,17 @@ impl DPC for FuelDPC {
         type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
         fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z); //
-        fmt_fns.insert(705810152, fuel_fmt::rtc::fuel_fmt_extract_rtc_z);
-        fmt_fns.insert(
-            1175485833,
-            fuel_fmt::animation::fuel_fmt_extract_animation_z,
-        );
-        fmt_fns.insert(838505646, fuel_fmt::genworld::fuel_fmt_extract_gen_world_z);
-        fmt_fns.insert(2906362741, fuel_fmt::worldref::fuel_fmt_extract_world_ref_z);
-        fmt_fns.insert(3845834591, fuel_fmt::gwroad::fuel_fmt_extract_gw_road_z);
         fmt_fns.insert(1396791303, fuel_fmt::skin::fuel_fmt_extract_skin_z); //
         fmt_fns.insert(
             3312018398,
             fuel_fmt::particles::fuel_fmt_extract_particles_z,
         ); //
-        fmt_fns.insert(968261323, fuel_fmt::world::fuel_fmt_extract_world_z);
         fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z); //
         fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z); //
         fmt_fns.insert(2204276779, fuel_fmt::material::fuel_fmt_extract_material_z);
-        fmt_fns.insert(3611002348, fuel_fmt::skel::fuel_fmt_extract_skel_z);
-        fmt_fns.insert(3412401859, fuel_fmt::loddata::fuel_fmt_extract_lod_data_z);
-        fmt_fns.insert(1706265229, fuel_fmt::surface::fuel_fmt_extract_surface_z);
-        fmt_fns.insert(
-            848525546,
-            fuel_fmt::lightdata::fuel_fmt_extract_light_data_z,
-        );
-        fmt_fns.insert(866453734, fuel_fmt::rotshape::fuel_fmt_extract_rot_shape_z);
-        fmt_fns.insert(
-            1910554652,
-            fuel_fmt::splinegraph::fuel_fmt_extract_spline_graph_z,
-        );
-        fmt_fns.insert(
-            2398393906,
-            fuel_fmt::collisionvol::fuel_fmt_extract_collision_vol_z,
-        );
-        fmt_fns.insert(549480509, fuel_fmt::omni::fuel_fmt_extract_omni_z);
         fmt_fns.insert(849267944, fuel_fmt::sound::fuel_fmt_extract_sound_z); //
-        fmt_fns.insert(
-            849861735,
-            fuel_fmt::materialobj::fuel_fmt_extract_material_obj_z,
-        );
-        fmt_fns.insert(
-            954499543,
-            fuel_fmt::particlesdata::fuel_fmt_extract_particles_data_z,
-        );
-        fmt_fns.insert(1114947943, fuel_fmt::warp::fuel_fmt_extract_warp_z);
-        fmt_fns.insert(1135194223, fuel_fmt::spline::fuel_fmt_extract_spline_z);
-        fmt_fns.insert(
-            1391959958,
-            fuel_fmt::userdefine::fuel_fmt_extract_user_define_z,
-        );
         fmt_fns.insert(1471281566, fuel_fmt::bitmap::fuel_fmt_extract_bitmap_z); //
-        fmt_fns.insert(1536002910, fuel_fmt::fonts::fuel_fmt_extract_fonts_z);
-        fmt_fns.insert(
-            1625945536,
-            fuel_fmt::rotshapedata::fuel_fmt_extract_rot_shape_data_z,
-        );
         fmt_fns.insert(2259852416, fuel_fmt::binary::fuel_fmt_extract_binary_z);
-        fmt_fns.insert(3626109572, fuel_fmt::meshdata::fuel_fmt_extract_mesh_data_z);
-        fmt_fns.insert(
-            3747817665,
-            fuel_fmt::surfacedatas::fuel_fmt_extract_surface_datas_z,
-        );
-        fmt_fns.insert(
-            3834418854,
-            fuel_fmt::materialanim::fuel_fmt_extract_material_anim_z,
-        );
-        fmt_fns.insert(4096629181, fuel_fmt::gameobj::fuel_fmt_extract_game_obj_z);
-        fmt_fns.insert(4240844041, fuel_fmt::camera::fuel_fmt_extract_camera_z);
 
         fs::create_dir_all(output_path)?;
 
@@ -1568,6 +1506,10 @@ impl DPC for FuelDPC {
             }
 
             fmt_fn(&header, &data, output_path.as_ref())?;
+        } else if let Some(fuel_object_format) =
+            fuel_fmt::get_formats().get(&object_header.class_crc32)
+        {
+            fuel_object_format.unpack(input_path.as_ref(), output_path.as_ref())?;
         } else {
             return Err(Error::new(ErrorKind::Other, "unsupported format"));
         }

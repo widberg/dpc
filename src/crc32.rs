@@ -1,13 +1,13 @@
+use std::collections::HashMap;
+use std::fs::File;
+use std::io;
 use std::io::{BufRead, BufReader, BufWriter, Error, Read, Write};
+use std::path::Path;
+use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use crc32fast::Hasher;
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io;
-use std::path::Path;
-use std::path::PathBuf;
 
 pub trait CRC32 {
     fn hash(self: &Self, name: &[u8]) -> u32;
@@ -169,7 +169,7 @@ impl CRC32SubCommand<'_> {
                             .keys()
                             .map(|x| x.clone())
                             .collect_vec()
-                            .as_slice()
+                            .as_slice(),
                     )
                     .help("The crc32 algorithm to use"),
             )

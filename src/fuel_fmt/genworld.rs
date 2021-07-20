@@ -1,12 +1,7 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ, PascalArray};
-use crate::File;
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ObjectZ, PascalArray};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown7 {
@@ -49,7 +44,7 @@ struct GenWorldZUnknown13 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct GenWorldZ {
+pub struct GenWorldZ {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
@@ -66,29 +61,4 @@ struct GenWorldZ {
     unknown13s: PascalArray<GenWorldZUnknown13>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct GenWorldObject {
-    object: ObjectZ,
-    gen_world: GenWorldZ,
-}
-
-pub fn fuel_fmt_extract_gen_world_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let object = match ObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let gen_world = match GenWorldZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let object = GenWorldObject { object, gen_world };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type GenWorldObjectFormat = FUELObjectFormat<ObjectZ, GenWorldZ>;

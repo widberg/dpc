@@ -1,16 +1,11 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{ResourceObjectZ, Vec2f, Vec3f};
-use crate::File;
+use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec2f, Vec3f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct WarpZ {
+pub struct WarpZ {
     material_crc32: u32,
     #[nom(Count(8))]
     vertices: Vec<Vec3f>,
@@ -21,32 +16,4 @@ struct WarpZ {
     texcoords: Vec<Vec2f>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct WarpObject {
-    resource_object: ResourceObjectZ,
-    warp: WarpZ,
-}
-
-pub fn fuel_fmt_extract_warp_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let resource_object = match ResourceObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let warp = match WarpZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let object = WarpObject {
-        resource_object,
-        warp,
-    };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type WarpObjectFormat = FUELObjectFormat<ResourceObjectZ, WarpZ>;

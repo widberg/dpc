@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -7,10 +8,9 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use lz4::{Decoder, EncoderBuilder};
-use std::collections::HashMap;
-use clap::{App, SubCommand, Arg, AppSettings, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use itertools::Itertools;
+use lz4::{Decoder, EncoderBuilder};
 
 pub fn lzss_decompress(
     compressed_buffer: &[u8],
@@ -439,32 +439,38 @@ impl LZSubCommand<'_> {
     pub fn subcommand(self: &Self) -> App {
         SubCommand::with_name("lz")
             .about("Used to compress raw files")
-            .arg(Arg::with_name("ALGORITHM")
-                .short("a")
-                .long("algorithm")
-                .takes_value(true)
-                .required(true)
-                .requires("INPUT")
-                .possible_values(
-                    self.algorithms
-                        .keys()
-                        .map(|x| x.clone())
-                        .collect_vec()
-                        .as_slice()
-                )
-                .help("The algorithm the raw file should be compatible with"))
-            .arg(Arg::with_name("COMPRESS")
-                .short("c")
-                .long("compress")
-                .requires("INPUT")
-                .conflicts_with("DECOMPRESS")
-                .help("compress the file"))
-            .arg(Arg::with_name("DECOMPRESS")
-                .short("d")
-                .long("decompress")
-                .requires("INPUT")
-                .conflicts_with("COMPRESS")
-                .help("decompress the file"))
+            .arg(
+                Arg::with_name("ALGORITHM")
+                    .short("a")
+                    .long("algorithm")
+                    .takes_value(true)
+                    .required(true)
+                    .requires("INPUT")
+                    .possible_values(
+                        self.algorithms
+                            .keys()
+                            .map(|x| x.clone())
+                            .collect_vec()
+                            .as_slice(),
+                    )
+                    .help("The algorithm the raw file should be compatible with"),
+            )
+            .arg(
+                Arg::with_name("COMPRESS")
+                    .short("c")
+                    .long("compress")
+                    .requires("INPUT")
+                    .conflicts_with("DECOMPRESS")
+                    .help("compress the file"),
+            )
+            .arg(
+                Arg::with_name("DECOMPRESS")
+                    .short("d")
+                    .long("decompress")
+                    .requires("INPUT")
+                    .conflicts_with("COMPRESS")
+                    .help("decompress the file"),
+            )
             .after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
             .settings(&[AppSettings::ArgRequiredElseHelp])
     }
@@ -488,15 +494,17 @@ impl LZSubCommand<'_> {
 
         match subcommand_matches.value_of("ALGORITHM") {
             None => panic!("Algorithm is required"),
-            Some(algorithm) => if let Some(lz_implementation) = self.algorithms.get(algorithm) {
-                if subcommand_matches.is_present("COMPRESS") {
-                    lz_implementation.compress(&input_path, &output_path.as_path())?;
+            Some(algorithm) => {
+                if let Some(lz_implementation) = self.algorithms.get(algorithm) {
+                    if subcommand_matches.is_present("COMPRESS") {
+                        lz_implementation.compress(&input_path, &output_path.as_path())?;
+                    } else {
+                        lz_implementation.decompress(&input_path, &output_path.as_path())?;
+                    }
                 } else {
-                    lz_implementation.decompress(&input_path, &output_path.as_path())?;
+                    panic!("bad algorithm")
                 }
-            } else {
-                panic!("bad algorithm")
-            },
+            }
         };
 
         Ok(())

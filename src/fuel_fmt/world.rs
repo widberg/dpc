@@ -1,12 +1,7 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, PascalArray, ResourceObjectZ};
-use crate::File;
+use crate::fuel_fmt::common::{FUELObjectFormat, Mat4f, PascalArray, ResourceObjectZ};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct WorldZUnknown2 {
@@ -20,7 +15,7 @@ struct WorldZUnknown2 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct WorldZ {
+pub struct WorldZ {
     unknown11: u32,
     unknown12: u32,
     unknown13: u32,
@@ -45,32 +40,4 @@ struct WorldZ {
     unknown13s: PascalArray<u32>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct WorldObject {
-    resource_object: ResourceObjectZ,
-    world: WorldZ,
-}
-
-pub fn fuel_fmt_extract_world_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let resource_object = match ResourceObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let world = match WorldZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let object = WorldObject {
-        resource_object,
-        world,
-    };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type WorldObjectFormat = FUELObjectFormat<ResourceObjectZ, WorldZ>;
