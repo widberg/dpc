@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ, PascalArray};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -41,44 +40,29 @@ struct ParticlesZUnknown5 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown0 {
-    #[nom(Count(19))]
-    data: Vec<u32>,
+    data: FixedVec<u32, 19>,
     unknown1flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<ParticlesZUnknown1>,
-
+    unknown1s: PascalArray<ParticlesZUnknown1>,
     unknown2flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<ParticlesZUnknown2>,
-
+    unknown2s: PascalArray<ParticlesZUnknown2>,
     unknown3flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown3s: Vec<ParticlesZUnknown2>,
-
+    unknown3s: PascalArray<ParticlesZUnknown2>,
     unknown4flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<ParticlesZUnknown4>,
-
+    unknown4s: PascalArray<ParticlesZUnknown4>,
     unknown5flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown5s: Vec<ParticlesZUnknown5>,
-
+    unknown5s: PascalArray<ParticlesZUnknown5>,
     unknown6flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown6s: Vec<ParticlesZUnknown5>,
+    unknown6s: PascalArray<ParticlesZUnknown5>,
     unknown7flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<ParticlesZUnknown4>,
+    unknown7s: PascalArray<ParticlesZUnknown4>,
     unknown8: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct ParticlesZ {
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<ParticlesZUnknown0>,
-    #[nom(LengthCount(le_u32))]
-    mats: Vec<Mat4f>,
+    unknown0s: PascalArray<ParticlesZUnknown0>,
+    mats: PascalArray<Mat4f>,
     unknown2: u32,
     unknown3: u16,
 }

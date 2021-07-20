@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::ResourceObjectZ;
+use crate::fuel_fmt::common::{FixedVec, PascalArray, ResourceObjectZ};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -16,16 +15,14 @@ struct LodDataZ {
     unknown_byte1: u8,
     zero_byte0: u8,
     zero_byte1: u8,
-    #[nom(LengthCount(le_u32))]
-    crc32s: Vec<u32>,
+    crc32s: PascalArray<u32>,
     zero0: u32,
     #[serde(skip_serializing)]
     #[allow(dead_code)]
     opt: u8,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[nom(Count(24))]
-    padding: Option<Vec<u8>>,
+    padding: Option<FixedVec<u8, 24>>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
     u1: Option<u32>,

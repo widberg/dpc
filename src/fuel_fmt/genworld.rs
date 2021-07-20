@@ -2,39 +2,28 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ, PascalArray};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct GenWorldZUnknown7Unknown {
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<u32>,
-}
-
-#[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown7 {
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<u8>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<GenWorldZUnknown7Unknown>,
+    unknown0s: PascalArray<u8>,
+    unknown1s: PascalArray<PascalArray<u32>>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown8 {
     unknown0: u32,
-    #[nom(Count(127))]
-    data: Vec<u8>,
+    data: FixedVec<u8, 127>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown10 {
     unknown0: u32,
-    #[nom(Count(8))]
-    unknown1s: Vec<u32>,
+    unknown1s: FixedVec<u32, 8>,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,
@@ -54,10 +43,8 @@ struct GenWorldZUnknown12 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown13 {
-    #[nom(Count(8))]
-    unknown0s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<u32>,
+    unknown0s: FixedVec<u32, 8>,
+    unknown1s: PascalArray<u32>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -66,27 +53,17 @@ struct GenWorldZ {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown3s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown5s: Vec<u32>,
+    unknown3s: PascalArray<u32>,
+    unknown4s: PascalArray<u32>,
+    unknown5s: PascalArray<u32>,
     unknown6: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<GenWorldZUnknown7>,
-    #[nom(LengthCount(le_u32))]
-    unknown8s: Vec<GenWorldZUnknown8>,
-    #[nom(LengthCount(le_u32))]
-    mats: Vec<Mat4f>,
-    #[nom(LengthCount(le_u32))]
-    unknown10s: Vec<GenWorldZUnknown10>,
-    #[nom(LengthCount(le_u32))]
-    unknown11s: Vec<GenWorldZUnknown11>,
-    #[nom(LengthCount(le_u32))]
-    unknown12s: Vec<GenWorldZUnknown12>,
-    #[nom(LengthCount(le_u32))]
-    unknown13s: Vec<GenWorldZUnknown13>,
+    unknown7s: PascalArray<GenWorldZUnknown7>,
+    unknown8s: PascalArray<GenWorldZUnknown8>,
+    mats: PascalArray<Mat4f>,
+    unknown10s: PascalArray<GenWorldZUnknown10>,
+    unknown11s: PascalArray<GenWorldZUnknown11>,
+    unknown12s: PascalArray<GenWorldZUnknown12>,
+    unknown13s: PascalArray<GenWorldZUnknown13>,
 }
 
 #[derive(Serialize, Deserialize)]

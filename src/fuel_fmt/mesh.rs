@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, Quat, Vec3f};
+use crate::fuel_fmt::common::{FixedVec, Mat4f, PascalArray, Quat, Vec3f};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -25,16 +24,14 @@ struct MeshZUnknown1 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown2 {
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<u16>,
+    unknown0s: PascalArray<u16>,
     unknown1: u32,
     unknown2: u32,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown4 {
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<MeshZUnknown1>,
+    unknown0s: PascalArray<MeshZUnknown1>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -106,10 +103,8 @@ struct MeshZUnknown13Unknown1 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown13 {
-    #[nom(Count(12))]
-    unknown0s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<MeshZUnknown13Unknown1>,
+    unknown0s: FixedVec<u32, 12>,
+    unknown1s: PascalArray<MeshZUnknown13Unknown1>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -138,14 +133,11 @@ struct MeshZUnknown15 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown14 {
-    #[nom(LengthCount(le_u32))]
-    name: Vec<u8>,
+    name: PascalArray<u8>,
     unknown1: u32,
     unknown2: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<u16>,
-    #[nom(LengthCount(le_u32))]
-    unknown15s: Vec<MeshZUnknown15>,
+    unknown4s: PascalArray<u16>,
+    unknown15s: PascalArray<MeshZUnknown15>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -157,87 +149,53 @@ struct MeshZUnknown12 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct MeshZ {
-    #[nom(LengthCount(le_u32))]
-    vecs: Vec<Vec3f>,
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<MeshZUnknown0>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<MeshZUnknown1>,
-    #[nom(LengthCount(le_u32))]
-    vertices1: Vec<Vec3f>,
-    #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<MeshZUnknown2>,
+    vecs: PascalArray<Vec3f>,
+    unknown0s: PascalArray<MeshZUnknown0>,
+    unknown1s: PascalArray<MeshZUnknown1>,
+    vertices1: PascalArray<Vec3f>,
+    unknown2s: PascalArray<MeshZUnknown2>,
     // if (someHeaderValue)
     // {
     //     PascalArray<std::uint32_t> unknown3s;
     // }
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<MeshZUnknown4>,
-    #[nom(LengthCount(le_u32))]
-    material_crc32s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown6s: Vec<MeshZUnknown6>,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<MeshZUnknown7>,
-    #[nom(LengthCount(le_u32))]
-    unknown8s: Vec<MeshZUnknown6>,
-    #[nom(LengthCount(le_u32))]
-    sub_meshes: Vec<MeshZSubMesh>,
-    #[nom(LengthCount(le_u32))]
-    indices: Vec<MeshZIndices>,
-    #[nom(LengthCount(le_u32))]
-    unknown11s: Vec<MeshZUnknown11>,
-    #[nom(LengthCount(le_u32))]
-    unknown13s: Vec<MeshZUnknown13>,
-    #[nom(LengthCount(le_u32))]
-    unknown16s: Vec<MeshZUnknown16>,
-    #[nom(LengthCount(le_u32))]
-    pairs: Vec<MeshZPair>,
-    #[nom(LengthCount(le_u32))]
-    unknown18s: Vec<u16>,
-    #[nom(LengthCount(le_u32))]
-    unknown14s: Vec<MeshZUnknown14>,
-    #[nom(LengthCount(le_u32))]
-    unknown12s: Vec<MeshZUnknown12>,
+    unknown4s: PascalArray<MeshZUnknown4>,
+    material_crc32s: PascalArray<u32>,
+    unknown6s: PascalArray<MeshZUnknown6>,
+    unknown7s: PascalArray<MeshZUnknown7>,
+    unknown8s: PascalArray<MeshZUnknown6>,
+    sub_meshes: PascalArray<MeshZSubMesh>,
+    indices: PascalArray<MeshZIndices>,
+    unknown11s: PascalArray<MeshZUnknown11>,
+    unknown13s: PascalArray<MeshZUnknown13>,
+    unknown16s: PascalArray<MeshZUnknown16>,
+    pairs: PascalArray<MeshZPair>,
+    unknown18s: PascalArray<u16>,
+    unknown14s: PascalArray<MeshZUnknown14>,
+    unknown12s: PascalArray<MeshZUnknown12>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct MeshZAlt {
-    #[nom(LengthCount(le_u32))]
-    vecs: Vec<Vec3f>,
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<MeshZUnknown0>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<MeshZUnknown1>,
-    #[nom(LengthCount(le_u32))]
-    vertices1: Vec<Vec3f>,
-    #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<MeshZUnknown2>,
+    vecs: PascalArray<Vec3f>,
+    unknown0s: PascalArray<MeshZUnknown0>,
+    unknown1s: PascalArray<MeshZUnknown1>,
+    vertices1: PascalArray<Vec3f>,
+    unknown2s: PascalArray<MeshZUnknown2>,
     // if (someHeaderValue)
     // {
     //     PascalArray<std::uint32_t> unknown3s;
     // }
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<MeshZUnknown4>,
-    #[nom(LengthCount(le_u32))]
-    material_crc32s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown6s: Vec<MeshZUnknown6>,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<MeshZUnknown7>,
-    #[nom(LengthCount(le_u32))]
-    unknown8s: Vec<MeshZUnknown6>,
-    #[nom(LengthCount(le_u32))]
-    sub_meshes: Vec<MeshZSubMesh>,
-    #[nom(LengthCount(le_u32))]
-    indices: Vec<MeshZIndices>,
-    #[nom(LengthCount(le_u32))]
-    unknown11s: Vec<MeshZUnknown11>,
-    #[nom(LengthCount(le_u32))]
-    unknown13s: Vec<MeshZUnknown13>,
-    #[nom(LengthCount(le_u32))]
-    unknown12s: Vec<MeshZUnknown12>,
+    unknown4s: PascalArray<MeshZUnknown4>,
+    material_crc32s: PascalArray<u32>,
+    unknown6s: PascalArray<MeshZUnknown6>,
+    unknown7s: PascalArray<MeshZUnknown7>,
+    unknown8s: PascalArray<MeshZUnknown6>,
+    sub_meshes: PascalArray<MeshZSubMesh>,
+    indices: PascalArray<MeshZIndices>,
+    unknown11s: PascalArray<MeshZUnknown11>,
+    unknown13s: PascalArray<MeshZUnknown13>,
+    unknown12s: PascalArray<MeshZUnknown12>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -252,8 +210,7 @@ struct MeshZHeaderUnknown3 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderUnknown4 {
-    #[nom(Count(64))]
-    unknown0s: Vec<u8>,
+    unknown0s: FixedVec<u8, 64>,
     unknown1: u32,
     unknown2: u32,
 }
@@ -268,18 +225,14 @@ struct MeshZHeader {
     unknown3: f32,
     unknown4: f32,
     unknown5: u16,
-    #[nom(LengthCount(le_u32))]
-    crc32s: Vec<u32>,
+    crc32s: PascalArray<u32>,
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown3s: Vec<MeshZHeaderUnknown3>,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<MeshZHeaderUnknown4>,
+    unknown3s: PascalArray<MeshZHeaderUnknown3>,
+    unknown4s: PascalArray<MeshZHeaderUnknown4>,
     #[nom(Cond(i.len() == 16))]
-    #[nom(Count(16))]
-    zeros: Option<Vec<u8>>,
+    zeros: Option<FixedVec<u8, 16>>,
 }
 
 #[derive(Serialize, Deserialize)]

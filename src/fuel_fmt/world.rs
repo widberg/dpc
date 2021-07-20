@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ResourceObjectZ};
+use crate::fuel_fmt::common::{Mat4f, PascalArray, ResourceObjectZ};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -28,36 +27,22 @@ struct WorldZ {
     unknown14: u32,
     unknown15: u32,
     unknown16: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown17s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknowns: Vec<u8>,
+    unknown17s: PascalArray<u32>,
+    unknowns: PascalArray<u8>,
     unknown0: Mat4f,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<WorldZUnknown2>,
+    unknown1s: PascalArray<u32>,
+    unknown2s: PascalArray<WorldZUnknown2>,
     unknown3: Mat4f,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown5s: Vec<WorldZUnknown2>,
-    #[nom(LengthCount(le_u32))]
-    unknown6s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown8s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown9s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown10s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown11s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown12s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown13s: Vec<u32>,
+    unknown4s: PascalArray<u32>,
+    unknown5s: PascalArray<WorldZUnknown2>,
+    unknown6s: PascalArray<u32>,
+    unknown7s: PascalArray<u32>,
+    unknown8s: PascalArray<u32>,
+    unknown9s: PascalArray<u32>,
+    unknown10s: PascalArray<u32>,
+    unknown11s: PascalArray<u32>,
+    unknown12s: PascalArray<u32>,
+    unknown13s: PascalArray<u32>,
 }
 
 #[derive(Serialize, Deserialize)]

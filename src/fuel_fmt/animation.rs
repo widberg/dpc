@@ -2,17 +2,15 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{ResourceObjectZ, Vec3f};
+use crate::fuel_fmt::common::{FixedVec, PascalArray, ResourceObjectZ, Vec3f};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown0 {
-    #[nom(Count(40))]
-    data: Vec<u8>,
+    data: FixedVec<u8, 40>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -23,8 +21,7 @@ struct AnimationZUnknown {
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown2 {
-    #[nom(Count(3))]
-    unknowns: Vec<AnimationZUnknown>,
+    unknowns: FixedVec<AnimationZUnknown, 3>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -39,8 +36,7 @@ struct AnimationZUnknown1 {
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown4 {
     unknown0: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<AnimationZUnknown1>,
+    unknown1s: PascalArray<AnimationZUnknown1>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -68,47 +64,31 @@ struct AnimationZ {
     b: f32,
     c: u16,
     d: u16,
-    #[nom(LengthCount(le_u32))]
-    vectors: Vec<Vec3f>,
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<AnimationZUnknown0>,
+    vectors: PascalArray<Vec3f>,
+    unknown0s: PascalArray<AnimationZUnknown0>,
     unknown2flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<AnimationZUnknown2>,
+    unknown2s: PascalArray<AnimationZUnknown2>,
     unknown3flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown3s: Vec<AnimationZUnknown2>,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<AnimationZUnknown4>,
+    unknown3s: PascalArray<AnimationZUnknown2>,
+    unknown4s: PascalArray<AnimationZUnknown4>,
     unknown5flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown5s: Vec<AnimationZUnknown5>,
+    unknown5s: PascalArray<AnimationZUnknown5>,
     unknown6flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown6s: Vec<AnimationZUnknown5>,
+    unknown6s: PascalArray<AnimationZUnknown5>,
     unknown7flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<AnimationZUnknown2>,
+    unknown7s: PascalArray<AnimationZUnknown2>,
     unknown8flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown8s: Vec<AnimationZUnknown2>,
+    unknown8s: PascalArray<AnimationZUnknown2>,
     unknown9flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown9s: Vec<AnimationZUnknown5>,
+    unknown9s: PascalArray<AnimationZUnknown5>,
     unknown10flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown10s: Vec<AnimationZUnknown5>,
+    unknown10s: PascalArray<AnimationZUnknown5>,
     unknown11flag: u16,
-    #[nom(LengthCount(le_u32))]
-    unknown11s: Vec<AnimationZUnknown5>,
-    #[nom(LengthCount(le_u32))]
-    unknown12s: Vec<AnimationZUnknown12>,
-    #[nom(LengthCount(le_u32))]
-    unknown13s: Vec<AnimationZUnknown12>,
-    #[nom(LengthCount(le_u32))]
-    unknown14s: Vec<AnimationZUnknown5>,
-    #[nom(LengthCount(le_u32))]
-    unknown15s: Vec<AnimationZUnknown5>,
+    unknown11s: PascalArray<AnimationZUnknown5>,
+    unknown12s: PascalArray<AnimationZUnknown12>,
+    unknown13s: PascalArray<AnimationZUnknown12>,
+    unknown14s: PascalArray<AnimationZUnknown5>,
+    unknown15s: PascalArray<AnimationZUnknown5>,
 }
 
 #[derive(Serialize, Deserialize)]

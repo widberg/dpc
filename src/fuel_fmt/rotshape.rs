@@ -2,27 +2,21 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{ObjectZ, Vec2f, Vec3f};
+use crate::fuel_fmt::common::{ObjectZ, PascalArray, Vec2f, Vec3f};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct RotShapeZ {
-    #[nom(LengthCount(le_u32))]
-    vertices: Vec<Vec3f>,
+    vertices: PascalArray<Vec3f>,
     unknown1: f32,
-    #[nom(LengthCount(le_u32))]
-    ints: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    sizes: Vec<Vec3f>,
-    #[nom(LengthCount(le_u32))]
-    texcoords: Vec<Vec2f>,
-    #[nom(LengthCount(le_u32))]
-    material_crc32s: Vec<u32>,
+    ints: PascalArray<u32>,
+    sizes: PascalArray<Vec3f>,
+    texcoords: PascalArray<Vec2f>,
+    material_crc32s: PascalArray<u32>,
     scale: f32,
     billboard_mode: u16,
 }

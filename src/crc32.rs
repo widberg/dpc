@@ -1,10 +1,18 @@
 use std::io::{BufRead, BufReader, BufWriter, Error, Read, Write};
 
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use crc32fast::Hasher;
+use itertools::Itertools;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io;
+use std::path::Path;
+use std::path::PathBuf;
 
 pub trait CRC32 {
-    fn hash(name: &[u8]) -> u32;
+    fn hash(self: &Self, name: &[u8]) -> u32;
     fn generate_names(
+        self: &Self,
         input: &mut dyn Read,
         output: &mut dyn Write,
         flush: bool,
@@ -16,11 +24,11 @@ pub trait CRC32 {
             let name = line?;
             if unsigned_option {
                 output_buffer.write(
-                    format!("{:?} \"{}\"\n", Self::hash(name.as_bytes()) as u32, name).as_bytes(),
+                    format!("{:?} \"{}\"\n", self.hash(name.as_bytes()) as u32, name).as_bytes(),
                 )?;
             } else {
                 output_buffer.write(
-                    format!("{:?} \"{}\"\n", Self::hash(name.as_bytes()) as i32, name).as_bytes(),
+                    format!("{:?} \"{}\"\n", self.hash(name.as_bytes()) as i32, name).as_bytes(),
                 )?;
             }
             if flush {
@@ -104,7 +112,7 @@ const CRC32_TABLE: [u32; CRC32_TABLE_SIZE] = [
 ];
 
 impl CRC32 for AsoboCRC32 {
-    fn hash(name: &[u8]) -> u32 {
+    fn hash(self: &Self, name: &[u8]) -> u32 {
         let mut hash: u32 = 0;
 
         for c in name {
@@ -119,9 +127,100 @@ impl CRC32 for AsoboCRC32 {
 pub struct IEEECRC32 {}
 
 impl CRC32 for IEEECRC32 {
-    fn hash(name: &[u8]) -> u32 {
+    fn hash(self: &Self, name: &[u8]) -> u32 {
         let mut hasher = Hasher::new();
         hasher.update(name);
         hasher.finalize()
+    }
+}
+
+pub struct CRC32SubCommand<'a> {
+    algorithms: HashMap<&'a str, &'a dyn CRC32>,
+}
+
+impl CRC32SubCommand<'_> {
+    pub fn new<'a>() -> CRC32SubCommand<'a> {
+        let mut algorithms: HashMap<&str, &dyn CRC32> = HashMap::new();
+
+        algorithms.insert("asobo", &AsoboCRC32 {});
+        algorithms.insert("ieee", &IEEECRC32 {});
+
+        CRC32SubCommand { algorithms }
+    }
+
+    pub fn subcommand(self: &Self) -> App {
+        SubCommand::with_name("crc32")
+            .about("generate name files")
+            .arg(
+                Arg::with_name("INTERACTIVE")
+                    .short("I")
+                    .long("interactive")
+                    .conflicts_with_all(&["INPUT", "OUTPUT"])
+                    .help("Run the command in interactive mode"),
+            )
+            .arg(
+                Arg::with_name("ALGORITHM")
+                    .short("a")
+                    .long("algorithm")
+                    .takes_value(true)
+                    .required(true)
+                    .possible_values(
+                        self.algorithms
+                            .keys()
+                            .map(|x| x.clone())
+                            .collect_vec()
+                            .as_slice(),
+                    )
+                    .help("The crc32 algorithm to use"),
+            )
+            .arg(
+                Arg::with_name("UNSIGNED")
+                    .short("U")
+                    .long("unsigned")
+                    .help("Use unsigned values"),
+            )
+            .settings(&[AppSettings::ArgRequiredElseHelp])
+    }
+
+    pub fn execute(
+        self: &Self,
+        matches: &ArgMatches,
+        subcommand_matches: &ArgMatches,
+    ) -> Result<(), io::Error> {
+        let unsigned_option = subcommand_matches.is_present("UNSIGNED");
+        let interactive_option = subcommand_matches.is_present("INTERACTIVE");
+
+        let (mut input, mut output): (Box<dyn Read>, Box<dyn Write>) = if interactive_option {
+            (Box::new(io::stdin()), Box::new(io::stdout()))
+        } else {
+            let input_path_string = matches.value_of_os("INPUT").unwrap();
+            let input_path = Path::new(input_path_string);
+            let output_path = match matches.value_of_os("OUTPUT") {
+                Some(output_path_string) => PathBuf::from(output_path_string),
+                None => input_path.with_extension("NPC"),
+            };
+            (
+                Box::new(File::open(input_path)?),
+                Box::new(File::create(output_path)?),
+            )
+        };
+
+        match subcommand_matches.value_of("ALGORITHM") {
+            None => panic!("Algorithm is required"),
+            Some(algorithm) => {
+                if let Some(crc32_implementation) = self.algorithms.get(algorithm) {
+                    crc32_implementation.generate_names(
+                        input.as_mut(),
+                        output.as_mut(),
+                        interactive_option,
+                        unsigned_option,
+                    )?;
+                } else {
+                    panic!("bad algorithm")
+                }
+            }
+        };
+
+        Ok(())
     }
 }

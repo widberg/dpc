@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::ObjectZ;
+use crate::fuel_fmt::common::{ObjectZ, PascalArray};
 use crate::File;
 
 static mut SKIN_DATA_COUNT: u32 = 0;
@@ -22,16 +21,9 @@ struct SkinZSkinSubsection {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct SkinZSkinSection {
-    #[nom(LengthCount(le_u32))]
-    skin_subsections: Vec<SkinZSkinSubsection>,
-}
-
-#[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct SkinZ {
-    #[nom(LengthCount(le_u32))]
-    mesh_crc32s: Vec<u32>,
+    mesh_crc32s: PascalArray<u32>,
     u0: u32,
     u1: u32,
     u2: u32,
@@ -39,8 +31,7 @@ struct SkinZ {
     one_and_a_half: f32,
     #[nom(PostExec(unsafe { SKIN_DATA_COUNT = data_count }))]
     data_count: u32,
-    #[nom(LengthCount(le_u32))]
-    skin_sections: Vec<SkinZSkinSection>,
+    skin_sections: PascalArray<PascalArray<SkinZSkinSubsection>>,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]

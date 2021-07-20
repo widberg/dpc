@@ -2,23 +2,20 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ResourceObjectZ};
+use crate::fuel_fmt::common::{FixedVec, Mat4f, PascalArray, ResourceObjectZ};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct SkelZBone {
     unknown0: u32,
-    #[nom(Count(136))]
-    data0: Vec<u8>,
+    data0: FixedVec<u8, 136>,
     transformation: Mat4f,
     unknown1: u32,
     parent_index: u32,
-    #[nom(Count(16))]
-    data1: Vec<u8>,
+    data1: FixedVec<u8, 16>,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,
@@ -46,12 +43,6 @@ struct SkelZUnknown2 {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct SkelZUnknown5 {
-    #[nom(LengthCount(le_u32))]
-    data: Vec<u32>,
-}
-
-#[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct SkelZ {
     u0: u32,
@@ -59,22 +50,14 @@ struct SkelZ {
     u2: f32,
     u3: f32,
     u4: f32,
-    #[nom(LengthCount(le_u32))]
-    bones: Vec<SkelZBone>,
-    #[nom(LengthCount(le_u32))]
-    material_crc32s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    mesh_data_crc32s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown5s: Vec<SkelZUnknown5>,
-    #[nom(LengthCount(le_u32))]
-    unknown3: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Vec<SkelZUnknown4>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<SkelZUnknown4>,
-    #[nom(LengthCount(le_u32))]
-    unknown2s: Vec<SkelZUnknown2>,
+    bones: PascalArray<SkelZBone>,
+    material_crc32s: PascalArray<u32>,
+    mesh_data_crc32s: PascalArray<u32>,
+    unknown5s: PascalArray<PascalArray<u32>>,
+    unknown3: PascalArray<u32>,
+    unknown4s: PascalArray<SkelZUnknown4>,
+    unknown1s: PascalArray<SkelZUnknown4>,
+    unknown2s: PascalArray<SkelZUnknown2>,
 }
 
 #[derive(Serialize, Deserialize)]

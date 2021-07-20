@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::fuel_fmt::common::{Mat4f, ObjectZ, PascalArray};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -41,30 +40,25 @@ struct LodZUnknown4 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct LodZ {
-    #[nom(LengthCount(le_u32))]
-    unknown0s: Vec<LodZUnknown0>,
-    #[nom(LengthCount(le_u32))]
-    unknown1s: Vec<LodZUnknown1>,
+    unknown0s: PascalArray<LodZUnknown0>,
+    unknown1s: PascalArray<LodZUnknown1>,
     unknown2: u32,
     unknown3: u32,
     u0: f32,
-    #[nom(LengthCount(le_u32))]
-    skin_crc32s: Vec<u32>,
+    skin_crc32s: PascalArray<u32>,
     u1: u32,
     #[serde(skip_serializing)]
     #[allow(dead_code)]
     sound_entries_option: u32,
     #[nom(Cond(sound_entries_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[nom(LengthCount(le_u32))]
-    sound_entries: Option<Vec<LodZSoundEntry>>,
+    sound_entries: Option<PascalArray<LodZSoundEntry>>,
     #[serde(skip_serializing)]
     #[allow(dead_code)]
     unknown4_option: u32,
     #[nom(Cond(unknown4_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[nom(LengthCount(le_u32))]
-    unknown4s: Option<Vec<LodZUnknown4>>,
+    unknown4s: Option<PascalArray<LodZUnknown4>>,
     unknown5: u32,
 }
 

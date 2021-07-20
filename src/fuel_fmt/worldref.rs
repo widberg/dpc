@@ -2,11 +2,10 @@ use std::io::Result;
 use std::io::Write;
 use std::path::Path;
 
-use nom::number::complete::*;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::fuel_fmt::common::{Mat4f, ObjectZ, PascalArray};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -24,24 +23,18 @@ struct WorldRefZ {
     unknown14: u32,
     unknown15: u32,
     unknown16: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown17s: Vec<u32>,
-    #[nom(LengthCount(le_u32))]
-    unknowns: Vec<u8>,
-    #[nom(LengthCount(le_u32))]
-    mats: Vec<Mat4f>,
+    unknown17s: PascalArray<u32>,
+    unknowns: PascalArray<u8>,
+    mats: PascalArray<Mat4f>,
     unknown1: u32,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,
     unknown5: u32,
     unknown6: u32,
-    #[nom(LengthCount(le_u32))]
-    unknown7s: Vec<WorldRefZUnknown7>,
-    #[nom(LengthCount(le_u32))]
-    unknown8s: Vec<u8>,
-    #[nom(LengthCount(le_u32))]
-    unknown9s: Vec<u32>,
+    unknown7s: PascalArray<WorldRefZUnknown7>,
+    unknown8s: PascalArray<u8>,
+    unknown9s: PascalArray<u32>,
     zero: u32,
 }
 

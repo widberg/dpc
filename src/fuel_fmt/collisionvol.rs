@@ -5,7 +5,7 @@ use std::path::Path;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ObjectZ};
+use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -14,8 +14,7 @@ struct CollisionVolZ {
     unknown0: u32,
     local_transform: Mat4f,
     local_transform_inverse: Mat4f,
-    #[nom(Count(28))]
-    zeros: Vec<u32>,
+    zeros: FixedVec<u32, 28>,
     volume_type: u32,
     unknown1: u32,
 }

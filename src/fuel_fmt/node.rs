@@ -5,7 +5,7 @@ use std::path::Path;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ResourceObjectZ};
+use crate::fuel_fmt::common::{FixedVec, Mat4f, ResourceObjectZ};
 use crate::File;
 
 #[derive(Serialize, Deserialize, NomLE)]
@@ -21,11 +21,9 @@ struct NodeZ {
     unknown7: u32,
     unknown8: u32,
     unknown9: f32,
-    #[nom(Count(32))]
-    unknown10s: Vec<u8>,
+    unknown10s: FixedVec<u8, 32>,
     mat0: Mat4f,
-    #[nom(Count(17))]
-    unknown11s: Vec<u16>,
+    unknown11s: FixedVec<u16, 17>,
     mat1: Mat4f,
 }
 #[derive(Serialize, Deserialize, NomLE)]

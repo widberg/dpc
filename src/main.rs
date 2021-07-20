@@ -1,6 +1,6 @@
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
-use std::io::{self, Result};
+use std::io::Result;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -8,7 +8,6 @@ use clap::{App, AppSettings, Arg, SubCommand};
 
 use base_dpc::Options;
 use base_dpc::DPC;
-use crc32::CRC32;
 use fuel_dpc::FuelDPC;
 use lz::LZ;
 
@@ -40,6 +39,8 @@ fn main() -> Result<()> {
         version_string.push(';');
         version_string.push_str(ci);
     }
+
+    let crc32_subcommand = crc32::CRC32SubCommand::new();
 
     let matches = App::new("dpc")
         .version(version_string.as_str())
@@ -187,88 +188,13 @@ fn main() -> Result<()> {
 						.conflicts_with("CREATE")
 						.help("extract the file"))
 				.settings(&[AppSettings::ArgRequiredElseHelp]))
-		.subcommand(SubCommand::with_name("crc32")
-				.about("generate name files")
-				.arg(Arg::with_name("INTERACTIVE")
-						.short("I")
-						.long("interactive")
-						.conflicts_with_all(&["INPUT", "OUTPUT"])
-						.help("Run the command in interactive mode"))
-				.arg(Arg::with_name("ALGORITHM")
-						.short("a")
-						.long("algorithm")
-						.takes_value(true)
-						.required(true)
-						.possible_values(&["asobo", "ieee"])
-						.help("The crc32 algorithm to use"))
-				.arg(Arg::with_name("UNSIGNED")
-					.short("U")
-					.long("unsigned")
-					.help("Use unsigned values"))
-				.settings(&[AppSettings::ArgRequiredElseHelp]))
+		.subcommand(crc32_subcommand.subcommand())
 		.after_help("EXAMPLES:\n    -g fuel -- -h\n    -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC\n    -ef -g fuel -i /FUEL/**/*.DPC")
 		.settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::SubcommandsNegateReqs, AppSettings::ArgsNegateSubcommands])
         .get_matches_from(wild::args_os());
 
     if let Some(subcommand_matches) = matches.subcommand_matches("crc32") {
-        let unsigned_option = subcommand_matches.is_present("UNSIGNED");
-        if !subcommand_matches.is_present("INTERACTIVE") {
-            let input_path_string = matches.value_of_os("INPUT").unwrap();
-            let input_path = Path::new(input_path_string);
-
-            let output_path = match subcommand_matches.value_of_os("OUTPUT") {
-                Some(output_path_string) => PathBuf::from(output_path_string),
-                None => input_path.with_extension("NPC"),
-            };
-
-            match subcommand_matches.value_of("ALGORITHM") {
-                None => panic!("Algorithm is required"),
-                Some(algorithm) => match algorithm {
-                    "asobo" => {
-                        crc32::AsoboCRC32::generate_names(
-                            &mut File::open(input_path)?,
-                            &mut File::create(output_path)?,
-                            false,
-                            unsigned_option,
-                        )?;
-                    }
-                    "ieee" => {
-                        crc32::IEEECRC32::generate_names(
-                            &mut File::open(input_path)?,
-                            &mut File::create(output_path)?,
-                            false,
-                            unsigned_option,
-                        )?;
-                    }
-                    _ => panic!("bad algorithm"),
-                },
-            };
-        } else {
-            match subcommand_matches.value_of("ALGORITHM") {
-                None => panic!("Algorithm is required"),
-                Some(algorithm) => match algorithm {
-                    "asobo" => {
-                        crc32::AsoboCRC32::generate_names(
-                            &mut io::stdin(),
-                            &mut io::stdout(),
-                            true,
-                            unsigned_option,
-                        )?;
-                    }
-                    "ieee" => {
-                        crc32::IEEECRC32::generate_names(
-                            &mut io::stdin(),
-                            &mut io::stdout(),
-                            true,
-                            unsigned_option,
-                        )?;
-                    }
-                    _ => panic!("bad algorithm"),
-                },
-            };
-        }
-
-        return Ok(());
+        return crc32_subcommand.execute(&matches, subcommand_matches);
     }
 
     if let Some(subcommand_matches) = matches.subcommand_matches("lz") {
