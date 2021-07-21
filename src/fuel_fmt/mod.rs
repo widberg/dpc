@@ -27,6 +27,8 @@ use crate::fuel_fmt::userdefine::UserDefineObjectFormat;
 use crate::fuel_fmt::warp::WarpObjectFormat;
 use crate::fuel_fmt::world::WorldObjectFormat;
 use crate::fuel_fmt::worldref::WorldRefObjectFormat;
+use crate::fuel_fmt::material::{MaterialObjectFormat, MaterialObjectFormatAltAlt, MaterialObjectFormatAlt};
+use crate::fuel_fmt::mesh::{MeshObjectFormat, MeshObjectFormatAlt, MeshObjectFormatAltAlt, MeshObjectFormatAltAltAlt};
 
 pub mod animation;
 pub mod binary;
@@ -65,7 +67,7 @@ pub mod warp;
 pub mod world;
 pub mod worldref;
 
-pub fn get_formats<'a>() -> HashMap<u32, &'a dyn FUELObjectFormatTrait> {
+pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectFormatTrait> {
     let mut formats: HashMap<u32, &'a dyn FUELObjectFormatTrait> = HashMap::new();
 
     formats.insert(1175485833, AnimationObjectFormat::new());
@@ -94,6 +96,38 @@ pub fn get_formats<'a>() -> HashMap<u32, &'a dyn FUELObjectFormatTrait> {
     formats.insert(1114947943, WarpObjectFormat::new());
     formats.insert(968261323, WorldObjectFormat::new());
     formats.insert(2906362741, WorldRefObjectFormat::new());
+
+    match version.as_str() {
+        "v1.381.67.09 - Asobo Studio - Internal Cross Technology" => {
+            formats.insert(2204276779, MaterialObjectFormat::new());
+            formats.insert(1387343541, MeshObjectFormat::new());
+        },
+        "v1.381.66.09 - Asobo Studio - Internal Cross Technology" => {
+            formats.insert(2204276779, MaterialObjectFormat::new());
+            formats.insert(1387343541, MeshObjectFormat::new());
+        },
+        "v1.381.65.09 - Asobo Studio - Internal Cross Technology" => {
+            formats.insert(2204276779, MaterialObjectFormat::new());
+            formats.insert(1387343541, MeshObjectFormatAlt::new());
+        },
+        "v1.381.64.09 - Asobo Studio - Internal Cross Technology" => {
+            formats.insert(2204276779, MaterialObjectFormat::new());
+            formats.insert(1387343541, MeshObjectFormatAlt::new());
+        },
+        "v1.379.60.09 - Asobo Studio - Internal Cross Technology" => {
+            formats.insert(2204276779, MaterialObjectFormat::new());
+            formats.insert(1387343541, MeshObjectFormatAltAlt::new());
+        },
+        "v1.325.50.07 - Asobo Studio - Internal Cross Technology" => { // TRAFFIC_TM
+            formats.insert(2204276779, MaterialObjectFormatAltAlt::new());
+            formats.insert(1387343541, MeshObjectFormatAltAlt::new());
+        },
+        "v1.220.50.07 - Asobo Studio - Internal Cross Technology" => { // P_MOTO
+            formats.insert(2204276779, MaterialObjectFormatAlt::new());
+            formats.insert(1387343541, MeshObjectFormatAltAltAlt::new());
+        },
+        _ => panic!("bad version")
+    }
 
     return formats;
 }

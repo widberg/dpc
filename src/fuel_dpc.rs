@@ -212,6 +212,7 @@ pub struct FuelDPC {
     unoptimized_pool: bool,
     no_pool: bool,
     version_lookup: HashMap<String, (u32, u32, u32)>,
+    version: String,
 }
 
 impl DPC for FuelDPC {
@@ -269,10 +270,11 @@ impl DPC for FuelDPC {
             unoptimized_pool: matches.is_present("UNOPTIMIZED-POOL"),
             no_pool: matches.is_present("NO-POOL"),
             version_lookup: version_lookup,
+            version: String::new(),
         }
     }
 
-    fn extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+    fn extract<P: AsRef<Path>>(&mut self, input_path: &P, output_path: &P) -> Result<()> {
         let mut class_names: HashMap<u32, &str> = HashMap::new();
         class_names.insert(549480509, "Omni_Z");
         class_names.insert(705810152, "Rtc_Z");
@@ -374,6 +376,7 @@ impl DPC for FuelDPC {
             panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and extract the dpc anyway (This will probably fail).");
         }
 
+        self.version = String::from(header.version_string);
         manifest_json.header.version_string = String::from(header.version_string);
         manifest_json.header.is_rtc = header.is_not_rtc == 0;
         manifest_json.header.pool_manifest_unused = header.pool_manifest_unused0;
@@ -1460,7 +1463,6 @@ impl DPC for FuelDPC {
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
         type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
-        fmt_fns.insert(1387343541, fuel_fmt::mesh::fuel_fmt_extract_mesh_z); //
         fmt_fns.insert(1396791303, fuel_fmt::skin::fuel_fmt_extract_skin_z); //
         fmt_fns.insert(
             3312018398,
@@ -1468,7 +1470,8 @@ impl DPC for FuelDPC {
         ); //
         fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z); //
         fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z); //
-        fmt_fns.insert(2204276779, fuel_fmt::material::fuel_fmt_extract_material_z);
+
+        // Special
         fmt_fns.insert(849267944, fuel_fmt::sound::fuel_fmt_extract_sound_z); //
         fmt_fns.insert(1471281566, fuel_fmt::bitmap::fuel_fmt_extract_bitmap_z); //
         fmt_fns.insert(2259852416, fuel_fmt::binary::fuel_fmt_extract_binary_z);
@@ -1506,9 +1509,7 @@ impl DPC for FuelDPC {
             }
 
             fmt_fn(&header, &data, output_path.as_ref())?;
-        } else if let Some(fuel_object_format) =
-            fuel_fmt::get_formats().get(&object_header.class_crc32)
-        {
+        } else if let  Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32) {
             fuel_object_format.unpack(input_path.as_ref(), output_path.as_ref())?;
         } else {
             return Err(Error::new(ErrorKind::Other, "unsupported format"));
@@ -1563,7 +1564,7 @@ mod test {
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_normal(path: &str) {
-        let dpc = FuelDPC::new(
+        let mut dpc = FuelDPC::new(
             &Options {
                 is_quiet: true,
                 is_force: true,
@@ -1593,7 +1594,7 @@ mod test {
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
-        let dpc = FuelDPC::new(
+        let mut dpc = FuelDPC::new(
             &Options {
                 is_quiet: true,
                 is_force: true,
@@ -1617,7 +1618,7 @@ mod test {
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_optimized(path: &str) {
-        let dpc = FuelDPC::new(
+        let mut dpc = FuelDPC::new(
             &Options {
                 is_quiet: true,
                 is_force: true,
@@ -1650,7 +1651,7 @@ mod test {
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_mixed(path: &str) {
-        let dpc_extract = FuelDPC::new(
+        let mut dpc_extract = FuelDPC::new(
             &Options {
                 is_quiet: true,
                 is_force: true,

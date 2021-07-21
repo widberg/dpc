@@ -1,12 +1,7 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, PascalArray, Quat, Vec3f};
-use crate::File;
+use crate::fuel_fmt::common::{FixedVec, Mat4f, PascalArray, Quat, Vec3f, FUELObjectFormat, Vec4f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown0 {
@@ -148,7 +143,7 @@ struct MeshZUnknown12 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct MeshZ {
+pub struct MeshZ {
     vecs: PascalArray<Vec3f>,
     unknown0s: PascalArray<MeshZUnknown0>,
     unknown1s: PascalArray<MeshZUnknown1>,
@@ -176,7 +171,7 @@ struct MeshZ {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct MeshZAlt {
+pub struct MeshZAlt {
     vecs: PascalArray<Vec3f>,
     unknown0s: PascalArray<MeshZUnknown0>,
     unknown1s: PascalArray<MeshZUnknown1>,
@@ -199,6 +194,81 @@ struct MeshZAlt {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+pub struct MeshZAltAlt {
+    vecs: PascalArray<Vec3f>,
+    unknown0s: PascalArray<MeshZUnknown0>,
+    unknown1s: PascalArray<MeshZUnknown1>,
+    vertices1: PascalArray<Vec3f>,
+    unknown2s: PascalArray<MeshZUnknown2>,
+    // if (someHeaderValue)
+    // {
+    //     PascalArray<std::uint32_t> unknown3s;
+    // }
+    unknown4s: PascalArray<MeshZUnknown4>,
+    material_crc32s: PascalArray<u32>,
+    unknown6s: PascalArray<MeshZUnknown6>,
+    unknown7s: PascalArray<MeshZUnknown7>,
+    unknown8s: PascalArray<MeshZUnknown6>,
+    sub_meshes: PascalArray<MeshZSubMesh>,
+    indices: PascalArray<MeshZIndices>,
+    unknown11s: PascalArray<MeshZUnknown11>,
+    unknown13s: PascalArray<MeshZUnknown13>,
+}
+
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MeshZAltAltAltUnknown11 {
+    unknown0: u32,
+    unknown1: u32,
+    unknown2: u32,
+    unknown3: u32,
+    unknown4: u32,
+    unknown5: u32,
+    unknown6: u32,
+    unknown7: u32,
+    unknown8: u32,
+    unknown9: u32,
+    unknown10: u32,
+    unknown11: u32,
+    unknown12: u32,
+    unknown13: u32,
+    unknown14: u32,
+    unknown15: u32,
+    unknown16: u32,
+    unknown17: u32,
+    unknown18: u32,
+    unknown19: u32,
+    unknown20: u32,
+    unknown21: u32,
+    unknown22: u32,
+    unknown23: u32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+pub struct MeshZAltAltAlt {
+    vecs: PascalArray<Vec3f>,
+    unknown0s: PascalArray<MeshZUnknown0>,
+    material_crc32s0: PascalArray<u32>,
+    unknown1s: PascalArray<MeshZUnknown1>,
+    vertices1: PascalArray<Vec3f>,
+    unknown2s: PascalArray<MeshZUnknown2>,
+    // if (someHeaderValue)
+    // {
+    //     PascalArray<std::uint32_t> unknown3s;
+    // }
+    unknown4s: PascalArray<MeshZUnknown4>,
+    material_crc32s1: PascalArray<u32>,
+    unknown6s: PascalArray<MeshZUnknown6>,
+    unknown7s: PascalArray<MeshZUnknown7>,
+    unknown8s: PascalArray<MeshZUnknown6>,
+    sub_meshes: PascalArray<MeshZSubMesh>,
+    indices: PascalArray<MeshZIndices>,
+    unknown11s: PascalArray<MeshZAltAltAltUnknown11>,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderUnknown3 {
     unknown0: u32,
     unknown1: u32,
@@ -217,7 +287,7 @@ struct MeshZHeaderUnknown4 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct MeshZHeader {
+pub struct MeshZHeader {
     friendly_name_crc32: u32,
     crc32_or_zero: u32,
     rot: Quat,
@@ -231,48 +301,92 @@ struct MeshZHeader {
     unknown2: u32,
     unknown3s: PascalArray<MeshZHeaderUnknown3>,
     unknown4s: PascalArray<MeshZHeaderUnknown4>,
-    #[nom(Cond(i.len() == 16))]
-    zeros: Option<FixedVec<u8, 16>>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct MeshObject {
-    mesh_header: MeshZHeader,
-    mesh: MeshZ,
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+pub struct MeshZHeaderAlt {
+    friendly_name_crc32: u32,
+    crc32_or_zero: u32,
+    rot: Quat,
+    transform: Mat4f,
+    unknown3: f32,
+    unknown4: f32,
+    unknown5: u16,
+    crc32s: PascalArray<u32>,
+    unknown0: u32,
+    unknown1: u32,
+    unknown2: u32,
+    unknown3s: PascalArray<MeshZHeaderUnknown3>,
+    unknown4s: PascalArray<MeshZHeaderUnknown4>,
+    zeros: FixedVec<u32, 4>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct MeshObjectAlt {
-    mesh_header: MeshZHeader,
-    mesh: MeshZAlt,
+#[derive(Serialize, Deserialize, NomLE)]
+struct MeshZHeaderAltAltUnknown10
+{
+    unknown0: u32,
+    unknown1s: Vec3f,
+    unknown2: u32,
+    unknown3: u32,
 }
 
-pub fn fuel_fmt_extract_mesh_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let mesh_header = match MeshZHeader::parse(&header) {
-        Ok((_, h)) => h,
-        Err(_) => return Ok(()),
-    };
-
-    let mesh = match MeshZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(_) => match MeshZAlt::parse(&data) {
-            Ok((_, mesh)) => {
-                let object = MeshObjectAlt { mesh_header, mesh };
-
-                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-                return Ok(());
-            }
-            Err(error) => panic!("{}", error),
-        },
-    };
-
-    let object = MeshObject { mesh_header, mesh };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
+#[derive(Serialize, Deserialize, NomLE)]
+struct MeshZHeaderAltAltUnknown4
+{
+    unknown0: u32,
+    unknown1: u16,
 }
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MeshZHeaderAltAltUnknown5
+{
+    unknown0: u32,
+    unknown1: u32,
+    unknown2: u32,
+    unknown3: u32,
+    unknown4: u32,
+    unknown5: u32,
+    unknown6: u32,
+    unknown7: u32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+struct MeshZHeaderAltAltUnknown8
+{
+    name: PascalArray<u8>,
+    unknown0: u32,
+    unknown1flag: u16,
+    unknown1s: PascalArray<u16>,
+    unknown2s: PascalArray<Vec4f>,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
+#[nom(Exact)]
+pub struct MeshZHeaderAltAlt {
+    friendly_name_crc32: u32,
+    crc32s: PascalArray<u32>,
+    rot: Quat,
+    transform: Mat4f,
+    unknown2: f32,
+    unknown0: f32,
+    unknown1: u16,
+    unknown3: Vec4f,
+    unknown4: u32,
+    unknown5: u32,
+    unknown6: u32,
+    unknown7: u32,
+    unknown10s: PascalArray<MeshZHeaderAltAltUnknown10>,
+    unknown8: u32,
+    unknown9: u32,
+    unknown4s: PascalArray<MeshZHeaderAltAltUnknown4>,
+    unknown5s: PascalArray<MeshZHeaderAltAltUnknown5>,
+    unknown6s: PascalArray<u32>,
+    unknown7s: PascalArray<u16>,
+    unknown8s: PascalArray<MeshZHeaderAltAltUnknown8>,
+}
+
+pub type MeshObjectFormat = FUELObjectFormat<MeshZHeader, MeshZ>;
+pub type MeshObjectFormatAlt = FUELObjectFormat<MeshZHeaderAlt, MeshZAlt>;
+pub type MeshObjectFormatAltAlt = FUELObjectFormat<MeshZHeaderAltAlt, MeshZAltAlt>;
+pub type MeshObjectFormatAltAltAlt = FUELObjectFormat<MeshZHeaderAltAlt, MeshZAltAltAlt>;

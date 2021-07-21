@@ -248,7 +248,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let dpc = match matches.value_of("GAME") {
+    let mut dpc = match matches.value_of("GAME") {
         None => panic!("Game is required"), // default to fuel until other games are supported
         Some(game) => match game {
             "fuel" => FuelDPC::new(&options, &custom_args),
