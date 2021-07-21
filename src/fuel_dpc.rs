@@ -1464,7 +1464,6 @@ impl DPC for FuelDPC {
         type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
         let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
         fmt_fns.insert(3312018398, fuel_fmt::particles::fuel_fmt_extract_particles_z); //
-        fmt_fns.insert(2245010728, fuel_fmt::node::fuel_fmt_extract_node_z); //
         fmt_fns.insert(1943824915, fuel_fmt::lod::fuel_fmt_extract_lod_z); //
 
         // Special

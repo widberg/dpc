@@ -1,16 +1,11 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, ResourceObjectZ};
-use crate::File;
+use crate::fuel_fmt::common::{FixedVec, Mat4f, ResourceObjectZ, FUELObjectFormat};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct NodeZ {
+pub struct NodeZ {
     parent_crc32: u32,
     some_node_crc320: u32,
     some_node_crc321: u32,
@@ -26,57 +21,28 @@ struct NodeZ {
     unknown11s: FixedVec<u16, 17>,
     mat1: Mat4f,
 }
+
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct NodeZAlt {
-    #[nom(Count(i.len()))]
-    data: Vec<u8>,
+pub struct NodeZAlt {
+    parent_crc32: u32,
+    some_node_crc320: u32,
+    some_node_crc321: u32,
+    some_node_crc322: u32,
+    some_crc320: u32,
+    some_crc321: u32,
+    some_crc322: u32,
+    some_crc323: u32,
+    some_crc324: u32,
+    mat0: Mat4f,
+    unknown0s: FixedVec<u8, 208>,
+    mat1: Mat4f,
+    unknown2: u32,
+    unknown3: u32,
+    unknown4: u16,
+    unknown5: u32,
+    unknown6: u32,
 }
 
-#[derive(Serialize, Deserialize)]
-struct NodeObject {
-    resource_object: ResourceObjectZ,
-    node: NodeZ,
-}
-
-#[derive(Serialize, Deserialize)]
-struct NodeObjectAlt {
-    resource_object: ResourceObjectZ,
-    node: NodeZAlt,
-}
-
-pub fn fuel_fmt_extract_node_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let resource_object = match ResourceObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let node = match NodeZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(_) => match NodeZAlt::parse(&data) {
-            Ok((_, node)) => {
-                let object = NodeObjectAlt {
-                    resource_object,
-                    node,
-                };
-
-                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-                return Ok(());
-            }
-            Err(error) => panic!("{}", error),
-        },
-    };
-
-    let object = NodeObject {
-        resource_object,
-        node,
-    };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type NodeObjectFormat = FUELObjectFormat<ResourceObjectZ, NodeZ>;
+pub type NodeObjectFormatAlt = FUELObjectFormat<ResourceObjectZ, NodeZAlt>;
