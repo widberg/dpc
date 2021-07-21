@@ -32,6 +32,7 @@ use crate::fuel_fmt::mesh::{MeshObjectFormat, MeshObjectFormatAlt, MeshObjectFor
 use crate::fuel_fmt::skin::{SkinObjectFormat, SkinObjectFormatAlt};
 use crate::fuel_fmt::node::{NodeObjectFormat, NodeObjectFormatAlt};
 use crate::fuel_fmt::particles::{ParticlesObjectFormat, ParticlesObjectFormatAlt};
+use crate::fuel_fmt::lod::{LodObjectFormat, LodObjectFormatAltAlt, LodObjectFormatAlt};
 
 pub mod animation;
 pub mod binary;
@@ -107,6 +108,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormat::new());
+            formats.insert(1943824915, LodObjectFormat::new());
         },
         "v1.381.66.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -114,6 +116,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormat::new());
+            formats.insert(1943824915, LodObjectFormat::new());
         },
         "v1.381.65.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -121,6 +124,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormat::new());
+            formats.insert(1943824915, LodObjectFormat::new());
         },
         "v1.381.64.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -128,6 +132,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
+            formats.insert(1943824915, LodObjectFormat::new());
         },
         "v1.379.60.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -135,6 +140,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
+            formats.insert(1943824915, LodObjectFormatAltAlt::new());
         },
         "v1.325.50.07 - Asobo Studio - Internal Cross Technology" => { // TRAFFIC_TM
             formats.insert(2204276779, MaterialObjectFormatAltAlt::new());
@@ -142,6 +148,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormatAlt::new());
             formats.insert(2245010728, NodeObjectFormatAlt::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
+            formats.insert(1943824915, LodObjectFormatAlt::new());
         },
         "v1.220.50.07 - Asobo Studio - Internal Cross Technology" => { // P_MOTO
             formats.insert(2204276779, MaterialObjectFormatAlt::new());
@@ -149,6 +156,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1396791303, SkinObjectFormatAlt::new());
             formats.insert(2245010728, NodeObjectFormatAlt::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
+            formats.insert(1943824915, LodObjectFormatAlt::new());
         },
         _ => panic!("bad version")
     }
