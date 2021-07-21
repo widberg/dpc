@@ -1,12 +1,7 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ, PascalArray};
-use crate::File;
+use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ, PascalArray, FUELObjectFormat, Vec2f, Vec3f, Vec4f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown1 {
@@ -60,7 +55,7 @@ struct ParticlesZUnknown0 {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct ParticlesZ {
+pub struct ParticlesZ {
     unknown0s: PascalArray<ParticlesZUnknown0>,
     mats: PascalArray<Mat4f>,
     unknown2: u32,
@@ -68,50 +63,33 @@ struct ParticlesZ {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
+struct ParticlesZUnknown0Alt {
+    data: FixedVec<u32, 19>,
+    unknown1flag: u16,
+    unknown1s: PascalArray<Vec2f>,
+    unknown2flag: u16,
+    unknown2s: PascalArray<Vec3f>,
+    unknown3flag: u16,
+    unknown3s: PascalArray<Vec3f>,
+    unknown4flag: u16,
+    unknown4s: PascalArray<Vec2f>,
+    unknown5flag: u16,
+    unknown5s: PascalArray<Vec4f>,
+    unknown6flag: u16,
+    unknown6s: PascalArray<Vec4f>,
+    unknown7flag: u16,
+    unknown7s: PascalArray<Vec2f>,
+    unknown8: u32,
+}
+
+#[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct ParticlesZAlt {
-    #[nom(Count(i.len()))]
-    data: Vec<u8>,
+pub struct ParticlesZAlt {
+    unknown0s: PascalArray<ParticlesZUnknown0Alt>,
+    mats: PascalArray<Mat4f>,
+    unknown2: u32,
+    unknown3: u16,
 }
 
-#[derive(Serialize, Deserialize)]
-struct ParticlesObject {
-    object: ObjectZ,
-    particles: ParticlesZ,
-}
-
-#[derive(Serialize, Deserialize)]
-struct ParticlesObjectAlt {
-    object: ObjectZ,
-    particles: ParticlesZAlt,
-}
-
-pub fn fuel_fmt_extract_particles_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let object = match ObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let particles = match ParticlesZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(_) => match ParticlesZAlt::parse(&data) {
-            Ok((_, particles)) => {
-                let object = ParticlesObjectAlt { object, particles };
-
-                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-                return Ok(());
-            }
-            Err(error) => panic!("{}", error),
-        },
-    };
-
-    let object = ParticlesObject { object, particles };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type ParticlesObjectFormat = FUELObjectFormat<ObjectZ, ParticlesZ>;
+pub type ParticlesObjectFormatAlt = FUELObjectFormat<ObjectZ, ParticlesZAlt>;

@@ -31,6 +31,7 @@ use crate::fuel_fmt::material::{MaterialObjectFormat, MaterialObjectFormatAltAlt
 use crate::fuel_fmt::mesh::{MeshObjectFormat, MeshObjectFormatAlt, MeshObjectFormatAltAlt, MeshObjectFormatAltAltAlt};
 use crate::fuel_fmt::skin::{SkinObjectFormat, SkinObjectFormatAlt};
 use crate::fuel_fmt::node::{NodeObjectFormat, NodeObjectFormatAlt};
+use crate::fuel_fmt::particles::{ParticlesObjectFormat, ParticlesObjectFormatAlt};
 
 pub mod animation;
 pub mod binary;
@@ -105,42 +106,49 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1387343541, MeshObjectFormat::new());
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
+            formats.insert(3312018398, ParticlesObjectFormat::new());
         },
         "v1.381.66.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
             formats.insert(1387343541, MeshObjectFormat::new());
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
+            formats.insert(3312018398, ParticlesObjectFormat::new());
         },
         "v1.381.65.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
             formats.insert(1387343541, MeshObjectFormatAlt::new());
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
+            formats.insert(3312018398, ParticlesObjectFormat::new());
         },
         "v1.381.64.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
             formats.insert(1387343541, MeshObjectFormatAlt::new());
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
+            formats.insert(3312018398, ParticlesObjectFormatAlt::new());
         },
         "v1.379.60.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
             formats.insert(1387343541, MeshObjectFormatAltAlt::new());
             formats.insert(1396791303, SkinObjectFormat::new());
             formats.insert(2245010728, NodeObjectFormat::new());
+            formats.insert(3312018398, ParticlesObjectFormatAlt::new());
         },
         "v1.325.50.07 - Asobo Studio - Internal Cross Technology" => { // TRAFFIC_TM
             formats.insert(2204276779, MaterialObjectFormatAltAlt::new());
             formats.insert(1387343541, MeshObjectFormatAltAlt::new());
             formats.insert(1396791303, SkinObjectFormatAlt::new());
             formats.insert(2245010728, NodeObjectFormatAlt::new());
+            formats.insert(3312018398, ParticlesObjectFormatAlt::new());
         },
         "v1.220.50.07 - Asobo Studio - Internal Cross Technology" => { // P_MOTO
             formats.insert(2204276779, MaterialObjectFormatAlt::new());
             formats.insert(1387343541, MeshObjectFormatAltAltAlt::new());
             formats.insert(1396791303, SkinObjectFormatAlt::new());
             formats.insert(2245010728, NodeObjectFormatAlt::new());
+            formats.insert(3312018398, ParticlesObjectFormatAlt::new());
         },
         _ => panic!("bad version")
     }
