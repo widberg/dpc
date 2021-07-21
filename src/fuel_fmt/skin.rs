@@ -1,12 +1,7 @@
-use std::io::Result;
-use std::io::Write;
-use std::path::Path;
-
-use nom_derive::{NomLE, Parse};
+use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{ObjectZ, PascalArray};
-use crate::File;
+use crate::fuel_fmt::common::{ObjectZ, PascalArray, FUELObjectFormat};
 
 static mut SKIN_DATA_COUNT: u32 = 0;
 
@@ -22,7 +17,7 @@ struct SkinZSkinSubsection {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct SkinZ {
+pub struct SkinZ {
     mesh_crc32s: PascalArray<u32>,
     u0: u32,
     u1: u32,
@@ -36,49 +31,16 @@ struct SkinZ {
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
-struct SkinZAlt {
-    #[nom(Count(i.len()))]
-    data: Vec<u8>,
+pub struct SkinZAlt {
+    mesh_crc32s: PascalArray<u32>,
+    u0: u32,
+    u1: u32,
+    u2: u8,
+    one_and_a_half: f32,
+    #[nom(PostExec(unsafe { SKIN_DATA_COUNT = data_count }))]
+    data_count: u32,
+    skin_sections: PascalArray<PascalArray<SkinZSkinSubsection>>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct SkinObject {
-    object: ObjectZ,
-    skin: SkinZ,
-}
-
-#[derive(Serialize, Deserialize)]
-struct SkinObjectAlt {
-    object: ObjectZ,
-    skin: SkinZAlt,
-}
-
-pub fn fuel_fmt_extract_skin_z(header: &[u8], data: &[u8], output_path: &Path) -> Result<()> {
-    let json_path = output_path.join("object.json");
-    let mut output_file = File::create(json_path)?;
-
-    let object = match ObjectZ::parse(&header) {
-        Ok((_, h)) => h,
-        Err(error) => panic!("{}", error),
-    };
-
-    let skin = match SkinZ::parse(&data) {
-        Ok((_, h)) => h,
-        Err(_) => match SkinZAlt::parse(&data) {
-            Ok((_, skin)) => {
-                let object = SkinObjectAlt { object, skin };
-
-                output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-                return Ok(());
-            }
-            Err(error) => panic!("{}", error),
-        },
-    };
-
-    let object = SkinObject { object, skin };
-
-    output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-
-    Ok(())
-}
+pub type SkinObjectFormat = FUELObjectFormat<ObjectZ, SkinZ>;
+pub type SkinObjectFormatAlt = FUELObjectFormat<ObjectZ, SkinZAlt>;
