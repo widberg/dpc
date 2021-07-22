@@ -5,8 +5,8 @@ use std::path::Path;
 use binwrite::BinWrite;
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
-use image::codecs::dxt::{DXTVariant, DxtDecoder};
-use image::codecs::png::PngEncoder;
+use image::codecs::dxt::{DXTVariant, DxtDecoder, DxtEncoder};
+use image::codecs::png::{PngEncoder, PngDecoder};
 use image::{ColorType, ImageDecoder};
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,7 @@ use zerocopy::AsBytes;
 
 use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait};
 use crate::File;
+use image::codecs::dxt::DXTVariant::{DXT1, DXT5};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -97,8 +98,41 @@ impl BitmapObjectFormat {
 }
 
 impl FUELObjectFormatTrait for BitmapObjectFormat {
-    fn pack(self: &Self, _input_path: &Path, _output_path: &Path) -> Result<(), Error> {
-        todo!()
+    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+        let json_path = input_path.join("object.json");
+        let json_file = File::open(json_path)?;
+
+        let png_path = input_path.join("data.png");
+        let png_file = File::create(png_path)?;
+
+        let mut object: BitmapObject = serde_json::from_reader(json_file)?;
+
+        object.bitmap_header.write(header)?;
+
+        let png_decoder = PngDecoder::new(png_file).unwrap();
+
+        let (width, height) = (&png_decoder).dimensions();
+        let mut buf: Vec<u32> = vec![0; (&png_decoder).total_bytes() as usize / 4];
+        png_decoder.read_image(buf.as_bytes_mut()).unwrap();
+
+        object.bitmap_header.width = width;
+        object.bitmap_header.height = height;
+
+        let dxt_encoder = DxtEncoder::new(body);
+        dxt_encoder
+            .encode(
+                buf.as_bytes(),
+                object.bitmap_header.width,
+                object.bitmap_header.height,
+                if object.bitmap_header.dxt_version0 == 14 {
+                    DXT1
+                } else {
+                    DXT5
+                },
+            )
+            .unwrap();
+
+        Ok(())
     }
 
     fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
@@ -160,8 +194,43 @@ impl BitmapObjectFormatAlt {
 }
 
 impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
-    fn pack(self: &Self, _input_path: &Path, _output_path: &Path) -> Result<(), Error> {
-        todo!()
+    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+        let json_path = input_path.join("object.json");
+        let json_file = File::open(json_path)?;
+
+        let png_path = input_path.join("data.png");
+        let png_file = File::create(png_path)?;
+
+        let mut object: BitmapObjectAlternate = serde_json::from_reader(json_file)?;
+
+        object.bitmap_header.write(header)?;
+        object.bitmap.write(body)?;
+
+        let png_decoder = PngDecoder::new(png_file).unwrap();
+
+        let (width, height) = (&png_decoder).dimensions();
+        let mut buf: Vec<u32> = vec![0; (&png_decoder).total_bytes() as usize / 4];
+        png_decoder.read_image(buf.as_bytes_mut()).unwrap();
+
+        object.bitmap.width = width;
+        object.bitmap.height = height;
+
+        let dxt_encoder = DxtEncoder::new(body);
+        dxt_encoder
+            .encode(
+                buf.as_bytes(),
+                object.bitmap.width,
+                object.bitmap.height,
+                if object.bitmap_header.dxt_version0 == 14 {
+                    DXT1
+                } else {
+                    DXT5
+                },
+            )
+            .unwrap();
+
+
+        Ok(())
     }
 
     fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {

@@ -41,8 +41,25 @@ impl SoundObjectFormat {
 }
 
 impl FUELObjectFormatTrait for SoundObjectFormat {
-    fn pack(self: &Self, _input_path: &Path, _output_path: &Path) -> Result<(), Error> {
-        todo!()
+    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+        let json_path = input_path.join("object.json");
+        let json_file = File::open(json_path)?;
+
+        let wav_path = input_path.join("data.wav");
+        let mut reader = hound::WavReader::open(wav_path).unwrap();
+        let samples: Result<Vec<i16>, hound::Error> = reader.samples::<i16>().collect();
+
+        #[derive(Deserialize)]
+        struct Object {
+            sound_header: SoundZHeader,
+        }
+
+        let object: Object = serde_json::from_reader(json_file)?;
+
+        object.sound_header.write(header)?;
+        samples.unwrap().write(body)?;
+
+        Ok(())
     }
 
     fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {

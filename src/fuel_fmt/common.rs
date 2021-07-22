@@ -193,7 +193,7 @@ pub struct ObjectZ {
 }
 
 pub trait FUELObjectFormatTrait {
-    fn pack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), Error>;
+    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error>;
     fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error>;
 }
 
@@ -216,8 +216,22 @@ where
     for<'a> T: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
     for<'a> U: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
 {
-    fn pack(self: &Self, _input_path: &Path, _output_path: &Path) -> Result<(), Error> {
-        todo!()
+    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+        let json_path = input_path.join("object.json");
+        let json_file = File::open(json_path)?;
+
+        #[derive(Serialize, Deserialize)]
+        struct Object<T, U> {
+            header: T,
+            body: U,
+        }
+
+        let object: Object<T, U> = serde_json::from_reader(json_file)?;
+
+        object.header.write(header)?;
+        object.body.write(body)?;
+
+        Ok(())
     }
 
     fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
