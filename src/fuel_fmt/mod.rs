@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::fuel_fmt::animation::AnimationObjectFormat;
 use crate::fuel_fmt::binary::BinaryObjectFormat;
-use crate::fuel_fmt::bitmap::BitmapObjectFormat;
+use crate::fuel_fmt::bitmap::{BitmapObjectFormat, BitmapObjectFormatAlt};
 use crate::fuel_fmt::camera::CameraObjectFormat;
 use crate::fuel_fmt::collisionvol::CollisionVolObjectType;
 use crate::fuel_fmt::common::FUELObjectFormatTrait;
@@ -109,7 +109,6 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
     formats.insert(2906362741, WorldRefObjectFormat::new());
     formats.insert(2259852416, BinaryObjectFormat::new());
     formats.insert(849267944, SoundObjectFormat::new());
-    formats.insert(1471281566, BitmapObjectFormat::new());
 
     match version.as_str() {
         "v1.381.67.09 - Asobo Studio - Internal Cross Technology" => {
@@ -119,6 +118,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormat::new());
             formats.insert(1943824915, LodObjectFormat::new());
+            formats.insert(1471281566, BitmapObjectFormat::new());
         }
         "v1.381.66.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -127,6 +127,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormat::new());
             formats.insert(1943824915, LodObjectFormat::new());
+            formats.insert(1471281566, BitmapObjectFormat::new());
         }
         "v1.381.65.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -135,6 +136,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormat::new());
             formats.insert(1943824915, LodObjectFormat::new());
+            formats.insert(1471281566, BitmapObjectFormat::new());
         }
         "v1.381.64.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -143,6 +145,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
             formats.insert(1943824915, LodObjectFormat::new());
+            formats.insert(1471281566, BitmapObjectFormat::new());
         }
         "v1.379.60.09 - Asobo Studio - Internal Cross Technology" => {
             formats.insert(2204276779, MaterialObjectFormat::new());
@@ -151,6 +154,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormat::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
             formats.insert(1943824915, LodObjectFormatAltAlt::new());
+            formats.insert(1471281566, BitmapObjectFormatAlt::new());
         }
         "v1.325.50.07 - Asobo Studio - Internal Cross Technology" => {
             // TRAFFIC_TM
@@ -160,6 +164,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormatAlt::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
             formats.insert(1943824915, LodObjectFormatAlt::new());
+            formats.insert(1471281566, BitmapObjectFormatAlt::new());
         }
         "v1.220.50.07 - Asobo Studio - Internal Cross Technology" => {
             // P_MOTO
@@ -169,6 +174,7 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(2245010728, NodeObjectFormatAlt::new());
             formats.insert(3312018398, ParticlesObjectFormatAlt::new());
             formats.insert(1943824915, LodObjectFormatAlt::new());
+            formats.insert(1471281566, BitmapObjectFormatAlt::new());
         }
         _ => panic!("bad version"),
     }

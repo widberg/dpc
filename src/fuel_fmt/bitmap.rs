@@ -141,24 +141,142 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         let png_path = output_path.join("data.png");
         let output_png_file = File::create(png_path)?;
 
-        if header.len() != 13 {
-            let bitmap_header = match BitmapZHeader::parse(&header) {
-                Ok((_, h)) => h,
-                Err(error) => panic!("{}", error),
-            };
+        let bitmap_header = match BitmapZHeader::parse(&header) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
 
-            let data_cursor = Cursor::new(&data);
-            let dxt_decoder = DxtDecoder::new(
-                data_cursor,
+        let data_cursor = Cursor::new(&data);
+        let dxt_decoder = DxtDecoder::new(
+            data_cursor,
+            bitmap_header.width,
+            bitmap_header.height,
+            if bitmap_header.dxt_version0 == 14 {
+                DXTVariant::DXT1
+            } else {
+                DXTVariant::DXT5
+            },
+        )
+        .unwrap();
+
+        let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
+        dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
+
+        let png_encoder = PngEncoder::new(output_png_file);
+        png_encoder
+            .encode(
+                buf.as_bytes(),
                 bitmap_header.width,
                 bitmap_header.height,
+                if bitmap_header.dxt_version0 == 14 {
+                    ColorType::Rgb8
+                } else {
+                    ColorType::Rgba8
+                },
+            )
+            .unwrap();
+
+        let object = BitmapObject { bitmap_header };
+
+        output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
+
+        Ok(())
+    }
+}
+
+pub struct BitmapObjectFormatAlt;
+
+impl BitmapObjectFormatAlt {
+    pub fn new<'a>() -> &'a Self {
+        &Self {}
+    }
+}
+
+impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
+    fn pack(self: &Self, _input_path: &Path, _output_path: &Path) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn unpack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), Error> {
+        fs::create_dir_all(output_path)?;
+
+        let mut input_file = File::open(input_path)?;
+
+        let mut object_header_buffer = [0; 24];
+        input_file.read(&mut object_header_buffer)?;
+
+        #[derive(NomLE)]
+        #[allow(dead_code)]
+        struct ObjectHeader {
+            data_size: u32,
+            class_object_size: u32,
+            decompressed_size: u32,
+            compressed_size: u32,
+            class_crc32: u32,
+            crc32: u32,
+        }
+        let object_header = match ObjectHeader::parse(&object_header_buffer) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
+
+        let mut header = vec![0; object_header.class_object_size as usize];
+        input_file.read(&mut header)?;
+
+        let mut data = vec![0; object_header.decompressed_size as usize];
+
+        if object_header.compressed_size != 0 {
+            let mut compresssed_data = vec![0; object_header.compressed_size as usize];
+            input_file.read(&mut compresssed_data)?;
+            lz::lzss_decompress(
+                &compresssed_data[..],
+                object_header.compressed_size as usize,
+                &mut data[..],
+                object_header.decompressed_size as usize,
+                false,
+            )?;
+        } else {
+            input_file.read(&mut data)?;
+        }
+        let json_path = output_path.join("object.json");
+        let mut output_file = File::create(json_path)?;
+
+        let png_path = output_path.join("data.png");
+        let output_png_file = File::create(png_path)?;
+
+        let bitmap_header = match BitmapZHeaderAlternate::parse(&header) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
+
+        let bitmap = match BitmapZAlternate::parse(&data) {
+            Ok((_, h)) => h,
+            Err(error) => panic!("{}", error),
+        };
+
+        if bitmap_header.dxt_version0 == 7 {
+            let png_encoder = PngEncoder::new(output_png_file);
+            png_encoder
+                .encode(
+                    bitmap.data.as_bytes(),
+                    bitmap.width,
+                    bitmap.height,
+                    ColorType::L16,
+                )
+                .unwrap();
+        } else {
+            let data_cursor = Cursor::new(&bitmap.data[..]);
+            let dxt_decoder = DxtDecoder::new(
+                data_cursor,
+                bitmap.width,
+                bitmap.height,
                 if bitmap_header.dxt_version0 == 14 {
                     DXTVariant::DXT1
                 } else {
                     DXTVariant::DXT5
                 },
             )
-            .unwrap();
+                .unwrap();
 
             let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
             dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
@@ -167,8 +285,8 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
             png_encoder
                 .encode(
                     buf.as_bytes(),
-                    bitmap_header.width,
-                    bitmap_header.height,
+                    bitmap.width,
+                    bitmap.height,
                     if bitmap_header.dxt_version0 == 14 {
                         ColorType::Rgb8
                     } else {
@@ -176,71 +294,16 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
                     },
                 )
                 .unwrap();
-
-            let object = BitmapObject { bitmap_header };
-
-            output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
-        } else {
-            let bitmap_header = match BitmapZHeaderAlternate::parse(&header) {
-                Ok((_, h)) => h,
-                Err(error) => panic!("{}", error),
-            };
-
-            let bitmap = match BitmapZAlternate::parse(&data) {
-                Ok((_, h)) => h,
-                Err(error) => panic!("{}", error),
-            };
-
-            if bitmap_header.dxt_version0 == 7 {
-                let png_encoder = PngEncoder::new(output_png_file);
-                png_encoder
-                    .encode(
-                        bitmap.data.as_bytes(),
-                        bitmap.width,
-                        bitmap.height,
-                        ColorType::L16,
-                    )
-                    .unwrap();
-            } else {
-                let data_cursor = Cursor::new(&bitmap.data[..]);
-                let dxt_decoder = DxtDecoder::new(
-                    data_cursor,
-                    bitmap.width,
-                    bitmap.height,
-                    if bitmap_header.dxt_version0 == 14 {
-                        DXTVariant::DXT1
-                    } else {
-                        DXTVariant::DXT5
-                    },
-                )
-                .unwrap();
-
-                let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
-                dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
-
-                let png_encoder = PngEncoder::new(output_png_file);
-                png_encoder
-                    .encode(
-                        buf.as_bytes(),
-                        bitmap.width,
-                        bitmap.height,
-                        if bitmap_header.dxt_version0 == 14 {
-                            ColorType::Rgb8
-                        } else {
-                            ColorType::Rgba8
-                        },
-                    )
-                    .unwrap();
-            }
-
-            let object = BitmapObjectAlternate {
-                bitmap_header,
-                bitmap,
-            };
-
-            output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
         }
+
+        let object = BitmapObjectAlternate {
+            bitmap_header,
+            bitmap,
+        };
+
+        output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
         Ok(())
     }
 }
+
