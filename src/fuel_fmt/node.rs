@@ -1,7 +1,7 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, ResourceObjectZ, FUELObjectFormat};
+use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, ResourceObjectZ};
 
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]

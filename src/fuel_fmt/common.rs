@@ -1,8 +1,8 @@
+use std::{fs, io};
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::marker::PhantomData;
 use std::path::Path;
-use std::{fs, io};
 
 pub use nom::number::complete::*;
 pub use nom_derive::NomLE;

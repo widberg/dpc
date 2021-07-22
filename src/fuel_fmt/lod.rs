@@ -1,7 +1,7 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{Mat4f, ObjectZ, PascalArray, FUELObjectFormat};
+use crate::fuel_fmt::common::{FUELObjectFormat, Mat4f, ObjectZ, PascalArray};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct LodZUnknown0 {

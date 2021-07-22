@@ -1,7 +1,7 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ObjectZ, PascalArray};
+use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, ObjectZ, PascalArray};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown7 {

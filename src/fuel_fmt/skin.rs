@@ -1,7 +1,7 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{ObjectZ, PascalArray, FUELObjectFormat};
+use crate::fuel_fmt::common::{FUELObjectFormat, ObjectZ, PascalArray};
 
 static mut SKIN_DATA_COUNT: u32 = 0;
 

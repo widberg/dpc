@@ -4,16 +4,17 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::metadata;
 use std::fs::File;
-use std::io::prelude::*;
+use std::fs::metadata;
 use std::io::Cursor;
 use std::io::Error;
 use std::io::ErrorKind;
+use std::io::prelude::*;
 use std::io::Read;
 use std::io::Result;
 use std::io::SeekFrom;
 use std::io::Write;
+use std::option::Option::Some;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -23,20 +24,19 @@ use clap::{App, AppSettings, Arg};
 use dialoguer::Select;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use nom::number::complete::*;
 use nom::*;
+use nom::number::complete::*;
 use nom_derive::{Nom, NomLE, Parse};
 use serde::Deserialize;
 use serde::Serialize;
 use tempdir::TempDir;
 
-use base_dpc::Options;
 use base_dpc::DPC;
+use base_dpc::Options;
 
 use crate::base_dpc;
 use crate::fuel_fmt;
 use crate::lz;
-use std::option::Option::Some;
 
 fn calculate_padded_size(unpadded_size: u32) -> u32 {
     return (unpadded_size + 0x7ff) & 0xfffff800;
@@ -1461,14 +1461,6 @@ impl DPC for FuelDPC {
     }
 
     fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-        type FmtExtractFn = fn(header: &[u8], data: &[u8], output_path: &Path) -> Result<()>;
-        let mut fmt_fns: HashMap<u32, FmtExtractFn> = HashMap::new();
-
-        // Special
-        fmt_fns.insert(849267944, fuel_fmt::sound::fuel_fmt_extract_sound_z); //
-        fmt_fns.insert(1471281566, fuel_fmt::bitmap::fuel_fmt_extract_bitmap_z); //
-        fmt_fns.insert(2259852416, fuel_fmt::binary::fuel_fmt_extract_binary_z);
-
         fs::create_dir_all(output_path)?;
 
         let mut input_file = File::open(input_path)?;
@@ -1481,28 +1473,9 @@ impl DPC for FuelDPC {
             Err(error) => panic!("{}", error),
         };
 
-        if let Some(fmt_fn) = fmt_fns.get(&object_header.class_crc32) {
-            let mut header = vec![0; object_header.class_object_size as usize];
-            input_file.read(&mut header)?;
-
-            let mut data = vec![0; object_header.decompressed_size as usize];
-
-            if object_header.compressed_size != 0 {
-                let mut compresssed_data = vec![0; object_header.compressed_size as usize];
-                input_file.read(&mut compresssed_data)?;
-                lz::lzss_decompress(
-                    &compresssed_data[..],
-                    object_header.compressed_size as usize,
-                    &mut data[..],
-                    object_header.decompressed_size as usize,
-                    false,
-                )?;
-            } else {
-                input_file.read(&mut data)?;
-            }
-
-            fmt_fn(&header, &data, output_path.as_ref())?;
-        } else if let  Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32) {
+        if let Some(fuel_object_format) =
+            fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32)
+        {
             fuel_object_format.unpack(input_path.as_ref(), output_path.as_ref())?;
         } else {
             return Err(Error::new(ErrorKind::Other, "unsupported format"));
@@ -1522,13 +1495,13 @@ mod test {
     use std::path::Path;
 
     use checksumdir::checksumdir;
-    use checksums::hash_file;
     use checksums::Algorithm;
+    use checksums::hash_file;
     use tempdir::TempDir;
     use test_generator::test_resources;
 
-    use crate::base_dpc::Options;
     use crate::base_dpc::DPC;
+    use crate::base_dpc::Options;
     use crate::fuel_dpc::FuelDPC;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]

@@ -1,7 +1,9 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, ObjectZ, PascalArray, FUELObjectFormat, Vec2f, Vec3f, Vec4f};
+use crate::fuel_fmt::common::{
+    FixedVec, FUELObjectFormat, Mat4f, ObjectZ, PascalArray, Vec2f, Vec3f, Vec4f,
+};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown1 {

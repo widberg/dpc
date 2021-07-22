@@ -1,7 +1,7 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FixedVec, Mat4f, PascalArray, Quat, Vec3f, FUELObjectFormat, Vec4f};
+use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, PascalArray, Quat, Vec3f, Vec4f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown0 {
@@ -216,7 +216,6 @@ pub struct MeshZAltAlt {
     unknown13s: PascalArray<MeshZUnknown13>,
 }
 
-
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZAltAltAltUnknown11 {
     unknown0: u32,
@@ -323,8 +322,7 @@ pub struct MeshZHeaderAlt {
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MeshZHeaderAltAltUnknown10
-{
+struct MeshZHeaderAltAltUnknown10 {
     unknown0: u32,
     unknown1s: Vec3f,
     unknown2: u32,
@@ -332,15 +330,13 @@ struct MeshZHeaderAltAltUnknown10
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MeshZHeaderAltAltUnknown4
-{
+struct MeshZHeaderAltAltUnknown4 {
     unknown0: u32,
     unknown1: u16,
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MeshZHeaderAltAltUnknown5
-{
+struct MeshZHeaderAltAltUnknown5 {
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
@@ -352,8 +348,7 @@ struct MeshZHeaderAltAltUnknown5
 }
 
 #[derive(Serialize, Deserialize, NomLE)]
-struct MeshZHeaderAltAltUnknown8
-{
+struct MeshZHeaderAltAltUnknown8 {
     name: PascalArray<u8>,
     unknown0: u32,
     unknown1flag: u16,

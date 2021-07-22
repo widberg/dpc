@@ -1,7 +1,7 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, ObjectZ, PascalArray, Quat, Vec3f};
+use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, ObjectZ, PascalArray, Quat, Vec3f};
 
 #[derive(Serialize, Deserialize, NomLE)]
 struct SurfaceZUnknown2 {
