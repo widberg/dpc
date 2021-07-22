@@ -4,12 +4,12 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::File;
 use std::fs::metadata;
+use std::fs::File;
+use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::Error;
 use std::io::ErrorKind;
-use std::io::prelude::*;
 use std::io::Read;
 use std::io::Result;
 use std::io::SeekFrom;
@@ -24,15 +24,15 @@ use clap::{App, AppSettings, Arg};
 use dialoguer::Select;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use nom::*;
 use nom::number::complete::*;
+use nom::*;
 use nom_derive::{Nom, NomLE, Parse};
 use serde::Deserialize;
 use serde::Serialize;
 use tempdir::TempDir;
 
-use base_dpc::DPC;
 use base_dpc::Options;
+use base_dpc::DPC;
 
 use crate::base_dpc;
 use crate::fuel_fmt;
@@ -1476,7 +1476,48 @@ impl DPC for FuelDPC {
         if let Some(fuel_object_format) =
             fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32)
         {
-            fuel_object_format.unpack(input_path.as_ref(), output_path.as_ref())?;
+            fs::create_dir_all(output_path)?;
+
+            let mut input_file = File::open(input_path)?;
+
+            let mut object_header_buffer = [0; 24];
+            input_file.read(&mut object_header_buffer)?;
+
+            #[derive(NomLE)]
+            #[allow(dead_code)]
+            struct ObjectHeader {
+                data_size: u32,
+                class_object_size: u32,
+                decompressed_size: u32,
+                compressed_size: u32,
+                class_crc32: u32,
+                crc32: u32,
+            }
+            let object_header = match ObjectHeader::parse(&object_header_buffer) {
+                Ok((_, h)) => h,
+                Err(error) => panic!("{}", error),
+            };
+
+            let mut header = vec![0; object_header.class_object_size as usize];
+            input_file.read(&mut header)?;
+
+            let mut data = vec![0; object_header.decompressed_size as usize];
+
+            if object_header.compressed_size != 0 {
+                let mut compresssed_data = vec![0; object_header.compressed_size as usize];
+                input_file.read(&mut compresssed_data)?;
+                lz::lzss_decompress(
+                    &compresssed_data[..],
+                    object_header.compressed_size as usize,
+                    &mut data[..],
+                    object_header.decompressed_size as usize,
+                    false,
+                )?;
+            } else {
+                input_file.read(&mut data)?;
+            }
+
+            fuel_object_format.unpack(&header[..], &data[..], output_path.as_ref())?;
         } else {
             return Err(Error::new(ErrorKind::Other, "unsupported format"));
         }
@@ -1495,13 +1536,13 @@ mod test {
     use std::path::Path;
 
     use checksumdir::checksumdir;
-    use checksums::Algorithm;
     use checksums::hash_file;
+    use checksums::Algorithm;
     use tempdir::TempDir;
     use test_generator::test_resources;
 
-    use crate::base_dpc::DPC;
     use crate::base_dpc::Options;
+    use crate::base_dpc::DPC;
     use crate::fuel_dpc::FuelDPC;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]

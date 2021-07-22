@@ -1,8 +1,8 @@
+use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
-use binwrite::BinWrite;
 
-use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, PascalArray, Quat, Vec3f, Vec4f};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Quat, Vec3f, Vec4f};
 
 #[derive(BinWrite)]
 #[binwrite(little)]

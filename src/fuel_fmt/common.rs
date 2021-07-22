@@ -1,16 +1,13 @@
-use std::{fs, io};
 use std::fs::File;
-use std::io::{Error, Read, Write};
+use std::io::{Error, Write};
 use std::marker::PhantomData;
 use std::path::Path;
 
+use binwrite::{BinWrite, WriterOption};
 pub use nom::number::complete::*;
 pub use nom_derive::NomLE;
 use nom_derive::Parse;
 pub use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use binwrite::{BinWrite, WriterOption};
-
-use crate::lz;
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -89,13 +86,17 @@ impl<T> BinWrite for PascalArray<T>
 where
     T: BinWrite,
 {
-    fn write_options<W: Write>(&self, writer: &mut W, options: &WriterOption) -> io::Result<()> {
+    fn write_options<W: Write>(&self, writer: &mut W, options: &WriterOption) -> Result<(), Error> {
         BinWrite::write_options(&(self.data.len() as u32), writer, options)?;
         BinWrite::write_options(&self.data, writer, options)
     }
 }
 
-pub fn write_option<W, T>(option: &Option<T>, writer: &mut W, options: &WriterOption) -> Result<(), Error>
+pub fn write_option<W, T>(
+    option: &Option<T>,
+    writer: &mut W,
+    options: &WriterOption,
+) -> Result<(), Error>
 where
     W: Write,
     T: BinWrite,
@@ -192,8 +193,8 @@ pub struct ObjectZ {
 }
 
 pub trait FUELObjectFormatTrait {
-    fn pack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), io::Error>;
-    fn unpack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), io::Error>;
+    fn pack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), Error>;
+    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error>;
 }
 
 pub struct FUELObjectFormat<T, U> {
@@ -219,48 +220,7 @@ where
         todo!()
     }
 
-    fn unpack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), Error> {
-        fs::create_dir_all(output_path)?;
-
-        let mut input_file = File::open(input_path)?;
-
-        let mut object_header_buffer = [0; 24];
-        input_file.read(&mut object_header_buffer)?;
-
-        #[derive(NomLE)]
-        #[allow(dead_code)]
-        struct ObjectHeader {
-            data_size: u32,
-            class_object_size: u32,
-            decompressed_size: u32,
-            compressed_size: u32,
-            class_crc32: u32,
-            crc32: u32,
-        }
-        let object_header = match ObjectHeader::parse(&object_header_buffer) {
-            Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
-        };
-
-        let mut header = vec![0; object_header.class_object_size as usize];
-        input_file.read(&mut header)?;
-
-        let mut data = vec![0; object_header.decompressed_size as usize];
-
-        if object_header.compressed_size != 0 {
-            let mut compresssed_data = vec![0; object_header.compressed_size as usize];
-            input_file.read(&mut compresssed_data)?;
-            lz::lzss_decompress(
-                &compresssed_data[..],
-                object_header.compressed_size as usize,
-                &mut data[..],
-                object_header.decompressed_size as usize,
-                false,
-            )?;
-        } else {
-            input_file.read(&mut data)?;
-        }
-
+    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -269,7 +229,7 @@ where
             Err(error) => panic!("{}", error),
         };
 
-        let body = match U::parse(&data) {
+        let body = match U::parse(&body) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };

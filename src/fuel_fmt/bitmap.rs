@@ -1,20 +1,19 @@
-use std::fs;
-use std::io::{Error, Read, Write};
 use std::io::Cursor;
+use std::io::{Error, Write};
 use std::path::Path;
 
+use binwrite::BinWrite;
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
-use image::{ColorType, ImageDecoder};
-use image::codecs::dxt::{DxtDecoder, DXTVariant};
+use image::codecs::dxt::{DXTVariant, DxtDecoder};
 use image::codecs::png::PngEncoder;
+use image::{ColorType, ImageDecoder};
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 use zerocopy::AsBytes;
-use binwrite::BinWrite;
 
-use crate::{File, lz};
-use crate::fuel_fmt::common::{FUELObjectFormatTrait, write_option};
+use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait};
+use crate::File;
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -102,47 +101,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         todo!()
     }
 
-    fn unpack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), Error> {
-        fs::create_dir_all(output_path)?;
-
-        let mut input_file = File::open(input_path)?;
-
-        let mut object_header_buffer = [0; 24];
-        input_file.read(&mut object_header_buffer)?;
-
-        #[derive(NomLE)]
-        #[allow(dead_code)]
-        struct ObjectHeader {
-            data_size: u32,
-            class_object_size: u32,
-            decompressed_size: u32,
-            compressed_size: u32,
-            class_crc32: u32,
-            crc32: u32,
-        }
-        let object_header = match ObjectHeader::parse(&object_header_buffer) {
-            Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
-        };
-
-        let mut header = vec![0; object_header.class_object_size as usize];
-        input_file.read(&mut header)?;
-
-        let mut data = vec![0; object_header.decompressed_size as usize];
-
-        if object_header.compressed_size != 0 {
-            let mut compresssed_data = vec![0; object_header.compressed_size as usize];
-            input_file.read(&mut compresssed_data)?;
-            lz::lzss_decompress(
-                &compresssed_data[..],
-                object_header.compressed_size as usize,
-                &mut data[..],
-                object_header.decompressed_size as usize,
-                false,
-            )?;
-        } else {
-            input_file.read(&mut data)?;
-        }
+    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -154,7 +113,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
             Err(error) => panic!("{}", error),
         };
 
-        let data_cursor = Cursor::new(&data);
+        let data_cursor = Cursor::new(&body);
         let dxt_decoder = DxtDecoder::new(
             data_cursor,
             bitmap_header.width,
@@ -205,47 +164,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
         todo!()
     }
 
-    fn unpack(self: &Self, input_path: &Path, output_path: &Path) -> Result<(), Error> {
-        fs::create_dir_all(output_path)?;
-
-        let mut input_file = File::open(input_path)?;
-
-        let mut object_header_buffer = [0; 24];
-        input_file.read(&mut object_header_buffer)?;
-
-        #[derive(NomLE)]
-        #[allow(dead_code)]
-        struct ObjectHeader {
-            data_size: u32,
-            class_object_size: u32,
-            decompressed_size: u32,
-            compressed_size: u32,
-            class_crc32: u32,
-            crc32: u32,
-        }
-        let object_header = match ObjectHeader::parse(&object_header_buffer) {
-            Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
-        };
-
-        let mut header = vec![0; object_header.class_object_size as usize];
-        input_file.read(&mut header)?;
-
-        let mut data = vec![0; object_header.decompressed_size as usize];
-
-        if object_header.compressed_size != 0 {
-            let mut compresssed_data = vec![0; object_header.compressed_size as usize];
-            input_file.read(&mut compresssed_data)?;
-            lz::lzss_decompress(
-                &compresssed_data[..],
-                object_header.compressed_size as usize,
-                &mut data[..],
-                object_header.decompressed_size as usize,
-                false,
-            )?;
-        } else {
-            input_file.read(&mut data)?;
-        }
+    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -257,7 +176,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
             Err(error) => panic!("{}", error),
         };
 
-        let bitmap = match BitmapZAlternate::parse(&data) {
+        let bitmap = match BitmapZAlternate::parse(&body) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };
@@ -284,7 +203,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
                     DXTVariant::DXT5
                 },
             )
-                .unwrap();
+            .unwrap();
 
             let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
             dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
@@ -314,4 +233,3 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
         Ok(())
     }
 }
-

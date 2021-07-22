@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
-use std::io::Cursor;
 use std::io::prelude::*;
+use std::io::Cursor;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::path::PathBuf;
@@ -352,8 +352,8 @@ mod test {
     use std::path::PathBuf;
 
     use byteorder::{LittleEndian, ReadBytesExt};
-    use checksums::Algorithm;
     use checksums::hash_file;
+    use checksums::Algorithm;
     use test_generator::test_resources;
 
     use crate::lz;

@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 
-use base_dpc::DPC;
 use base_dpc::Options;
+use base_dpc::DPC;
 use fuel_dpc::FuelDPC;
 
 pub mod base_dpc;

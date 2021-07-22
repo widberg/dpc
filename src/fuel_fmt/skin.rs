@@ -1,6 +1,6 @@
+use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
-use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormat, ObjectZ, PascalArray};
 

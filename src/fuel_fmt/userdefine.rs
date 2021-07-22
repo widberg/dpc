@@ -1,8 +1,8 @@
-use nom::*;
+use binwrite::BinWrite;
 use nom::number::complete::*;
+use nom::*;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
-use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ};
 
