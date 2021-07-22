@@ -1476,28 +1476,6 @@ impl DPC for FuelDPC {
         if let Some(fuel_object_format) =
             fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32)
         {
-            fs::create_dir_all(output_path)?;
-
-            let mut input_file = File::open(input_path)?;
-
-            let mut object_header_buffer = [0; 24];
-            input_file.read(&mut object_header_buffer)?;
-
-            #[derive(NomLE)]
-            #[allow(dead_code)]
-            struct ObjectHeader {
-                data_size: u32,
-                class_object_size: u32,
-                decompressed_size: u32,
-                compressed_size: u32,
-                class_crc32: u32,
-                crc32: u32,
-            }
-            let object_header = match ObjectHeader::parse(&object_header_buffer) {
-                Ok((_, h)) => h,
-                Err(error) => panic!("{}", error),
-            };
-
             let mut header = vec![0; object_header.class_object_size as usize];
             input_file.read(&mut header)?;
 
@@ -1525,7 +1503,72 @@ impl DPC for FuelDPC {
         Ok(())
     }
 
-    fn fmt_create<P: AsRef<Path>>(&self, _input_path: &P, _output_path: &P) -> Result<()> {
+    fn fmt_create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+        let mut output_file = File::create(output_path)?;
+
+        let crc32: u32 = input_path.as_ref().file_stem().unwrap().to_str().unwrap().parse::<u32>().unwrap();
+        let class_name = input_path.as_ref().extension().unwrap().to_str().unwrap();
+
+        let mut class_names: HashMap<&str, u32> = HashMap::new();
+        class_names.insert("Omni_Z", 549480509);
+        class_names.insert("Rtc_Z", 705810152);
+        class_names.insert("GenWorld_Z", 838505646);
+        class_names.insert("LightData_Z", 848525546);
+        class_names.insert("Sound_Z", 849267944);
+        class_names.insert("MaterialObj_Z", 849861735);
+        class_names.insert("RotShape_Z", 866453734);
+        class_names.insert("ParticlesData_Z", 954499543);
+        class_names.insert("World_Z", 968261323);
+        class_names.insert("Warp_Z", 1114947943);
+        class_names.insert("Spline_Z", 1135194223);
+        class_names.insert("Animation_Z", 1175485833);
+        class_names.insert("Mesh_Z", 1387343541);
+        class_names.insert("UserDefine_Z", 1391959958);
+        class_names.insert("Skin_Z", 1396791303);
+        class_names.insert("Bitmap_Z", 1471281566);
+        class_names.insert("Fonts_Z", 1536002910);
+        class_names.insert("RotShapeData_Z", 1625945536);
+        class_names.insert("Surface_Z", 1706265229);
+        class_names.insert("SplineGraph_Z", 1910554652);
+        class_names.insert("Lod_Z", 1943824915);
+        class_names.insert("Material_Z", 2204276779);
+        class_names.insert("Node_Z", 2245010728);
+        class_names.insert("Binary_Z", 2259852416);
+        class_names.insert("CollisionVol_Z", 2398393906);
+        class_names.insert("WorldRef_Z", 2906362741);
+        class_names.insert("Particles_Z", 3312018398);
+        class_names.insert("LodData_Z", 3412401859);
+        class_names.insert("Skel_Z", 3611002348);
+        class_names.insert("MeshData_Z", 3626109572);
+        class_names.insert("SurfaceDatas_Z", 3747817665);
+        class_names.insert("MaterialAnim_Z", 3834418854);
+        class_names.insert("GwRoad_Z", 3845834591);
+        class_names.insert("GameObj_Z", 4096629181);
+        class_names.insert("Camera_Z", 4240844041);
+
+        let class_crc32 = *class_names.get(class_name).unwrap();
+
+        if let Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&class_crc32) {
+            let mut header: Vec<u8> = Vec::new();
+            let mut body: Vec<u8> = Vec::new();
+            fuel_object_format.pack(output_path.as_ref(), &mut header, &mut body)?;
+
+            let object_header = ObjectHeader {
+                data_size: body.len() as u32 + header.len() as u32,
+                class_object_size: header.len() as u32,
+                decompressed_size: body.len() as u32,
+                compressed_size: 0,
+                class_crc32: class_crc32,
+                crc32: crc32,
+            };
+
+            object_header.write(&mut output_file)?;
+            header.write(&mut output_file)?;
+            body.write(&mut output_file)?;
+        } else {
+            return Err(Error::new(ErrorKind::Other, "unsupported format"));
+        }
+
         Ok(())
     }
 }
