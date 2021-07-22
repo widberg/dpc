@@ -6,10 +6,13 @@ use std::path::Path;
 use byteorder::{LittleEndian, ReadBytesExt};
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::{File, lz};
-use crate::fuel_fmt::common::FUELObjectFormatTrait;
+use crate::fuel_fmt::common::{FUELObjectFormatTrait, write_option};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct SoundZHeader {
@@ -18,12 +21,15 @@ struct SoundZHeader {
     sample_rate: u32,
     #[nom(Cond = "sample_rate != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     data_size: Option<u32>,
     #[nom(Cond = "sample_rate != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     sound_type: Option<u16>,
     #[nom(Cond = "sample_rate != 0 && i.len() == 2")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero: Option<u16>,
 }
 

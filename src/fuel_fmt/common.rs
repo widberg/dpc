@@ -212,8 +212,8 @@ impl<T, U> FUELObjectFormat<T, U> {
 
 impl<T, U> FUELObjectFormatTrait for FUELObjectFormat<T, U>
 where
-    for<'a> T: Parse<&'a [u8]> + Serialize + Deserialize<'a>,
-    for<'a> U: Parse<&'a [u8]> + Serialize + Deserialize<'a>,
+    for<'a> T: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
+    for<'a> U: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
 {
     fn pack(self: &Self, _input_path: &Path, _output_path: &Path) -> Result<(), Error> {
         todo!()

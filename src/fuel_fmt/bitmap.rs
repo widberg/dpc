@@ -11,10 +11,13 @@ use image::codecs::png::PngEncoder;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 use zerocopy::AsBytes;
+use binwrite::BinWrite;
 
 use crate::{File, lz};
-use crate::fuel_fmt::common::FUELObjectFormatTrait;
+use crate::fuel_fmt::common::{FUELObjectFormatTrait, write_option};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 // https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-header
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
@@ -47,6 +50,8 @@ struct BitmapObject {
 
 // alternate
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct BitmapZHeaderAlternate {
@@ -58,6 +63,8 @@ struct BitmapZHeaderAlternate {
     zero1: u16,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 struct BitmapZAlternate {
@@ -68,6 +75,7 @@ struct BitmapZAlternate {
     zero0: u32,
     unknown0: u32,
     #[nom(Cond = "LittleEndian::read_u32(&i[0..4]) == 0")]
+    #[binwrite(with(write_option))]
     zero1: Option<u32>,
     unknown1: u16,
     unknown2: u8,
