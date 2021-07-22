@@ -1,19 +1,26 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
-use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, ObjectZ, PascalArray, Quat, Vec3f};
+use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, ObjectZ, PascalArray, Quat, Vec3f, write_option};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SurfaceZUnknown2 {
     data: FixedVec<u8, 32>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SurfaceZUnknown7 {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SurfaceZUnknown8 {
     unknown0: u32,
@@ -21,12 +28,16 @@ struct SurfaceZUnknown8 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SurfaceZUnknown4 {
     data: FixedVec<u32, 43>,
     unknown: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct SurfaceZ {
@@ -46,15 +57,19 @@ pub struct SurfaceZ {
     opt: u8,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     unknown13s: Option<PascalArray<u32>>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     unknown14s: Option<PascalArray<u16>>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     unknown15: Option<FixedVec<u32, 52>>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     unknown16_count: Option<u32>,
 }
 

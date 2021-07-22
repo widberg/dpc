@@ -1,24 +1,33 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, PascalArray, ResourceObjectZ, Vec3f};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown0 {
     data: FixedVec<u8, 40>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown2 {
     unknowns: FixedVec<AnimationZUnknown, 3>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown1 {
     unknown0: u32,
@@ -28,12 +37,16 @@ struct AnimationZUnknown1 {
     unknown4: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown4 {
     unknown0: u32,
     unknown1s: PascalArray<AnimationZUnknown1>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown5 {
     unknown0: u32,
@@ -41,6 +54,8 @@ struct AnimationZUnknown5 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct AnimationZUnknown12 {
     unknown0: u32,
@@ -52,6 +67,8 @@ struct AnimationZUnknown12 {
     unknown6: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct AnimationZ {

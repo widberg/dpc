@@ -1,13 +1,18 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, ObjectZ, PascalArray, Vec3f};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SplineZUnknown1 {
     data: FixedVec<u8, 240>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct SplineZ {

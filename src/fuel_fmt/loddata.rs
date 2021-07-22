@@ -1,8 +1,11 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
-use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, PascalArray, ResourceObjectZ};
+use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, PascalArray, ResourceObjectZ, write_option};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct LodDataZ {
@@ -17,57 +20,75 @@ pub struct LodDataZ {
     opt: u8,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     padding: Option<FixedVec<u8, 24>>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     u1: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero1: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     u2: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero2: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero3: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero4: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     scale_x: Option<f32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     scale_y: Option<f32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     scale_z: Option<f32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero5: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero6: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero7: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     u6: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero8: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero9: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero10: Option<u32>,
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     zero11: Option<u32>,
 }
 

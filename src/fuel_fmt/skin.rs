@@ -1,10 +1,13 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormat, ObjectZ, PascalArray};
 
 static mut SKIN_DATA_COUNT: u32 = 0;
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SkinZSkinSubsection {
     vertex_group_crc32: u32,
@@ -15,6 +18,8 @@ struct SkinZSkinSubsection {
     data: Vec<u32>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct SkinZ {
@@ -29,6 +34,8 @@ pub struct SkinZ {
     skin_sections: PascalArray<PascalArray<SkinZSkinSubsection>>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct SkinZAlt {

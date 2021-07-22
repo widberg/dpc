@@ -1,8 +1,11 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, PascalArray, Quat, Vec3f, Vec4f};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown0 {
     unknown0: u32,
@@ -11,12 +14,16 @@ struct MeshZUnknown0 {
     unknown3: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown1 {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown2 {
     unknown0s: PascalArray<u16>,
@@ -24,11 +31,15 @@ struct MeshZUnknown2 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown4 {
     unknown0s: PascalArray<MeshZUnknown1>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown6 {
     unknown0: u32,
@@ -41,6 +52,8 @@ struct MeshZUnknown6 {
     unknown7: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown7 {
     unknown0: u16,
@@ -49,6 +62,8 @@ struct MeshZUnknown7 {
     unknown3: u16,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZSubMesh {
     vertex_count: u32,
@@ -58,6 +73,8 @@ struct MeshZSubMesh {
     data: Vec<u8>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZIndices {
     index_count: u32,
@@ -66,6 +83,8 @@ struct MeshZIndices {
     data: Vec<u16>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown11 {
     unknown0: u32,
@@ -85,6 +104,8 @@ struct MeshZUnknown11 {
     unknown14: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown13Unknown1 {
     unknown0: u32,
@@ -96,12 +117,16 @@ struct MeshZUnknown13Unknown1 {
     unknown6: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown13 {
     unknown0s: FixedVec<u32, 12>,
     unknown1s: PascalArray<MeshZUnknown13Unknown1>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown16 {
     unknown0: u32,
@@ -114,18 +139,24 @@ struct MeshZUnknown16 {
     unknown7: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZPair {
     first: u16,
     second: u16,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown15 {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown14 {
     name: PascalArray<u8>,
@@ -135,12 +166,16 @@ struct MeshZUnknown14 {
     unknown15s: PascalArray<MeshZUnknown15>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown12 {
     u0: u16,
     u1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZ {
@@ -169,6 +204,8 @@ pub struct MeshZ {
     unknown12s: PascalArray<MeshZUnknown12>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZAlt {
@@ -193,6 +230,8 @@ pub struct MeshZAlt {
     unknown12s: PascalArray<MeshZUnknown12>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZAltAlt {
@@ -216,6 +255,8 @@ pub struct MeshZAltAlt {
     unknown13s: PascalArray<MeshZUnknown13>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZAltAltAltUnknown11 {
     unknown0: u32,
@@ -244,6 +285,8 @@ struct MeshZAltAltAltUnknown11 {
     unknown23: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZAltAltAlt {
@@ -267,6 +310,8 @@ pub struct MeshZAltAltAlt {
     unknown11s: PascalArray<MeshZAltAltAltUnknown11>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderUnknown3 {
     unknown0: u32,
@@ -277,6 +322,8 @@ struct MeshZHeaderUnknown3 {
     unknown5: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderUnknown4 {
     unknown0s: FixedVec<u8, 64>,
@@ -284,6 +331,8 @@ struct MeshZHeaderUnknown4 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZHeader {
@@ -302,6 +351,8 @@ pub struct MeshZHeader {
     unknown4s: PascalArray<MeshZHeaderUnknown4>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZHeaderAlt {
@@ -321,6 +372,8 @@ pub struct MeshZHeaderAlt {
     zeros: FixedVec<u32, 4>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderAltAltUnknown10 {
     unknown0: u32,
@@ -329,12 +382,16 @@ struct MeshZHeaderAltAltUnknown10 {
     unknown3: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderAltAltUnknown4 {
     unknown0: u32,
     unknown1: u16,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderAltAltUnknown5 {
     unknown0: u32,
@@ -347,6 +404,8 @@ struct MeshZHeaderAltAltUnknown5 {
     unknown7: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderAltAltUnknown8 {
     name: PascalArray<u8>,
@@ -356,6 +415,8 @@ struct MeshZHeaderAltAltUnknown8 {
     unknown2s: PascalArray<Vec4f>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MeshZHeaderAltAlt {

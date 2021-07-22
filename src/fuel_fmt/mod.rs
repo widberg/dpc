@@ -157,7 +157,6 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1471281566, BitmapObjectFormatAlt::new());
         }
         "v1.325.50.07 - Asobo Studio - Internal Cross Technology" => {
-            // TRAFFIC_TM
             formats.insert(2204276779, MaterialObjectFormatAltAlt::new());
             formats.insert(1387343541, MeshObjectFormatAltAlt::new());
             formats.insert(1396791303, SkinObjectFormatAlt::new());
@@ -167,7 +166,6 @@ pub fn get_formats<'a>(version: &String) -> HashMap<u32, &'a dyn FUELObjectForma
             formats.insert(1471281566, BitmapObjectFormatAlt::new());
         }
         "v1.220.50.07 - Asobo Studio - Internal Cross Technology" => {
-            // P_MOTO
             formats.insert(2204276779, MaterialObjectFormatAlt::new());
             formats.insert(1387343541, MeshObjectFormatAltAltAlt::new());
             formats.insert(1396791303, SkinObjectFormatAlt::new());

@@ -8,9 +8,12 @@ pub use nom::number::complete::*;
 pub use nom_derive::NomLE;
 use nom_derive::Parse;
 pub use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use binwrite::{BinWrite, WriterOption};
 
 use crate::lz;
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ResourceObjectZ {
@@ -18,9 +21,12 @@ pub struct ResourceObjectZ {
     #[nom(Cond = "i.len() != 0")]
     #[nom(LengthCount = "le_u32")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     pub crc32s: Option<Vec<u32>>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Vec3f {
     x: f32,
@@ -28,6 +34,8 @@ pub struct Vec3f {
     y: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Vec4f {
     x: f32,
@@ -36,6 +44,8 @@ pub struct Vec4f {
     w: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Vec3i32 {
     x: i32,
@@ -43,18 +53,24 @@ pub struct Vec3i32 {
     y: i32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Vec2f {
     x: f32,
     y: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Mat4f {
     #[nom(Count(16))]
     data: Vec<f32>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 pub struct Quat {
     x: f32,
@@ -67,6 +83,28 @@ pub struct Quat {
 pub struct PascalArray<T> {
     #[nom(LengthCount(le_u32))]
     data: Vec<T>,
+}
+
+impl<T> BinWrite for PascalArray<T>
+where
+    T: BinWrite,
+{
+    fn write_options<W: Write>(&self, writer: &mut W, options: &WriterOption) -> io::Result<()> {
+        BinWrite::write_options(&(self.data.len() as u32), writer, options)?;
+        BinWrite::write_options(&self.data, writer, options)
+    }
+}
+
+pub fn write_option<W, T>(option: &Option<T>, writer: &mut W, options: &WriterOption) -> Result<(), Error>
+where
+    W: Write,
+    T: BinWrite,
+{
+    if let Some(value) = option {
+        BinWrite::write_options(value, writer, options)
+    } else {
+        Ok(())
+    }
 }
 
 impl<T> PascalArray<T> {
@@ -101,13 +139,15 @@ where
     }
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(NomLE)]
-pub struct FixedVec<T, const U: usize> {
+pub struct FixedVec<T: BinWrite, const U: usize> {
     #[nom(Count(U))]
     data: Vec<T>,
 }
 
-impl<T, const U: usize> Serialize for FixedVec<T, U>
+impl<T: BinWrite, const U: usize> Serialize for FixedVec<T, U>
 where
     T: Serialize,
 {
@@ -119,7 +159,7 @@ where
     }
 }
 
-impl<'de, T, const U: usize> Deserialize<'de> for FixedVec<T, U>
+impl<'de, T: BinWrite, const U: usize> Deserialize<'de> for FixedVec<T, U>
 where
     T: Deserialize<'de>,
 {
@@ -133,6 +173,8 @@ where
     }
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ObjectZ {
@@ -140,6 +182,7 @@ pub struct ObjectZ {
     crc32_or_zero: u32,
     #[nom(Cond = "i.len() != 90", Count = "crc32_or_zero as usize + 1")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     crc32s: Option<Vec<u32>>,
     rot: Quat,
     transform: Mat4f,

@@ -1,14 +1,19 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec2f};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GwRoadZPoint {
     encoded_vec2hf: u32,
     a: u8,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GwRoadZRoad {
     road_type: u8,
@@ -17,6 +22,8 @@ struct GwRoadZRoad {
     points: Vec<GwRoadZPoint>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GwRoadZUnknown5 {
     unknown0: u32,
@@ -31,6 +38,8 @@ struct GwRoadZUnknown5 {
     unknown8s: Vec<u32>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct GwRoadZ {

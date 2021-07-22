@@ -1,14 +1,19 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, ResourceObjectZ};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZUnknown0 {
     unknown0: f32,
     unknown1: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZUnknown23 {
     unknown0: f32,
@@ -16,6 +21,8 @@ struct MaterialAnimZUnknown23 {
     unknown2: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZUnknown56 {
     unknown0: f32,
@@ -24,6 +31,8 @@ struct MaterialAnimZUnknown56 {
     unknown3: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZUnknown89 {
     unknown0: f32,
@@ -33,18 +42,24 @@ struct MaterialAnimZUnknown89 {
     unknown4: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZUnknown1011 {
     unknown0: f32,
     unknown1: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MaterialAnimZColor {
     unknown: f32,
     rgba: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MaterialAnimZ {

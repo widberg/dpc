@@ -2,9 +2,12 @@ use nom::*;
 use nom::number::complete::*;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct UserDefineZ {

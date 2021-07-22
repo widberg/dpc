@@ -1,8 +1,11 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, ResourceObjectZ};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct NodeZ {
@@ -22,6 +25,8 @@ pub struct NodeZ {
     mat1: Mat4f,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct NodeZAlt {

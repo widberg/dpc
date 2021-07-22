@@ -1,8 +1,11 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, PascalArray, ResourceObjectZ};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown2 {
     unknown0: u32,
@@ -10,17 +13,23 @@ struct RtcZUnknown1Unknown2 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown3Unknown {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown3 {
     unknowns: FixedVec<RtcZUnknown1Unknown3Unknown, 5>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown5Unknown1 {
     unknown0: u32,
@@ -30,12 +39,16 @@ struct RtcZUnknown1Unknown5Unknown1 {
     unknown4: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1Unknown5 {
     unknown0: u32,
     unknown1s: PascalArray<RtcZUnknown1Unknown5Unknown1>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown1 {
     unknown_node_crc32: u32,
@@ -48,6 +61,8 @@ struct RtcZUnknown1 {
     unknown5s: PascalArray<RtcZUnknown1Unknown5>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown2Unknown2 {
     unknown0: u32,
@@ -55,6 +70,8 @@ struct RtcZUnknown2Unknown2 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown2Unknown4 {
     unknown0: u32,
@@ -63,6 +80,8 @@ struct RtcZUnknown2Unknown4 {
     unknown3: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown2 {
     unknown0: u32,
@@ -77,17 +96,23 @@ struct RtcZUnknown2 {
     unknown5s: PascalArray<RtcZUnknown2Unknown2>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown4RtcZUnknown5Unknown {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown4RtcZUnknown5 {
     unknowns: FixedVec<RtcZUnknown4RtcZUnknown5Unknown, 3>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown4RtcZUnknown6 {
     unknown0: u32,
@@ -95,6 +120,8 @@ struct RtcZUnknown4RtcZUnknown6 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown4 {
     unknown0: u32,
@@ -107,6 +134,8 @@ struct RtcZUnknown4 {
     unknown7s: PascalArray<RtcZUnknown4RtcZUnknown6>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown8 {
     unknown0: u32,
@@ -118,6 +147,8 @@ struct RtcZUnknown8 {
     unknown6: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown9 {
     unknown0: u32,
@@ -128,6 +159,8 @@ struct RtcZUnknown9 {
     unknown5: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown12Unknown1 {
     unknown0: u32,
@@ -137,12 +170,16 @@ struct RtcZUnknown12Unknown1 {
     unknown4: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct RtcZUnknown12 {
     unknown0: u32,
     unknown1s: PascalArray<RtcZUnknown12Unknown1>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct RtcZ {

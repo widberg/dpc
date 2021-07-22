@@ -1,8 +1,11 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
-use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec3f, Vec4f};
+use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec3f, Vec4f, write_option};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MaterialZ {
@@ -22,6 +25,8 @@ pub struct MaterialZ {
     unknown_bitmap_crc323: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MaterialZAlt {
@@ -35,14 +40,18 @@ pub struct MaterialZAlt {
     opt: u8,
     #[nom(Cond(opt != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     unknown_crc320: Option<u32>,
     #[nom(Cond(opt != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
     unknown_crc321: Option<u32>,
     #[nom(Count = "6")]
     bitmap_crc32s: Vec<u32>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct MaterialZAltAlt {

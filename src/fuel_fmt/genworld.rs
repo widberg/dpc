@@ -1,20 +1,27 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FixedVec, FUELObjectFormat, Mat4f, ObjectZ, PascalArray};
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown7 {
     unknown0s: PascalArray<u8>,
     unknown1s: PascalArray<PascalArray<u32>>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown8 {
     unknown0: u32,
     data: FixedVec<u8, 127>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown10 {
     unknown0: u32,
@@ -24,24 +31,32 @@ struct GenWorldZUnknown10 {
     unknown4: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown11 {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown12 {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown13 {
     unknown0s: FixedVec<u32, 8>,
     unknown1s: PascalArray<u32>,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct GenWorldZ {

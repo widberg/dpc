@@ -1,10 +1,13 @@
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
+use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{
     FixedVec, FUELObjectFormat, Mat4f, ObjectZ, PascalArray, Vec2f, Vec3f, Vec4f,
 };
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown1 {
     unknown0: u32,
@@ -12,6 +15,8 @@ struct ParticlesZUnknown1 {
     unknown2: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown2 {
     unknown0: u32,
@@ -21,12 +26,16 @@ struct ParticlesZUnknown2 {
     unknown4: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown4 {
     unknown0: u32,
     unknown1: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown5 {
     unknown0: u32,
@@ -35,6 +44,8 @@ struct ParticlesZUnknown5 {
     unknown3: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown0 {
     data: FixedVec<u32, 19>,
@@ -55,6 +66,8 @@ struct ParticlesZUnknown0 {
     unknown8: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ParticlesZ {
@@ -64,6 +77,8 @@ pub struct ParticlesZ {
     unknown3: u16,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct ParticlesZUnknown0Alt {
     data: FixedVec<u32, 19>,
@@ -84,6 +99,8 @@ struct ParticlesZUnknown0Alt {
     unknown8: u32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ParticlesZAlt {
