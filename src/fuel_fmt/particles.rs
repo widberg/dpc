@@ -105,9 +105,9 @@ struct ParticlesZUnknown0Alt {
 #[nom(Exact)]
 pub struct ParticlesZAlt {
     unknown0s: PascalArray<ParticlesZUnknown0Alt>,
-    mats: PascalArray<Mat4f>,
+    mats: FixedVec<u32, 16>,
     unknown2: u32,
-    unknown3: u16,
+    // unknown3: u16,
 }
 
 pub type ParticlesObjectFormat = FUELObjectFormat<ObjectZ, ParticlesZ>;

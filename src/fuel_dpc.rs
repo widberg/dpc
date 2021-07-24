@@ -1506,8 +1506,9 @@ impl DPC for FuelDPC {
     fn fmt_create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
         let mut output_file = File::create(output_path)?;
 
-        let crc32: u32 = input_path.as_ref().file_stem().unwrap().to_str().unwrap().parse::<u32>().unwrap();
-        let class_name = input_path.as_ref().extension().unwrap().to_str().unwrap();
+        let p = Path::new(input_path.as_ref().file_stem().unwrap());
+        let crc32: u32 = p.file_stem().unwrap().to_str().unwrap().parse::<u32>().unwrap();
+        let class_name = p.extension().unwrap().to_str().unwrap();
 
         let mut class_names: HashMap<&str, u32> = HashMap::new();
         class_names.insert("Omni_Z", 549480509);
@@ -1551,7 +1552,7 @@ impl DPC for FuelDPC {
         if let Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&class_crc32) {
             let mut header: Vec<u8> = Vec::new();
             let mut body: Vec<u8> = Vec::new();
-            fuel_object_format.pack(output_path.as_ref(), &mut header, &mut body)?;
+            fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body)?;
 
             let object_header = ObjectHeader {
                 data_size: body.len() as u32 + header.len() as u32,
@@ -1587,6 +1588,8 @@ mod test {
     use crate::base_dpc::Options;
     use crate::base_dpc::DPC;
     use crate::fuel_dpc::FuelDPC;
+    use std::fs;
+    use copy_dir;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_validate(path: &str) {
@@ -1643,6 +1646,7 @@ mod test {
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/FONTES.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
         let mut dpc = FuelDPC::new(
             &Options {
@@ -1663,7 +1667,30 @@ mod test {
 
         dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
 
+        let mut passed = true;
+
+        for entry in fs::read_dir(dpc_directory.join("objects")).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_dir() {
+                dpc.fmt_create(&path, &path.join("obj")).unwrap();
+                // let x = path.with_extension("");
+                // let class_name = x.extension().unwrap().to_str().unwrap();
+                if hash_file(path.join("obj").as_path(), Algorithm::SHA1) !=
+                    hash_file(path.with_extension("").as_path(), Algorithm::SHA1) {
+                    println!("{:?} {:?}", dpc_file, path);
+                    passed = false;
+                }
+            }
+        }
+
+        if !passed {
+            copy_dir::copy_dir(tmp_dir.path(), Path::new(&("data/".to_owned() + tmp_dir.path().file_name().unwrap().to_str().unwrap()))).unwrap();
+        }
+
         tmp_dir.close().expect("Failed to delete temp_dir");
+
+        assert_eq!(passed, true);
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]

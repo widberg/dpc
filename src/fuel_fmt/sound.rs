@@ -3,7 +3,7 @@ use std::io::{Error, Write};
 use std::path::Path;
 
 use binwrite::BinWrite;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +16,6 @@ use crate::File;
 #[nom(Exact)]
 struct SoundZHeader {
     friendly_name_crc32: u32,
-    #[serde(skip_serializing)]
     sample_rate: u32,
     #[nom(Cond = "sample_rate != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -47,7 +46,6 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
 
         let wav_path = input_path.join("data.wav");
         let mut reader = hound::WavReader::open(wav_path).unwrap();
-        let samples: Result<Vec<i16>, hound::Error> = reader.samples::<i16>().collect();
 
         #[derive(Deserialize)]
         struct Object {
@@ -57,7 +55,10 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
         let object: Object = serde_json::from_reader(json_file)?;
 
         object.sound_header.write(header)?;
-        samples.unwrap().write(body)?;
+
+        for sample in reader.samples::<i16>() {
+            body.write_i16::<LittleEndian>(sample.unwrap())?;
+        }
 
         Ok(())
     }
@@ -94,6 +95,8 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
         for _ in 0..number_of_samples {
             writer.write_sample(data_cursor.read_i16::<LittleEndian>()?);
         }
+        writer.flush().unwrap();
+        parent_writer.finalize().unwrap();
 
         #[derive(Serialize)]
         struct Object {

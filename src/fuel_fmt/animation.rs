@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, PascalArray, ResourceObjectZ, Vec3f};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, PascalArray, ResourceObjectZ, Vec3i32};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -72,11 +72,11 @@ struct AnimationZUnknown12 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct AnimationZ {
-    a: f32,
-    b: f32,
+    a: u32,
+    b: u32,
     c: u16,
     d: u16,
-    vectors: PascalArray<Vec3f>,
+    vectors: PascalArray<Vec3i32>,
     unknown0s: PascalArray<AnimationZUnknown0>,
     unknown2flag: u16,
     unknown2s: PascalArray<AnimationZUnknown2>,

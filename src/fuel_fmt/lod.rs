@@ -54,17 +54,23 @@ pub struct LodZ {
     skin_crc32s: PascalArray<u32>,
     u1: u32,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     sound_entries_option: u32,
     #[nom(Cond(sound_entries_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u32, Vec<u8>) { if x.len() != 0 { (1u32, x) } else { (0u32, x) } }))]
     #[binwrite(with(write_option))]
     sound_entries: Option<PascalArray<LodZSoundEntry>>,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     unknown4_option: u32,
     #[nom(Cond(unknown4_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u32, Vec<u8>) { if x.len() != 0 { (1u32, x) } else { (0u32, x) } }))]
     #[binwrite(with(write_option))]
     unknown4s: Option<PascalArray<LodZUnknown4>>,
     unknown5: u32,
@@ -93,15 +99,21 @@ pub struct LodZAlt {
     skin_crc32s: PascalArray<u32>,
     u1: u32,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     sound_entries_option: u8,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u8, Vec<u8>) { if x.len() != 0 { (1u8, x) } else { (0u8, x) } }))]
     #[nom(Cond(sound_entries_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     sound_entries: Option<PascalArray<LodZSoundEntry>>,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     unknown4_option: u8,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u8, Vec<u8>) { if x.len() != 0 { (1u8, x) } else { (0u8, x) } }))]
     #[nom(Cond(unknown4_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
@@ -132,15 +144,21 @@ pub struct LodZAltAlt {
     skin_crc32s: PascalArray<u32>,
     u1: u32,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     sound_entries_option: u32,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u32, Vec<u8>) { if x.len() != 0 { (1u32, x) } else { (0u32, x) } }))]
     #[nom(Cond(sound_entries_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     sound_entries: Option<PascalArray<LodZSoundEntry>>,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     unknown4_option: u32,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u32, Vec<u8>) { if x.len() != 0 { (1u32, x) } else { (0u32, x) } }))]
     #[nom(Cond(unknown4_option != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]

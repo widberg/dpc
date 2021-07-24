@@ -55,8 +55,11 @@ pub struct SurfaceZ {
     unknown11s: PascalArray<u16>,
     unknown12s: PascalArray<SurfaceZUnknown2>,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     opt: u8,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u8, Vec<u8>) { if x.len() != 0 { (1u8, x) } else { (0u8, x) } }))]
     #[nom(Cond = "opt != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]

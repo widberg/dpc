@@ -1,20 +1,14 @@
 use binwrite::BinWrite;
-use nom::number::complete::*;
-use nom::*;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, ResourceObjectZ};
+use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, ResourceObjectZ, PascalStringNULL};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GameObjZChild {
-    #[nom(
-        Map = "|x: Vec<u8>| String::from_utf8_lossy(&x[0..x.len() - 1]).to_string()",
-        Parse = "|i| length_count!(i, le_u32, le_u8)"
-    )]
-    string: String,
+    string: PascalStringNULL,
     is_in_world: u32,
     crc32s: PascalArray<u32>,
 }

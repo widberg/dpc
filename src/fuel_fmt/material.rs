@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormat, ResourceObjectZ, Vec3f, Vec4f};
+use crate::fuel_fmt::common::{write_option, FUELObjectFormat, ResourceObjectZ, Vec3f, Vec4f, FixedVec};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -12,8 +12,7 @@ pub struct MaterialZ {
     color: Vec4f,
     emission: Vec3f,
     unknown0: i32,
-    #[nom(Count = "26")]
-    vertex_shader_constant_fs: Vec<f32>,
+    vertex_shader_constant_fs: FixedVec<u32, 26>,
     diffuse_bitmap_crc32: u32,
     unknown_bitmap_crc320: u32,
     metal_bitmap_crc32: u32,
@@ -33,11 +32,13 @@ pub struct MaterialZAlt {
     color: Vec4f,
     emission: Vec3f,
     unknown0: i32,
-    #[nom(Count = "28")]
-    vertex_shader_constant_fs: Vec<f32>,
+    vertex_shader_constant_fs: FixedVec<u32, 28>,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     #[allow(dead_code)]
+    #[binwrite(ignore)]
     opt: u8,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u8, Vec<u8>) { if x.len() != 0 { (1u8, x) } else { (0u8, x) } }))]
     #[nom(Cond(opt != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
@@ -46,8 +47,7 @@ pub struct MaterialZAlt {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     unknown_crc321: Option<u32>,
-    #[nom(Count = "6")]
-    bitmap_crc32s: Vec<u32>,
+    bitmap_crc32s: FixedVec<u32, 6>,
 }
 
 #[derive(BinWrite)]
@@ -58,11 +58,19 @@ pub struct MaterialZAltAlt {
     color: Vec4f,
     emission: Vec3f,
     unknown0: i32,
-    #[nom(Count = "31")]
-    vertex_shader_constant_fs: Vec<f32>,
+    vertex_shader_constant_fs: FixedVec<u32, 31>,
+    #[binwrite(ignore)]
     opt: u8,
-    #[nom(Count = "6")]
-    bitmap_crc32s: Vec<u32>,
+    #[binwrite(postprocessor(|x: Vec<u8>| -> (u8, Vec<u8>) { if x.len() != 0 { (1u8, x) } else { (0u8, x) } }))]
+    #[nom(Cond(opt != 0))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
+    unknown_crc320: Option<u32>,
+    #[nom(Cond(opt != 0))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[binwrite(with(write_option))]
+    unknown_crc321: Option<u32>,
+    bitmap_crc32s: FixedVec<u32, 6>,
 }
 
 pub type MaterialObjectFormat = FUELObjectFormat<ResourceObjectZ, MaterialZ>;

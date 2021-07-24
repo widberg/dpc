@@ -10,7 +10,7 @@ use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Re
 struct SkelZBone {
     unknown0: u32,
     data0: FixedVec<u8, 136>,
-    transformation: Mat4f,
+    transformation: FixedVec<u32, 16>,
     unknown1: u32,
     parent_index: u32,
     data1: FixedVec<u8, 16>,

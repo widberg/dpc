@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Error, Write};
+use std::io::{Error, Write, Read};
 use std::path::Path;
 
 use nom_derive::Parse;
@@ -7,6 +7,8 @@ use serde::{Serialize, Deserialize};
 use binwrite::BinWrite;
 
 use crate::fuel_fmt::common::{FUELObjectFormatTrait, ResourceObjectZ};
+use std::fs;
+use zerocopy::AsBytes;
 
 pub struct BinaryObjectFormat;
 
@@ -22,7 +24,7 @@ impl FUELObjectFormatTrait for BinaryObjectFormat {
         let json_file = File::open(json_path)?;
 
         let bin_path = input_path.join("data.bin");
-        let mut bin_file = File::create(bin_path)?;
+        let mut bin_file = File::open(&bin_path)?;
 
 
         #[derive(Deserialize)]
@@ -33,7 +35,10 @@ impl FUELObjectFormatTrait for BinaryObjectFormat {
         let object: Object = serde_json::from_reader(json_file)?;
 
         object.resource_object.write(header)?;
-        bin_file.write(body)?;
+
+        let metadata = fs::metadata(&bin_path)?;
+        body.resize(metadata.len() as usize, 0);
+        bin_file.read(body.as_bytes_mut())?;
 
         Ok(())
     }
