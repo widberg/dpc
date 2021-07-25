@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::metadata;
+use std::fs::{metadata, OpenOptions};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -590,13 +590,16 @@ impl DPC for FuelDPC {
                     class_names.get(&pool_object.header.class_crc32).unwrap()
                 ));
 
-                let mut object_file = File::create(&object_file_path)?;
+                let mut object_file = OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(&object_file_path)?;
 
                 let mut oh = global_object_headers
                     .get(&pool_object.header.crc32)
                     .unwrap()
                     .clone();
-                object_file.seek(SeekFrom::End(0))?;
+                object_file.seek(SeekFrom::Start((oh.class_object_size + 24) as u64))?; // FIXME: if object in pool twice then skip this stuff
                 if self.options.is_lz && (pool_object.header.compressed_size != 0) {
                     pb.println(format!("Decompressing {}", pool_object.header.crc32));
                     let mut data_cursor = Cursor::new(&pool_object.data);
@@ -614,7 +617,7 @@ impl DPC for FuelDPC {
                     oh.data_size = oh.class_object_size + pool_object.header.decompressed_size;
                 } else {
                     object_file.write(pool_object.data.as_bytes())?;
-                    oh.data_size = oh.class_object_size + pool_object.header.data_size;
+                    oh.data_size = oh.class_object_size + if pool_object.header.compressed_size != 0 { pool_object.header.compressed_size } else { pool_object.header.decompressed_size };
                 }
                 global_objects
                     .get_mut(&pool_object.header.crc32)
@@ -627,6 +630,8 @@ impl DPC for FuelDPC {
                     oh.compressed_size = pool_object.header.compressed_size;
                 }
                 oh.decompressed_size = pool_object.header.decompressed_size;
+                assert_eq!(oh.data_size, oh.class_object_size + if oh.compressed_size != 0 { oh.compressed_size } else { oh.decompressed_size });
+                assert_eq!(oh.data_size + 24, object_file.stream_position()? as u32);
 
                 object_file.seek(SeekFrom::Start(0))?;
                 oh.write(&mut object_file)?;
@@ -1696,7 +1701,7 @@ mod test {
         assert_eq!(passed, true);
     }
 
-    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_extract(path: &str) {
         let mut dpc = FuelDPC::new(
             &Options {
