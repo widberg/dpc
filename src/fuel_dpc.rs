@@ -478,11 +478,15 @@ impl DPC for FuelDPC {
                         oh.write(&mut object_file)?;
                         object_file.write(&object.class_object)?;
                         object_file.write(&decompressed_buffer)?;
+                        assert_eq!(oh.data_size, oh.class_object_size + oh.decompressed_size);
+                        assert_eq!(oh.data_size + 24, object_file.stream_position()? as u32);
                     } else {
                         pb.println(format!("Processing {}", object.header.crc32));
                         oh.write(&mut object_file)?;
                         object_file.write(&object.class_object)?;
                         object_file.write(&object.data)?;
+                        assert_eq!(oh.data_size, oh.class_object_size + if oh.compressed_size != 0 { oh.compressed_size } else { oh.decompressed_size });
+                        assert_eq!(oh.data_size + 24, object_file.stream_position()? as u32);
                     }
 
                     if oh.data_size > oh.class_object_size && self.options.is_recursive {
@@ -1584,9 +1588,11 @@ mod test {
 
     use crate::base_dpc::Options;
     use crate::base_dpc::DPC;
-    use crate::fuel_dpc::FuelDPC;
+    use crate::fuel_dpc::{FuelDPC, ObjectHeader};
     use std::fs;
-    use copy_dir;
+    use std::fs::File;
+    use std::io::{Read, Seek, SeekFrom};
+    use nom_derive::Parse;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_validate(path: &str) {
@@ -1688,6 +1694,51 @@ mod test {
         tmp_dir.close().expect("Failed to delete temp_dir");
 
         assert_eq!(passed, true);
+    }
+
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
+    fn test_fuel_dpc_extract(path: &str) {
+        let mut dpc = FuelDPC::new(
+            &Options {
+                is_quiet: true,
+                is_force: true,
+                is_unsafe: false,
+                is_lz: true,
+                is_optimization: false,
+                is_recursive: false,
+            },
+            &vec![],
+        );
+
+        let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
+
+        let dpc_file = Path::new(path);
+        let dpc_directory = tmp_dir.path().join("TEMP");
+
+        dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
+
+        for entry in fs::read_dir(dpc_directory.join("objects")).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if !path.is_dir() {
+                let mut f = File::open(path).unwrap();
+
+                let mut object_header_buffer = [0; 24];
+                f.read(&mut object_header_buffer).unwrap();
+
+                let oh = match ObjectHeader::parse(&object_header_buffer) {
+                    Ok((_, h)) => h,
+                    Err(error) => panic!("{}", error),
+                };
+
+                f.seek(SeekFrom::End(0)).unwrap();
+
+                assert_eq!(oh.data_size, oh.class_object_size + if oh.compressed_size != 0 { oh.compressed_size } else { oh.decompressed_size });
+                assert_eq!(oh.data_size + 24, f.stream_position().unwrap() as u32);
+            }
+        }
+
+        tmp_dir.close().expect("Failed to delete temp_dir");
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
