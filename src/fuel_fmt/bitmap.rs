@@ -100,22 +100,15 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         let json_file = File::open(json_path)?;
 
         let dds_path = input_path.join("data.dds");
-        let mut dds_file = File::create(dds_path)?;
+        let mut dds_file = File::open(dds_path)?;
 
         let dds = Dds::read(&mut dds_file).unwrap();
 
         let mut object: BitmapObject = serde_json::from_reader(json_file)?;
         object.bitmap_header.width = dds.get_width();
         object.bitmap_header.height = dds.get_height();
-
-        let dds = Dds::read(&mut dds_file).unwrap();
-
-        object.bitmap_header.width = dds.get_width();
-        object.bitmap_header.height = dds.get_height();
         object.bitmap_header.write(header)?;
-        dds.get_data(0).unwrap().write(body)?;
-
-        dds.data.write(body).unwrap();
+        dds.data.write(body)?;
 
         Ok(())
     }
@@ -144,7 +137,6 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
 
         dds.write(&mut output_dds_file).unwrap();
 
-        dds.write(&mut output_dds_file).unwrap();
 
         let object = BitmapObject { bitmap_header };
 
@@ -175,7 +167,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
         object.bitmap_header.write(header)?;
 
         let dds_path = input_path.join("data.dds");
-        let mut dds_file = File::create(dds_path)?;
+        let mut dds_file = File::open(dds_path)?;
 
         let dds = Dds::read(&mut dds_file).unwrap();
 
@@ -199,11 +191,10 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
             Err(error) => panic!("{}", error),
         };
 
-        let bitmap = match BitmapZAlternate::parse(&body) {
+        let bitmap = match BitmapZAlternate::parse(body) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };
-
 
         let dds_path = output_path.join("data.dds");
         let mut output_dds_file = File::create(dds_path)?;
@@ -218,7 +209,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
         )
             .unwrap();
 
-        dds.data = Vec::from(body);
+        dds.data = bitmap.data.clone();
 
         dds.write(&mut output_dds_file).unwrap();
 
