@@ -586,10 +586,7 @@ impl DPC for FuelDPC {
                     class_names.get(&pool_object.header.class_crc32).unwrap()
                 ));
 
-                let mut object_file = std::fs::OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .open(&object_file_path)?;
+                let mut object_file = File::create(&object_file_path)?;
 
                 let mut oh = global_object_headers
                     .get(&pool_object.header.crc32)
@@ -1645,8 +1642,8 @@ mod test {
         tmp_dir.close().expect("Failed to delete temp_dir");
     }
 
-    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
-    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/FONTES.DPC")]
+    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
         let mut dpc = FuelDPC::new(
             &Options {

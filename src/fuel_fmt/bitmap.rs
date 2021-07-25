@@ -111,67 +111,6 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         object.bitmap_header.write(header)?;
         dds.get_data(0).unwrap().write(body)?;
 
-        // let bmp_path = input_path.join("data.bmp");
-        // let bmp_file = File::open(bmp_path)?;
-        //
-        // let mut object: BitmapObject = serde_json::from_reader(json_file)?;
-        // let bmp_decoder = BmpDecoder::new(bmp_file).unwrap();
-        //
-        // let (width, height) = (&bmp_decoder).dimensions();
-        //
-        // object.bitmap_header.width = width;
-        // object.bitmap_header.height = height;
-        // object.bitmap_header.data_size = (&bmp_decoder).total_bytes() as u32 / 4;
-        //
-        // object.bitmap_header.write(header)?;
-        //
-        // let mut buf: Vec<u32> = vec![0; (&bmp_decoder).total_bytes() as usize / 4];
-        //
-        // if object.bitmap_header.dxt_version0 == 14 {
-        //     assert_eq!((&bmp_decoder).color_type(), ColorType::Rgb8);
-        //     assert_eq!(DXT1.color_type(), ColorType::Rgb8);
-        // } else {
-        //     assert_eq!((&bmp_decoder).color_type(), ColorType::Rgba8);
-        //     assert_eq!(DXT5.color_type(), ColorType::Rgba8);
-        // }
-        // bmp_decoder.read_image(buf.as_bytes_mut()).unwrap();
-        //
-        // let out_bmp_path = input_path.join("dataaa.bmp");
-        // let mut output_bmp_file = File::create(out_bmp_path)?;
-        // let mut bmp_encoder = BmpEncoder::new(&mut output_bmp_file);
-        // bmp_encoder
-        //     .encode(
-        //         buf.as_bytes(),
-        //         object.bitmap_header.width,
-        //         object.bitmap_header.height,
-        //         if object.bitmap_header.dxt_version0 == 14 {
-        //             ColorType::Rgb8
-        //         } else {
-        //             ColorType::Rgba8
-        //         },
-        //     )
-        //     .unwrap();
-        //
-        // let out_dxt_path = input_path.join("dataaa.dxt");
-        // let mut output_dxt_file = File::create(out_dxt_path)?;
-        // let dxt_encoder = DxtEncoder::new(&output_dxt_file);
-        // dxt_encoder
-        //     .encode(
-        //         buf.as_bytes(),
-        //         object.bitmap_header.width,
-        //         object.bitmap_header.height,
-        //         if object.bitmap_header.dxt_version0 == 14 {
-        //             DXT1
-        //         } else {
-        //             DXT5
-        //         },
-        //     )
-        //     .unwrap();
-
-        // body.resize(output_dxt_file.stream_position()? as usize, 0);
-        // output_dxt_file.seek(SeekFrom::Start(0))?;
-        // output_dxt_file.read(body.as_bytes_mut())?;
-
         Ok(())
     }
 
@@ -179,14 +118,10 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
-        // let bmp_path = output_path.join("data.bmp");
-        // let mut output_bmp_file = File::create(bmp_path)?;
-
         let bitmap_header = match BitmapZHeader::parse(&header) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };
-
 
         let dds_path = output_path.join("data.dds");
         let mut output_dds_file = File::create(dds_path)?;
@@ -197,39 +132,10 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
                 D3DFormat::DXT5
             }, Some(bitmap_header.mip_map_count as u32), None).unwrap();
 
-        dds.get_mut_data(0).unwrap() = &mut *Vec::from(body);
+
+        dds.data = Vec::from(body);
 
         dds.write(&mut output_dds_file).unwrap();
-
-        // let data_cursor = Cursor::new(&body);
-        // let dxt_decoder = DxtDecoder::new(
-        //     data_cursor,
-        //     bitmap_header.width,
-        //     bitmap_header.height,
-        //     if bitmap_header.dxt_version0 == 14 {
-        //         DXTVariant::DXT1
-        //     } else {
-        //         DXTVariant::DXT5
-        //     },
-        // )
-        // .unwrap();
-        //
-        // let mut buf: Vec<u32> = vec![0; dxt_decoder.total_bytes() as usize / 4];
-        // dxt_decoder.read_image(buf.as_bytes_mut()).unwrap();
-        //
-        // let mut bmp_encoder = BmpEncoder::new(&mut output_bmp_file);
-        // bmp_encoder
-        //     .encode(
-        //         buf.as_bytes(),
-        //         bitmap_header.width,
-        //         bitmap_header.height,
-        //         if bitmap_header.dxt_version0 == 14 {
-        //             ColorType::Rgb8
-        //         } else {
-        //             ColorType::Rgba8
-        //         },
-        //     )
-        //     .unwrap();
 
         let object = BitmapObject { bitmap_header };
 
@@ -263,7 +169,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
 
         object.bitmap_header.write(header)?;
 
-        object.bitmap.data.resize(0, 0);
+        object.bitmap.data.clear();
         object.bitmap.write(body)?;
 
         dds.data.write(body)?;
