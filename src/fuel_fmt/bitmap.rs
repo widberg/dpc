@@ -161,9 +161,6 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
 
         let mut object: BitmapObjectAlternate = serde_json::from_reader(json_file)?;
 
-        object.bitmap.width = dds.get_width();
-        object.bitmap.height = dds.get_height();
-
         object.bitmap_header.write(header)?;
 
         let dds_path = input_path.join("data.dds");

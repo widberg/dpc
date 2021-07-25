@@ -1654,6 +1654,7 @@ mod test {
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/WORLD/USA1_HUB_MOUNTAIN1_3A578755.DPC")]
     // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
         let mut dpc = FuelDPC::new(

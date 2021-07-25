@@ -2,9 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{
-    FUELObjectFormat, FixedVec, Mat4f, ObjectZ, PascalArray, Vec2f, Vec3f, Vec4f,
-};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ObjectZ, PascalArray};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -83,19 +81,19 @@ pub struct ParticlesZ {
 struct ParticlesZUnknown0Alt {
     data: FixedVec<u32, 19>,
     unknown1flag: u16,
-    unknown1s: PascalArray<Vec2f>,
+    unknown1s: PascalArray<FixedVec<u32, 2>>,
     unknown2flag: u16,
-    unknown2s: PascalArray<Vec3f>,
+    unknown2s: PascalArray<FixedVec<u32, 3>>,
     unknown3flag: u16,
-    unknown3s: PascalArray<Vec3f>,
+    unknown3s: PascalArray<FixedVec<u32, 3>>,
     unknown4flag: u16,
-    unknown4s: PascalArray<Vec2f>,
+    unknown4s: PascalArray<FixedVec<u32, 2>>,
     unknown5flag: u16,
-    unknown5s: PascalArray<Vec4f>,
+    unknown5s: PascalArray<FixedVec<u32, 4>>,
     unknown6flag: u16,
-    unknown6s: PascalArray<Vec4f>,
+    unknown6s: PascalArray<FixedVec<u32, 4>>,
     unknown7flag: u16,
-    unknown7s: PascalArray<Vec2f>,
+    unknown7s: PascalArray<FixedVec<u32, 2>>,
     unknown8: u32,
 }
 
@@ -105,9 +103,9 @@ struct ParticlesZUnknown0Alt {
 #[nom(Exact)]
 pub struct ParticlesZAlt {
     unknown0s: PascalArray<ParticlesZUnknown0Alt>,
-    mats: FixedVec<u32, 16>,
+    mats: PascalArray<FixedVec<u32, 16>>,
     unknown2: u32,
-    // unknown3: u16,
+    unknown3: u16,
 }
 
 pub type ParticlesObjectFormat = FUELObjectFormat<ObjectZ, ParticlesZ>;
