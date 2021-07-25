@@ -1653,8 +1653,8 @@ mod test {
         tmp_dir.close().expect("Failed to delete temp_dir");
     }
 
-    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
-    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
         let mut dpc = FuelDPC::new(
             &Options {
@@ -1675,6 +1675,7 @@ mod test {
 
         dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
 
+
         let mut passed = true;
 
         for entry in fs::read_dir(dpc_directory.join("objects")).unwrap() {
@@ -1690,10 +1691,6 @@ mod test {
                     passed = false;
                 }
             }
-        }
-
-        if !passed {
-            copy_dir::copy_dir(tmp_dir.path(), Path::new(&("data/".to_owned() + tmp_dir.path().file_name().unwrap().to_str().unwrap()))).unwrap();
         }
 
         tmp_dir.close().expect("Failed to delete temp_dir");
