@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, ResourceObjectZ, PascalStringNULL};
+use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, PascalStringNULL, ResourceObjectZ};
 
 #[derive(BinWrite)]
 #[binwrite(little)]

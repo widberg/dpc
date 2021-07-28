@@ -80,9 +80,9 @@ pub fn write_option<W, T>(
     writer: &mut W,
     options: &WriterOption,
 ) -> Result<(), Error>
-    where
-        W: Write,
-        T: BinWrite,
+where
+    W: Write,
+    T: BinWrite,
 {
     if let Some(value) = option {
         BinWrite::write_options(value, writer, options)
@@ -148,29 +148,26 @@ pub struct PascalString {
     data: String,
 }
 
-impl BinWrite for PascalString
-{
+impl BinWrite for PascalString {
     fn write_options<W: Write>(&self, writer: &mut W, options: &WriterOption) -> Result<(), Error> {
         BinWrite::write_options(&(self.data.len() as u32), writer, options)?;
         BinWrite::write_options(&self.data, writer, options)
     }
 }
 
-impl Serialize for PascalString
-{
+impl Serialize for PascalString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         self.data.serialize(serializer)
     }
 }
 
-impl<'de> Deserialize<'de> for PascalString
-{
+impl<'de> Deserialize<'de> for PascalString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         Ok(PascalString {
             data: String::deserialize(deserializer)?,
@@ -187,8 +184,7 @@ pub struct PascalStringNULL {
     data: String,
 }
 
-impl BinWrite for PascalStringNULL
-{
+impl BinWrite for PascalStringNULL {
     fn write_options<W: Write>(&self, writer: &mut W, options: &WriterOption) -> Result<(), Error> {
         BinWrite::write_options(&(self.data.len() as u32 + 1u32), writer, options)?;
         BinWrite::write_options(&self.data, writer, options)?;
@@ -196,21 +192,19 @@ impl BinWrite for PascalStringNULL
     }
 }
 
-impl Serialize for PascalStringNULL
-{
+impl Serialize for PascalStringNULL {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         self.data.serialize(serializer)
     }
 }
 
-impl<'de> Deserialize<'de> for PascalStringNULL
-{
+impl<'de> Deserialize<'de> for PascalStringNULL {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         Ok(PascalStringNULL {
             data: String::deserialize(deserializer)?,
@@ -271,7 +265,12 @@ pub struct ObjectZ {
 }
 
 pub trait FUELObjectFormatTrait {
-    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error>;
+    fn pack(
+        self: &Self,
+        input_path: &Path,
+        header: &mut Vec<u8>,
+        body: &mut Vec<u8>,
+    ) -> Result<(), Error>;
     fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error>;
 }
 
@@ -294,7 +293,12 @@ where
     for<'a> T: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
     for<'a> U: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
 {
-    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+    fn pack(
+        self: &Self,
+        input_path: &Path,
+        header: &mut Vec<u8>,
+        body: &mut Vec<u8>,
+    ) -> Result<(), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 

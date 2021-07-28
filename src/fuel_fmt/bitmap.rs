@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait};
 use crate::File;
-use ddsfile::{Dds, D3DFormat};
+use ddsfile::{D3DFormat, Dds};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -95,7 +95,12 @@ impl BitmapObjectFormat {
 }
 
 impl FUELObjectFormatTrait for BitmapObjectFormat {
-    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+    fn pack(
+        self: &Self,
+        input_path: &Path,
+        header: &mut Vec<u8>,
+        body: &mut Vec<u8>,
+    ) -> Result<(), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -125,18 +130,23 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         let dds_path = output_path.join("data.dds");
         let mut output_dds_file = File::create(dds_path)?;
 
-        let mut dds = Dds::new_d3d(bitmap_header.height, bitmap_header.width, None, if bitmap_header.dxt_version0 == 14 {
+        let mut dds = Dds::new_d3d(
+            bitmap_header.height,
+            bitmap_header.width,
+            None,
+            if bitmap_header.dxt_version0 == 14 {
                 D3DFormat::DXT1
             } else {
                 D3DFormat::DXT5
-            }, Some(bitmap_header.mip_map_count as u32), None
+            },
+            Some(bitmap_header.mip_map_count as u32),
+            None,
         )
         .unwrap();
 
         dds.data = Vec::from(body);
 
         dds.write(&mut output_dds_file).unwrap();
-
 
         let object = BitmapObject { bitmap_header };
 
@@ -155,7 +165,12 @@ impl BitmapObjectFormatAlt {
 }
 
 impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
-    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+    fn pack(
+        self: &Self,
+        input_path: &Path,
+        header: &mut Vec<u8>,
+        body: &mut Vec<u8>,
+    ) -> Result<(), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -196,15 +211,21 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
         let dds_path = output_path.join("data.dds");
         let mut output_dds_file = File::create(dds_path)?;
 
-        let mut dds = Dds::new_d3d(bitmap.height, bitmap.width, None, if bitmap_header.dxt_version0 == 7 {
-          D3DFormat::A8L8
-        } else if bitmap_header.dxt_version0 == 14 {
-            D3DFormat::DXT1
-        } else {
-            D3DFormat::DXT5
-        }, Some(0), None
+        let mut dds = Dds::new_d3d(
+            bitmap.height,
+            bitmap.width,
+            None,
+            if bitmap_header.dxt_version0 == 7 {
+                D3DFormat::A8L8
+            } else if bitmap_header.dxt_version0 == 14 {
+                D3DFormat::DXT1
+            } else {
+                D3DFormat::DXT5
+            },
+            Some(0),
+            None,
         )
-            .unwrap();
+        .unwrap();
 
         dds.data = bitmap.data.clone();
 

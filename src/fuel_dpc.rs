@@ -4,8 +4,8 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
-use std::fs::{metadata, OpenOptions};
 use std::fs::File;
+use std::fs::{metadata, OpenOptions};
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::Error;
@@ -485,7 +485,15 @@ impl DPC for FuelDPC {
                         oh.write(&mut object_file)?;
                         object_file.write(&object.class_object)?;
                         object_file.write(&object.data)?;
-                        assert_eq!(oh.data_size, oh.class_object_size + if oh.compressed_size != 0 { oh.compressed_size } else { oh.decompressed_size });
+                        assert_eq!(
+                            oh.data_size,
+                            oh.class_object_size
+                                + if oh.compressed_size != 0 {
+                                    oh.compressed_size
+                                } else {
+                                    oh.decompressed_size
+                                }
+                        );
                         assert_eq!(oh.data_size + 24, object_file.stream_position()? as u32);
                     }
 
@@ -617,7 +625,12 @@ impl DPC for FuelDPC {
                     oh.data_size = oh.class_object_size + pool_object.header.decompressed_size;
                 } else {
                     object_file.write(pool_object.data.as_bytes())?;
-                    oh.data_size = oh.class_object_size + if pool_object.header.compressed_size != 0 { pool_object.header.compressed_size } else { pool_object.header.decompressed_size };
+                    oh.data_size = oh.class_object_size
+                        + if pool_object.header.compressed_size != 0 {
+                            pool_object.header.compressed_size
+                        } else {
+                            pool_object.header.decompressed_size
+                        };
                 }
                 global_objects
                     .get_mut(&pool_object.header.crc32)
@@ -630,7 +643,15 @@ impl DPC for FuelDPC {
                     oh.compressed_size = pool_object.header.compressed_size;
                 }
                 oh.decompressed_size = pool_object.header.decompressed_size;
-                assert_eq!(oh.data_size, oh.class_object_size + if oh.compressed_size != 0 { oh.compressed_size } else { oh.decompressed_size });
+                assert_eq!(
+                    oh.data_size,
+                    oh.class_object_size
+                        + if oh.compressed_size != 0 {
+                            oh.compressed_size
+                        } else {
+                            oh.decompressed_size
+                        }
+                );
                 assert_eq!(oh.data_size + 24, object_file.stream_position()? as u32);
 
                 object_file.seek(SeekFrom::Start(0))?;
@@ -1513,7 +1534,13 @@ impl DPC for FuelDPC {
         let mut output_file = File::create(output_path)?;
 
         let p = Path::new(input_path.as_ref().file_stem().unwrap());
-        let crc32: u32 = p.file_stem().unwrap().to_str().unwrap().parse::<u32>().unwrap();
+        let crc32: u32 = p
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
         let class_name = p.extension().unwrap().to_str().unwrap();
 
         let mut class_names: HashMap<&str, u32> = HashMap::new();
@@ -1594,10 +1621,10 @@ mod test {
     use crate::base_dpc::Options;
     use crate::base_dpc::DPC;
     use crate::fuel_dpc::{FuelDPC, ObjectHeader};
+    use nom_derive::Parse;
     use std::fs;
     use std::fs::File;
     use std::io::{Read, Seek, SeekFrom};
-    use nom_derive::Parse;
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
     fn test_fuel_dpc_validate(path: &str) {
@@ -1629,7 +1656,7 @@ mod test {
             &Options {
                 is_quiet: true,
                 is_force: true,
-                is_unsafe: false,
+                is_unsafe: true,
                 is_lz: false,
                 is_optimization: false,
                 is_recursive: false,
@@ -1676,7 +1703,6 @@ mod test {
 
         dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
 
-
         let mut passed = true;
 
         for entry in fs::read_dir(dpc_directory.join("objects")).unwrap() {
@@ -1686,8 +1712,9 @@ mod test {
                 dpc.fmt_create(&path, &path.join("obj")).unwrap();
                 // let x = path.with_extension("");
                 // let class_name = x.extension().unwrap().to_str().unwrap();
-                if hash_file(path.join("obj").as_path(), Algorithm::SHA1) !=
-                    hash_file(path.with_extension("").as_path(), Algorithm::SHA1) {
+                if hash_file(path.join("obj").as_path(), Algorithm::SHA1)
+                    != hash_file(path.with_extension("").as_path(), Algorithm::SHA1)
+                {
                     println!("{:?} {:?}", dpc_file, path);
                     passed = false;
                 }
@@ -1736,7 +1763,15 @@ mod test {
 
                 f.seek(SeekFrom::End(0)).unwrap();
 
-                assert_eq!(oh.data_size, oh.class_object_size + if oh.compressed_size != 0 { oh.compressed_size } else { oh.decompressed_size });
+                assert_eq!(
+                    oh.data_size,
+                    oh.class_object_size
+                        + if oh.compressed_size != 0 {
+                            oh.compressed_size
+                        } else {
+                            oh.decompressed_size
+                        }
+                );
                 assert_eq!(oh.data_size + 24, f.stream_position().unwrap() as u32);
             }
         }

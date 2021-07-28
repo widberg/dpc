@@ -1,10 +1,10 @@
 use std::fs::File;
-use std::io::{Error, Write, Read};
+use std::io::{Error, Read, Write};
 use std::path::Path;
 
-use nom_derive::Parse;
-use serde::{Serialize, Deserialize};
 use binwrite::BinWrite;
+use nom_derive::Parse;
+use serde::{Deserialize, Serialize};
 
 use crate::fuel_fmt::common::{FUELObjectFormatTrait, ResourceObjectZ};
 use std::fs;
@@ -19,13 +19,17 @@ impl BinaryObjectFormat {
 }
 
 impl FUELObjectFormatTrait for BinaryObjectFormat {
-    fn pack(self: &Self, input_path: &Path, header: &mut Vec<u8>, body: &mut Vec<u8>) -> Result<(), Error> {
+    fn pack(
+        self: &Self,
+        input_path: &Path,
+        header: &mut Vec<u8>,
+        body: &mut Vec<u8>,
+    ) -> Result<(), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
         let bin_path = input_path.join("data.bin");
         let mut bin_file = File::open(&bin_path)?;
-
 
         #[derive(Deserialize)]
         struct Object {

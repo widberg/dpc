@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormat, ResourceObjectZ, Vec3f, Vec4f, FixedVec};
+use crate::fuel_fmt::common::{
+    write_option, FUELObjectFormat, FixedVec, ResourceObjectZ, Vec3f, Vec4f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
