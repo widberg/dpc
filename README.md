@@ -4,6 +4,22 @@ Tar analogous utility to work with the DPC file format from Asobo Studio games.
 
 <sup>This repository is a relative of the main [FMTK repository](https://github.com/widberg/fmtk).</sup>
 
+## Supported Games/Version
+
+All versions listed have full support. The bold versions are the version that the respective game is equipped to load. Unstable games are games that may be processed by the tool using the `--unsafe` option but do not have a dedicated DPC backend.
+
+* Ratatouille (unstable)
+* WALL-E (unstable)
+* FUEL
+  * **v1.381.67.09 - Asobo Studio - Internal Cross Technology**
+  * v1.381.66.09 - Asobo Studio - Internal Cross Technology
+  * v1.381.65.09 - Asobo Studio - Internal Cross Technology
+  * v1.381.64.09 - Asobo Studio - Internal Cross Technology
+  * v1.379.60.09 - Asobo Studio - Internal Cross Technology
+  * v1.325.50.07 - Asobo Studio - Internal Cross Technology
+  * v1.220.50.07 - Asobo Studio - Internal Cross Technology
+* Up (unstable)
+
 ## Help
 
 ```plaintext
