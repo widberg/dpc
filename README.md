@@ -4,7 +4,7 @@ Tar analogous utility to work with the DPC file format from Asobo Studio games.
 
 <sup>This repository is a relative of the main [FMTK repository](https://github.com/widberg/fmtk).</sup>
 
-## Supported Games/Version
+## Supported Games/Versions
 
 All versions listed have full support. The bold versions are the version that the respective game is equipped to load. Unstable games are games that may be processed by the tool using the `--unsafe` option but do not have a dedicated DPC backend.
 
@@ -63,4 +63,23 @@ EXAMPLES:
     -g fuel -- -h
     -cflO -g fuel -i BIKE.DPC.d -o BIKE.DPC
     -ef -g fuel -i /FUEL/**/*.DPC
+```
+
+## Getting Started
+
+### Prerequisites
+
+* Rust
+
+### Checkout
+
+```sh
+git clone https://github.com/widberg/dpc.git
+cd dpc
+```
+
+### Build
+
+```sh
+cargo build --release
 ```
