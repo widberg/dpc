@@ -694,10 +694,6 @@ impl DPC for FuelDPC {
     //
 
     fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
-        if self.options.is_lz && !self.options.is_optimization {
-            panic!("Unoptimized DPC creation for fuel with lz is unsupported due to the original compression algorithm being unknown. Either remove the -l/--lz flag or add the -O/--optimization flag");
-        }
-
         let manifest_file =
             File::open(input_path.as_ref().join("manifest.json")).unwrap_or_else(|why| {
                 panic!("Problem opening the input file: {:?}", why.kind());
@@ -840,6 +836,34 @@ impl DPC for FuelDPC {
                         dpc_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
                         dpc_file.write_u32::<LittleEndian>(oh.compressed_size)?;
                         dpc_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+                    } else if object.compress
+                        && oh.compressed_size == 0
+                        && self.options.is_lz
+                        && !self.options.is_optimization
+                    {
+                        pb.println(format!("Compressing {}", oh.crc32));
+                        let mut class_object_data = vec![0; oh.class_object_size as usize];
+                        object_file.read(&mut class_object_data)?;
+                        let mut data = vec![0; oh.decompressed_size as usize + 2];
+                        object_file.read(&mut data)?;
+                        let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
+
+                        unsafe {
+                            let compressed_buffer_len = lz::lzss_compress(
+                                &data[..],
+                                oh.decompressed_size as usize,
+                                &mut compressed_buffer[..],
+                                oh.decompressed_size as usize * 2,
+                            )?;
+                            oh.compressed_size = compressed_buffer_len as u32 + 8;
+                            oh.data_size = oh.class_object_size + oh.compressed_size;
+
+                            oh.write(&mut dpc_file)?;
+                            dpc_file.write(&class_object_data)?;
+                            dpc_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
+                            dpc_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+                            dpc_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+                        }
                     } else {
                         oh.write(&mut dpc_file)?;
                         let mut data = vec![0; oh.data_size as usize];
@@ -888,6 +912,37 @@ impl DPC for FuelDPC {
                             compressed_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
                             compressed_file.write_u32::<LittleEndian>(oh.compressed_size)?;
                             compressed_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+                        } else if object.compress
+                            && oh.compressed_size == 0
+                            && self.options.is_lz
+                            && !self.options.is_optimization
+                        {
+                            pb.println(format!("Compressing {}", oh.crc32));
+                            let compressed_path = tmp_dir.path().join(oh.crc32.to_string());
+                            let mut compressed_file = File::create(compressed_path)?;
+
+                            let mut decompressed_buffer = vec![0; oh.decompressed_size as usize + 2];
+                            let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
+
+                            object_file.read(&mut decompressed_buffer)?;
+
+                            unsafe {
+                                let compressed_buffer_len = lz::lzss_compress(
+                                    &decompressed_buffer[..],
+                                    oh.decompressed_size as usize,
+                                    &mut compressed_buffer[..],
+                                    oh.decompressed_size as usize * 2,
+                                )?;
+
+                                oh.compressed_size = compressed_buffer_len as u32 + 8;
+                                oh.data_size = oh.compressed_size;
+                                oh.class_object_size = 0;
+
+                                oh.write(&mut compressed_file)?;
+                                compressed_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
+                                compressed_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+                                compressed_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+                            }
                         }
                     }
 
@@ -1125,7 +1180,6 @@ impl DPC for FuelDPC {
 
                 let mut object_file = match *pool_object_compress_map.get(&crc32).unwrap()
                     && self.options.is_lz
-                    && self.options.is_optimization
                 {
                     true => File::open(tmp_dir.path().join(crc32.to_string()))?,
                     false => File::open(index.get(&crc32).unwrap().as_path())?,
@@ -1813,7 +1867,36 @@ mod test {
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
-    fn test_fuel_dpc_mixed(path: &str) {
+    fn test_fuel_dpc_mixed_full(path: &str) {
+        let mut dpc = FuelDPC::new(
+            &Options {
+                is_quiet: true,
+                is_force: true,
+                is_unsafe: true,
+                is_lz: true,
+                is_optimization: false,
+                is_recursive: false,
+            },
+            &vec![],
+        );
+
+        let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
+
+        let dpc_file = Path::new(path);
+        let dpc_file_2 = tmp_dir.path().join("TEMP.DPC");
+        let dpc_directory = tmp_dir.path().join("TEMP");
+
+        dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
+
+        dpc.create(&dpc_directory, &dpc_file_2).unwrap();
+
+        assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2.as_path(), Algorithm::SHA1));
+
+        tmp_dir.close().expect("Failed to delete temp_dir");
+    }
+
+    #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
+    fn test_fuel_dpc_mixed_lazy(path: &str) {
         let mut dpc_extract = FuelDPC::new(
             &Options {
                 is_quiet: true,

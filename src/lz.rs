@@ -468,7 +468,7 @@ unsafe fn encode_packet(
     return true;
 }
 
-unsafe fn lzss_compress(
+pub(crate) unsafe fn lzss_compress(
     uncompressed_buffer: &[u8],
     uncompressed_buffer_size: usize,
     compressed_buffer: &mut [u8],
