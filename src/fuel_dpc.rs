@@ -723,13 +723,19 @@ impl DPC for FuelDPC {
             manifest_json.pool = None;
         }
 
-        if manifest_json.pool.is_some() && !self.options.is_unsafe {
-            panic!("Creating a DPC with a pool is unsafe. Either add the -u/--unsafe main option to do it anyway or -- -n/--no-pool custom argument to move pool objects to blocks.");
-        }
-
         let mut dpc_file = File::create(output_path.as_ref())?;
 
         let mut index: HashMap<u32, std::path::PathBuf> = HashMap::new();
+
+        if self.options.is_recursive {
+            for entry in fs::read_dir(input_path.as_ref().join("objects"))? {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                if path.is_dir() {
+                    self.fmt_create(&path, &path.with_extension(""))?;
+                }
+            }
+        }
 
         for path in fs::read_dir(input_path.as_ref().join("objects"))? {
             let actual_os_path = path.unwrap().path();
@@ -1753,31 +1759,17 @@ mod test {
         let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
 
         let dpc_file = Path::new(path);
+        let dpc_file_2 = tmp_dir.path().join("TEMP.DPC");
         let dpc_directory = tmp_dir.path().join("TEMP");
 
         dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
-
-        let mut passed = true;
-
-        for entry in fs::read_dir(dpc_directory.join("objects")).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.is_dir() {
-                dpc.fmt_create(&path, &path.join("obj")).unwrap();
-                // let x = path.with_extension("");
-                // let class_name = x.extension().unwrap().to_str().unwrap();
-                if hash_file(path.join("obj").as_path(), Algorithm::SHA1)
-                    != hash_file(path.with_extension("").as_path(), Algorithm::SHA1)
-                {
-                    println!("{:?} {:?}", dpc_file, path);
-                    passed = false;
-                }
-            }
-        }
+        dpc.create(&dpc_directory.as_path(), &dpc_file_2.as_path()).unwrap();
+        assert_eq!(
+            hash_file(dpc_file, Algorithm::SHA1),
+            hash_file(dpc_file_2.as_path(), Algorithm::SHA1)
+        );
 
         tmp_dir.close().expect("Failed to delete temp_dir");
-
-        assert_eq!(passed, true);
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
