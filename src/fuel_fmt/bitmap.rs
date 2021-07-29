@@ -1,4 +1,4 @@
-use std::io::{Error, Write};
+use std::io::{Error, ErrorKind, Write};
 use std::path::Path;
 
 use binwrite::BinWrite;
@@ -124,7 +124,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
 
         let bitmap_header = match BitmapZHeader::parse(&header) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         let dds_path = output_path.join("data.dds");
@@ -200,12 +200,12 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
 
         let bitmap_header = match BitmapZHeaderAlternate::parse(&header) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         let bitmap = match BitmapZAlternate::parse(body) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         let dds_path = output_path.join("data.dds");

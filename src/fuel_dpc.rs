@@ -367,13 +367,17 @@ impl DPC for FuelDPC {
 
         let mut buffer = [0; 2048];
         input_file.read(&mut buffer)?;
-        let header = match PrimaryHeader::parse(&buffer) {
+        let mut header = match PrimaryHeader::parse(&buffer) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };
 
         if !self.version_lookup.contains_key(header.version_string) && !self.options.is_unsafe {
             panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and extract the dpc anyway (This will probably fail).");
+        }
+
+        if !self.version_lookup.contains_key(header.version_string) {
+            header.version_string = "v1.381.67.09 - Asobo Studio - Internal Cross Technology";
         }
 
         self.version = String::from(header.version_string);
@@ -457,7 +461,9 @@ impl DPC for FuelDPC {
                     let object_file_path = objects_path.join(format!(
                         "{}.{}",
                         object.header.crc32,
-                        class_names.get(&object.header.class_crc32).unwrap()
+                        class_names
+                            .get(&object.header.class_crc32)
+                            .unwrap_or(&object.header.class_crc32.to_string().as_str())
                     ));
                     let mut object_file = File::create(&object_file_path)?;
                     let mut oh = object.header;
@@ -595,7 +601,9 @@ impl DPC for FuelDPC {
                 let object_file_path = objects_path.join(format!(
                     "{}.{}",
                     pool_object.header.crc32,
-                    class_names.get(&pool_object.header.class_crc32).unwrap()
+                    class_names
+                        .get(&pool_object.header.class_crc32)
+                        .unwrap_or(&pool_object.header.class_crc32.to_string().as_str())
                 ));
 
                 let mut object_file = OpenOptions::new()
@@ -734,7 +742,7 @@ impl DPC for FuelDPC {
                 let entry = entry.unwrap();
                 let path = entry.path();
                 if path.is_dir() {
-                    self.fmt_create(&path, &path.with_extension(""))?;
+                    self.fmt_create(&path, &path.with_extension(""))?; // .expect("Warn: object parser failed");
                 }
             }
         }
@@ -929,7 +937,8 @@ impl DPC for FuelDPC {
                             let compressed_path = tmp_dir.path().join(oh.crc32.to_string());
                             let mut compressed_file = File::create(compressed_path)?;
 
-                            let mut decompressed_buffer = vec![0; oh.decompressed_size as usize + 2];
+                            let mut decompressed_buffer =
+                                vec![0; oh.decompressed_size as usize + 2];
                             let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
 
                             object_file.read(&mut decompressed_buffer)?;
@@ -949,7 +958,8 @@ impl DPC for FuelDPC {
                                 oh.write(&mut compressed_file)?;
                                 compressed_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
                                 compressed_file.write_u32::<LittleEndian>(oh.compressed_size)?;
-                                compressed_file.write(&compressed_buffer[0..compressed_buffer_len])?;
+                                compressed_file
+                                    .write(&compressed_buffer[0..compressed_buffer_len])?;
                             }
                         }
                     }
@@ -1186,12 +1196,11 @@ impl DPC for FuelDPC {
                 let crc32 = pool.object_entries[*i as usize].crc32;
                 pb.println(format!("Processing {}", crc32));
 
-                let mut object_file = match *pool_object_compress_map.get(&crc32).unwrap()
-                    && self.options.is_lz
-                {
-                    true => File::open(tmp_dir.path().join(crc32.to_string()))?,
-                    false => File::open(index.get(&crc32).unwrap().as_path())?,
-                };
+                let mut object_file =
+                    match *pool_object_compress_map.get(&crc32).unwrap() && self.options.is_lz {
+                        true => File::open(tmp_dir.path().join(crc32.to_string()))?,
+                        false => File::open(index.get(&crc32).unwrap().as_path())?,
+                    };
 
                 let mut buffer: [u8; 24] = [0; 24];
                 object_file.read(&mut buffer)?;
@@ -1642,12 +1651,14 @@ impl DPC for FuelDPC {
         class_names.insert("GameObj_Z", 4096629181);
         class_names.insert("Camera_Z", 4240844041);
 
-        let class_crc32 = *class_names.get(class_name).unwrap();
+        let class_crc32 = *class_names
+            .get(class_name)
+            .unwrap_or(&class_name.parse::<u32>().unwrap());
 
         if let Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&class_crc32) {
             let mut header: Vec<u8> = Vec::new();
             let mut body: Vec<u8> = Vec::new();
-            fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body)?;
+            fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body)?; // .expect("Warn: object parser failed");
 
             let object_header = ObjectHeader {
                 data_size: body.len() as u32 + header.len() as u32,
@@ -1765,7 +1776,8 @@ mod test {
         let dpc_directory = tmp_dir.path().join("TEMP");
 
         dpc.extract(&dpc_file, &dpc_directory.as_path()).unwrap();
-        dpc.create(&dpc_directory.as_path(), &dpc_file_2.as_path()).unwrap();
+        dpc.create(&dpc_directory.as_path(), &dpc_file_2.as_path())
+            .unwrap();
         assert_eq!(
             hash_file(dpc_file, Algorithm::SHA1),
             hash_file(dpc_file_2.as_path(), Algorithm::SHA1)
@@ -1884,7 +1896,10 @@ mod test {
 
         dpc.create(&dpc_directory, &dpc_file_2).unwrap();
 
-        assert_eq!(hash_file(dpc_file, Algorithm::SHA1), hash_file(dpc_file_2.as_path(), Algorithm::SHA1));
+        assert_eq!(
+            hash_file(dpc_file, Algorithm::SHA1),
+            hash_file(dpc_file_2.as_path(), Algorithm::SHA1)
+        );
 
         tmp_dir.close().expect("Failed to delete temp_dir");
     }

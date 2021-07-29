@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::io::{Cursor, ErrorKind};
 use std::io::{Error, Write};
 use std::path::Path;
 
@@ -76,7 +76,7 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
 
         let sound_header = match SoundZHeader::parse(&header) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         let spec = hound::WavSpec {

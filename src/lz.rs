@@ -451,7 +451,7 @@ unsafe fn encode_packet(
                 packet.total_length += match_length;
                 packet.matches.push(PacketMatch {
                     length: match_length - 3,
-                    data: uncompressed_buffer_ptr as i32 - ptr as i32 ,
+                    data: uncompressed_buffer_ptr as i32 - ptr as i32,
                 });
                 uncompressed_buffer_ptr += match_length as u64;
                 window_index += match_length as u32;

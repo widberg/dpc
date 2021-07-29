@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Error, Write};
+use std::io::{Error, ErrorKind, Write};
 use std::marker::PhantomData;
 use std::path::Path;
 
@@ -322,12 +322,12 @@ where
 
         let header = match T::parse(&header) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         let body = match U::parse(&body) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         #[derive(Serialize, Deserialize)]

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Error, Read, Write};
+use std::io::{Error, ErrorKind, Read, Write};
 use std::path::Path;
 
 use binwrite::BinWrite;
@@ -56,7 +56,7 @@ impl FUELObjectFormatTrait for BinaryObjectFormat {
 
         let resource_object = match ResourceObjectZ::parse(&header) {
             Ok((_, h)) => h,
-            Err(error) => panic!("{}", error),
+            Err(_) => return Err(Error::from(ErrorKind::Other)),
         };
 
         #[derive(Serialize)]
