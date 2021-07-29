@@ -7,7 +7,6 @@ edition = "2018"
 
 [dependencies]
 binwrite = "0.2.1"
-built = { version = "0.5.0", features = ["git2"] }
 byteorder = "1.4.3"
 copy_dir = "0.1.2"
 checksums = "0.7.1"
@@ -32,4 +31,4 @@ wild = "2.0.4"
 zerocopy = "0.5.0"
 
 [build-dependencies]
-built = "0.5.0"
+built = { version = "0.5.1", features = ["git2"] }
