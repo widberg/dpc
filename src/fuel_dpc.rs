@@ -458,12 +458,16 @@ impl DPC for FuelDPC {
                 // a += object.header.data_size + 24;
 
                 if !crc32s.contains(&object.header.crc32) {
+                    let x: String;
+                    if let Some(v) = class_names.get(&object.header.class_crc32) {
+                        x = String::from(*v)
+                    } else {
+                        x = object.header.class_crc32.to_string().clone();
+                    }
                     let object_file_path = objects_path.join(format!(
                         "{}.{}",
                         object.header.crc32,
-                        class_names
-                            .get(&object.header.class_crc32)
-                            .unwrap_or(&object.header.class_crc32.to_string().as_str())
+                        x.as_str()
                     ));
                     let mut object_file = File::create(&object_file_path)?;
                     let mut oh = object.header;
@@ -598,12 +602,17 @@ impl DPC for FuelDPC {
             for pool_object in pool_objects.iter() {
                 pb.println(format!("Processing {}", pool_object.header.crc32));
 
+
+                let x: String;
+                if let Some(v) = class_names.get(&pool_object.header.class_crc32) {
+                    x = String::from(*v)
+                } else {
+                    x = pool_object.header.class_crc32.to_string().clone();
+                }
                 let object_file_path = objects_path.join(format!(
                     "{}.{}",
                     pool_object.header.crc32,
-                    class_names
-                        .get(&pool_object.header.class_crc32)
-                        .unwrap_or(&pool_object.header.class_crc32.to_string().as_str())
+                    x.as_str()
                 ));
 
                 let mut object_file = OpenOptions::new()
@@ -785,7 +794,7 @@ impl DPC for FuelDPC {
         let (version_patch, version_minor, mut block_type) = self
             .version_lookup
             .get(&manifest_json.header.version_string)
-            .unwrap_or(&(0, 0, 0));
+            .unwrap_or_else(|| &(0, 0, 0));
 
         if *version_patch == 0 && !self.options.is_unsafe {
             panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and use the invalid string.");
@@ -1660,9 +1669,13 @@ impl DPC for FuelDPC {
         class_names.insert("GameObj_Z", 4096629181);
         class_names.insert("Camera_Z", 4240844041);
 
-        let class_crc32 = *class_names
-            .get(class_name)
-            .unwrap_or(&class_name.parse::<u32>().unwrap());
+
+        let class_crc32: u32;
+        if let Some(v) = class_names.get(class_name) {
+            class_crc32 = *v
+        } else {
+            class_crc32 = class_name.parse::<u32>().unwrap();
+        }
 
         if let Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&class_crc32) {
             let mut header: Vec<u8> = Vec::new();
