@@ -78,7 +78,7 @@ EXAMPLES:
 
 ### Prerequisites
 
-* Rust
+* [Rust](https://www.rust-lang.org/)
 
 ### Checkout
 
