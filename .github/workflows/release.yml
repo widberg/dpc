@@ -50,7 +50,7 @@ jobs:
         toolchain: stable
 
     - name: Build
-      run: cargo build --release
+      run: cargo build --release --locked
 
     - name: Create Archive
       run: tar -C target/release/ -czvf dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz ${{ matrix.executable_name }} ../../README.md

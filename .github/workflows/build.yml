@@ -30,4 +30,4 @@ jobs:
         toolchain: stable
 
     - name: Build
-      run: cargo build --release
+      run: cargo build --release --locked
