@@ -742,7 +742,16 @@ impl DPC for FuelDPC {
                 let entry = entry.unwrap();
                 let path = entry.path();
                 if path.is_dir() {
-                    self.fmt_create(&path, &path.with_extension(""))?; // .expect("Warn: object parser failed");
+                    let res = self.fmt_create(&path, &path.with_extension(""));
+                    if res.is_err() {
+                        if !self.options.is_unsafe {
+                            panic!("Object parser failed. run again with -u/--unsafe to skip errors.");
+                        }
+
+                        if !self.options.is_quiet {
+                            println!("Warn: object parser failed");
+                        }
+                    }
                 }
             }
         }
@@ -1658,7 +1667,16 @@ impl DPC for FuelDPC {
         if let Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&class_crc32) {
             let mut header: Vec<u8> = Vec::new();
             let mut body: Vec<u8> = Vec::new();
-            fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body)?; // .expect("Warn: object parser failed");
+            let res = fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body);
+            if res.is_err() {
+                if !self.options.is_unsafe {
+                    panic!("Object parser failed. run again with -u/--unsafe to skip errors.");
+                }
+
+                if !self.options.is_quiet {
+                    println!("Warn: object parser failed");
+                }
+            }
 
             let object_header = ObjectHeader {
                 data_size: body.len() as u32 + header.len() as u32,
