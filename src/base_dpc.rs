@@ -31,7 +31,7 @@ impl From<&ArgMatches<'_>> for Options {
 pub trait DPC {
     fn new(options: &Options, custom_args: &Vec<&OsStr>) -> Self;
     fn extract<P: AsRef<Path>>(&mut self, input_path: &P, output_path: &P) -> Result<()>;
-    fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
+    fn create<P: AsRef<Path>>(&mut self, input_path: &P, output_path: &P) -> Result<()>;
     fn validate<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
     fn compress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
     fn decompress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;

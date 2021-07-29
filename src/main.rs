@@ -117,7 +117,7 @@ fn main() -> Result<()> {
 				.help("Supply arguments directly to the dpc backend"))
 		.subcommand(lz_subcommand.subcommand())
 		.subcommand(SubCommand::with_name("obj")
-				.about("Used to compress object files")
+				.about("Used to compress/split object files")
 				.arg(Arg::with_name("GAME")
 						.short("g")
 						.long("game")

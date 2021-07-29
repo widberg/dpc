@@ -693,7 +693,7 @@ impl DPC for FuelDPC {
     // CREATE
     //
 
-    fn create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+    fn create<P: AsRef<Path>>(&mut self, input_path: &P, output_path: &P) -> Result<()> {
         let manifest_file =
             File::open(input_path.as_ref().join("manifest.json")).unwrap_or_else(|why| {
                 panic!("Problem opening the input file: {:?}", why.kind());
@@ -717,6 +717,8 @@ impl DPC for FuelDPC {
         }
 
         let mut manifest_json: Manifest = serde_json::from_reader(manifest_file)?;
+
+        self.version = manifest_json.header.version_string.clone();
 
         if self.no_pool {
             manifest_json.header.pool_manifest_unused = 0;
@@ -1901,7 +1903,7 @@ mod test {
             &vec![],
         );
 
-        let dpc_create = FuelDPC::new(
+        let mut dpc_create = FuelDPC::new(
             &Options {
                 is_quiet: true,
                 is_force: true,
