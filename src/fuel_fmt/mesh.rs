@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Quat, Vec3f, Vec4f};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Quat, Vec3f, Vec4f, PascalStringNULL};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -159,7 +159,7 @@ struct MeshZUnknown15 {
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZUnknown14 {
-    name: PascalArray<u8>,
+    name: PascalStringNULL,
     unknown1: u32,
     unknown2: u16,
     unknown4s: PascalArray<u16>,

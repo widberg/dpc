@@ -7,8 +7,24 @@ use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, ObjectZ, PascalArray, 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
-struct SplineZUnknown1 {
-    data: FixedVec<u8, 240>,
+struct SplineZSubsection
+{
+    point1: Vec3f,
+    point2: Vec3f,
+    length: f32,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(Serialize, Deserialize, NomLE)]
+struct SplineZSection {
+    p1: u16,
+    p2: u16,
+    p1_t: u16,
+    p2_t: u16,
+    unknown0: u32,
+    length: f32,
+    spline_subsections: FixedVec<SplineZSubsection, 8>,
 }
 
 #[derive(BinWrite)]
@@ -16,13 +32,13 @@ struct SplineZUnknown1 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct SplineZ {
-    unknown0s: PascalArray<Vec3f>,
-    unknown1s: PascalArray<SplineZUnknown1>,
+    vertices: PascalArray<Vec3f>,
+    spline_sections: PascalArray<SplineZSection>,
     unknown2: f32,
     unknown3: f32,
     unknown4: f32,
     unknown5: f32,
-    unknown6: f32,
+    length: f32,
 }
 
 pub type SplineObjectFormat = FUELObjectFormat<ObjectZ, SplineZ>;

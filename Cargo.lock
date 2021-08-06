@@ -462,7 +462,7 @@ dependencies = [
 
 [[package]]
 name = "dpc"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "binwrite",
  "built",
