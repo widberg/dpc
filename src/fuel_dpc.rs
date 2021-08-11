@@ -474,7 +474,7 @@ impl DPC for FuelDPC {
                     if self.options.is_lz && object.header.compressed_size != 0 {
                         pb.println(format!("Decompressing {}", object.header.crc32));
                         let mut decompressed_buffer = vec![0; oh.decompressed_size as usize];
-                        lz::lzss_decompress(
+                        lz::lzrs_decompress(
                             &object.data[8..],
                             oh.compressed_size as usize - 8,
                             &mut decompressed_buffer[..],
@@ -631,7 +631,7 @@ impl DPC for FuelDPC {
                     let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
                     let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 8;
                     let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
-                    lz::lzss_decompress(
+                    lz::lzrs_decompress(
                         &pool_object.data[8..],
                         compressed_buffer_len as usize,
                         &mut decompressed_buffer[..],
@@ -856,7 +856,7 @@ impl DPC for FuelDPC {
                         object_file.read(&mut data)?;
                         let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
 
-                        let compressed_buffer_len = lz::lzss_compress_optimized(
+                        let compressed_buffer_len = lz::lzrs_compress_optimized(
                             &data[..],
                             oh.decompressed_size as usize,
                             &mut compressed_buffer[..],
@@ -883,7 +883,7 @@ impl DPC for FuelDPC {
                         let mut compressed_buffer = vec![0; oh.decompressed_size as usize * 2];
 
                         unsafe {
-                            let compressed_buffer_len = lz::lzss_compress(
+                            let compressed_buffer_len = lz::lzrs_compress(
                                 &data[..],
                                 oh.decompressed_size as usize,
                                 &mut compressed_buffer[..],
@@ -931,7 +931,7 @@ impl DPC for FuelDPC {
 
                             object_file.read(&mut decompressed_buffer)?;
 
-                            let compressed_buffer_len = lz::lzss_compress_optimized(
+                            let compressed_buffer_len = lz::lzrs_compress_optimized(
                                 &decompressed_buffer[..],
                                 oh.decompressed_size as usize,
                                 &mut compressed_buffer[..],
@@ -962,7 +962,7 @@ impl DPC for FuelDPC {
                             object_file.read(&mut decompressed_buffer)?;
 
                             unsafe {
-                                let compressed_buffer_len = lz::lzss_compress(
+                                let compressed_buffer_len = lz::lzrs_compress(
                                     &decompressed_buffer[..],
                                     oh.decompressed_size as usize,
                                     &mut compressed_buffer[..],
@@ -1483,7 +1483,7 @@ impl DPC for FuelDPC {
 
         let mut compressed_buffer = vec![0; object_header.decompressed_size as usize * 2];
 
-        let compressed_len = lz::lzss_compress_optimized(
+        let compressed_len = lz::lzrs_compress_optimized(
             &decompressed_buffer[..],
             object_header.decompressed_size as usize,
             &mut compressed_buffer[..],
@@ -1527,7 +1527,7 @@ impl DPC for FuelDPC {
         input_file.seek(SeekFrom::Current(8))?;
         input_file.read(&mut compressed_buffer)?;
 
-        lz::lzss_decompress(
+        lz::lzrs_decompress(
             &compressed_buffer[..],
             object_header.compressed_size as usize,
             &mut decompressed_buffer[..],
@@ -1600,7 +1600,7 @@ impl DPC for FuelDPC {
             if object_header.compressed_size != 0 {
                 let mut compresssed_data = vec![0; object_header.compressed_size as usize];
                 input_file.read(&mut compresssed_data)?;
-                lz::lzss_decompress(
+                lz::lzrs_decompress(
                     &compresssed_data[..],
                     object_header.compressed_size as usize,
                     &mut data[..],

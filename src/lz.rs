@@ -15,7 +15,7 @@ use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::ptr::null_mut;
 
-pub fn lzss_decompress(
+pub fn lzrs_decompress(
     compressed_buffer: &[u8],
     _compressed_buffer_size: usize,
     decompressed_buffer: &mut [u8],
@@ -63,287 +63,6 @@ pub fn lzss_decompress(
         }
     }
 }
-
-// #[derive(Clone)]
-// struct PacketMatch {
-//     length: i32,
-//     data: i32,
-// }
-//
-// #[derive(Clone)]
-// struct Packet {
-//     match_length: i32,
-//     total_length: i32,
-//     matches: Vec<PacketMatch>,
-// }
-//
-// #[derive(Clone)]
-// struct Match {
-//     pos: i64,
-//     prev: *mut Match,
-//     next: *mut Match,
-// }
-//
-// impl Match {
-//     unsafe fn orphan(&mut self) {
-//         self.prev.as_mut().unwrap().next = null_mut();
-//         self.prev = null_mut();
-//     }
-//
-//     unsafe fn push_back(&mut self, node: &mut Match) {
-//         node.prev = self.prev;
-//         if !node.prev.is_null() { node.prev.as_mut().unwrap().next = node; }
-//         node.next = self;
-//         node.prev = node;
-//     }
-// }
-//
-// unsafe fn encode_packet(
-//     uncompressed_buffer: &[u8],
-//     packet: &mut Packet,
-//     mut window_index: u32,
-//     uncompressed_buffer_cursor: &mut Cursor<&[u8]>,
-//     uncompressed_buffer_size: usize,
-//     g_window_buffer: &Vec<Match>,
-// ) -> bool {
-//     let mut remaining_length: u32 = (1 << packet.match_length) + 2;
-//     let v20: u32 = 0x10000 >> packet.match_length;
-//
-//     packet.matches.clear();
-//     for _ in 0..30 {
-//         let v5: u8 = max(
-//             0,
-//             (uncompressed_buffer_cursor.position() - v20 as u64) as u8,
-//         );
-//
-//         remaining_length = min(
-//             remaining_length,
-//             (uncompressed_buffer_size - uncompressed_buffer_cursor.position() as usize) as u32,
-//         );
-//
-//         if remaining_length <= 2 {
-//             packet.total_length += 1;
-//             packet.matches.push(PacketMatch {
-//                 length: -1,
-//                 data: uncompressed_buffer_cursor.read_u8().unwrap() as i32,
-//             });
-//             window_index += 1;
-//         } else {
-//             let mut pos: u32 = 0;
-//
-//             let mut match_length: i32 = 2;
-//
-//             let mut prev: *mut Match = g_window_buffer[window_index as usize].prev;
-//             while !prev.is_null() && prev.as_ref().unwrap().pos >= v5 as i64 {
-//                 if uncompressed_buffer[uncompressed_buffer_cursor.position()  as usize + 2] == uncompressed_buffer[prev.as_ref().unwrap().pos as usize + 2] {
-//                     let mut j: i32 = 3;
-//                     while uncompressed_buffer[prev.as_ref().unwrap().pos  as usize + j  as usize] == uncompressed_buffer[uncompressed_buffer_cursor.position()  as usize + j  as usize] && remaining_length as usize != j as usize {
-//                         j += 1;
-//                     }
-//
-//                     if match_length < j {
-//                         if remaining_length as usize == j as usize {
-//                             pos = prev.as_ref().unwrap().pos as u32;
-//                             match_length = remaining_length as i32;
-//                             break;
-//                         }
-//                         match_length = j;
-//                         pos = prev.as_ref().unwrap().pos as u32;
-//                     }
-//                 }
-//
-//                 prev = prev.as_ref().unwrap().prev;
-//             }
-//
-//             if match_length == 2 {
-//                 packet.total_length += 1;
-//                 packet.matches.push(PacketMatch {
-//                     length: -1,
-//                     data: uncompressed_buffer_cursor.read_u8().unwrap() as i32,
-//                 });
-//                 window_index += 1;
-//             } else {
-//                 packet.total_length += match_length;
-//                 packet.matches.push(PacketMatch {
-//                     length: match_length - 3,
-//                     data: (uncompressed_buffer_cursor.position() as usize - pos as usize) as i32,
-//                 });
-//                 uncompressed_buffer_cursor.seek(SeekFrom::Current(match_length as i64)).unwrap();
-//                 window_index += match_length as u32;
-//             }
-//         }
-//
-//         window_index = window_index % 0x8000;
-//
-//         if uncompressed_buffer_cursor.position() >= uncompressed_buffer_size as u64 {
-//             return false;
-//         }
-//     }
-//
-//     return true;
-// }
-//
-// unsafe fn lzss_compress(
-//     uncompressed_buffer: &[u8],
-//     uncompressed_buffer_size: usize,
-//     compressed_buffer: &mut [u8],
-//     _compressed_buffer_size: usize,
-// ) -> Result<usize, io::Error> {
-//     let mut g_window_buffer: Vec<Match> = std::iter::repeat(Match {
-//         pos: -1,
-//         prev: null_mut(),
-//         next: null_mut()
-//     }).take(0x8000).collect::<Vec<_>>();
-//
-//     let mut g_matches: Vec<Match> = std::iter::repeat(Match {
-//         pos: -1,
-//         prev: null_mut(),
-//         next: null_mut()
-//     }).take(0x10000).collect::<Vec<_>>();
-//
-//     let mut compressed_buffer_cursor = Cursor::new(compressed_buffer);
-//     compressed_buffer_cursor.write_u32::<LittleEndian>(uncompressed_buffer_size as u32).unwrap();
-//     compressed_buffer_cursor.seek(SeekFrom::Current(4)).unwrap();
-//
-//     let window_size: u32 = min(uncompressed_buffer_size as u32, 0x8000u32);
-//
-//     let mut packets: Vec<Packet> = std::iter::repeat(Packet {
-//         match_length: 0,
-//         total_length: 0,
-//         matches: vec![]
-//     }).take(4).collect::<Vec<_>>();
-//     packets[0].match_length = 2;
-//     packets[1].match_length = 3;
-//     packets[2].match_length = 4;
-//     packets[3].match_length = 5;
-//
-//     let mut window_index: u32 = 0;
-//
-//     for i in 0..window_size {
-//         let pos: i64 = i as i64;
-//         let match_index: u16 = u16::from_be_bytes(uncompressed_buffer[pos as usize..pos as usize + 2].try_into().unwrap());
-//         let mut current: &mut Match = &mut g_window_buffer[i as usize];
-//         let next: &mut Match = &mut g_matches[match_index as usize];
-//         current.pos = pos;
-//         next.push_back(current);
-//     }
-//
-//     let mut uncompressed_buffer_cursor = Cursor::new(uncompressed_buffer);
-//
-//     let mut buffer_size_2 = 0x8000u32;
-//     let mut k = 0x7000i32;
-//
-//     while uncompressed_buffer_cursor.position() < uncompressed_buffer_size as u64 {
-//         let mut len: u8;
-//
-//         packets[3].total_length = 0;
-//         packets[2].total_length = 0;
-//         packets[1].total_length = 0;
-//         packets[0].total_length = 0;
-//
-//         if encode_packet(
-//             &uncompressed_buffer[uncompressed_buffer_cursor.position() as usize..],
-//             &mut packets[3],
-//             window_index,
-//             &mut uncompressed_buffer_cursor,
-//             uncompressed_buffer_size,
-//             &mut g_window_buffer,
-//         ) && packets[3].total_length <= 540
-//         {
-//             if encode_packet(
-//                 &uncompressed_buffer[uncompressed_buffer_cursor.position() as usize..],
-//                 &mut packets[2],
-//                 window_index,
-//                 &mut uncompressed_buffer_cursor,
-//                 uncompressed_buffer_size,
-//                 &mut g_window_buffer,
-//             ) {
-//                 len = if packets[2].total_length <= packets[3].total_length { 1 } else { 0 } + 2;
-//                 if packets[len as usize].total_length <= 300 {
-//                     if encode_packet(
-//                         &uncompressed_buffer[uncompressed_buffer_cursor.position() as usize..],
-//                         &mut packets[1],
-//                         window_index,
-//                         &mut uncompressed_buffer_cursor,
-//                         uncompressed_buffer_size,
-//                         &mut g_window_buffer,
-//                     ) {
-//                         if packets[1].total_length > packets[len as usize].total_length {
-//                             len = 1;
-//                         }
-//
-//                         if packets[len as usize].total_length <= 180 {
-//                             encode_packet(
-//                                 &uncompressed_buffer[uncompressed_buffer_cursor.position() as usize..],
-//                                 &mut packets[0],
-//                                 window_index,
-//                                 &mut uncompressed_buffer_cursor,
-//                                 uncompressed_buffer_size,
-//                                 &mut g_window_buffer,
-//                             );
-//                             if packets[0].total_length >= packets[len as usize].total_length {
-//                                 len = 0;
-//                             }
-//                         }
-//                     } else {
-//                         len = 1;
-//                     }
-//                 }
-//             } else {
-//                 len = 2;
-//             }
-//         } else {
-//             len = 3;
-//         }
-//
-//         let current_packet: &Packet = &packets[len as usize];
-//
-//         let mut flag: u32 = 0;
-//         for i in 0..current_packet.matches.len() {
-//             if current_packet.matches[i].length >= 0 {
-//                 flag |= 0x80000000u32 >> i;
-//             }
-//         }
-//
-//         compressed_buffer_cursor.write_u32::<BigEndian>(flag | len as u32).unwrap();
-//
-//         for m in current_packet.matches.iter() {
-//             if m.length == -1 {
-//                 compressed_buffer_cursor.write_u8(m.data as u8).unwrap();
-//             } else {
-//                 compressed_buffer_cursor
-//                     .write_u16::<BigEndian>((m.data + (m.length << (0xE - len)) - 1) as u16).unwrap();
-//             }
-//         }
-//
-//         uncompressed_buffer_cursor.seek(SeekFrom::Current(current_packet.total_length as i64)).unwrap();
-//
-//         window_index = (window_index + current_packet.total_length as u32) % 0x8000u32;
-//
-//         k -= current_packet.total_length;
-//         if k < 0 {
-//             let window_size_1: u32 = min(uncompressed_buffer_size as u32, buffer_size_2 + 0x1000u32);
-//             for i in buffer_size_2..window_size_1 {
-//                 let pos: i64 = i as i64;
-//                 let match_index: u16 =
-//                     u16::from_be_bytes(uncompressed_buffer[pos as usize..pos as usize + 2].try_into().unwrap());
-//                 let mut current: &mut Match = &mut g_window_buffer.split_at_mut(i as usize % 0x8000usize).1[0];
-//                 let next: &mut Match = &mut g_matches.split_at_mut(match_index as usize).1[0];
-//                 current.next.as_mut().unwrap().orphan();
-//                 current.pos = pos;
-//                 next.push_back(current);
-//             }
-//             k += 0x1000i32;
-//             buffer_size_2 = window_size_1;
-//         }
-//     }
-//
-//     let compressed_size = compressed_buffer_cursor.position() as u32;
-//     compressed_buffer_cursor.seek(SeekFrom::Start(4)).unwrap();
-//     compressed_buffer_cursor.write_u32::<LittleEndian>(compressed_size).unwrap();
-//
-//     return Ok(compressed_size as usize);
-// }
 
 #[derive(Clone)]
 struct PacketMatch {
@@ -468,7 +187,7 @@ unsafe fn encode_packet(
     return true;
 }
 
-pub(crate) unsafe fn lzss_compress(
+pub(crate) unsafe fn lzrs_compress(
     uncompressed_buffer: &[u8],
     uncompressed_buffer_size: usize,
     compressed_buffer: &mut [u8],
@@ -644,7 +363,7 @@ pub(crate) unsafe fn lzss_compress(
     return Ok(compressed_buffer_cursor.position() as usize);
 }
 
-pub fn lzss_compress_optimized(
+pub fn lzrs_compress_optimized(
     decompressed_buffer: &[u8],
     decompressed_buffer_size: usize,
     compressed_buffer: &mut [u8],
@@ -851,16 +570,16 @@ pub trait LZ {
     }
 }
 
-pub struct LZLZSS {}
+pub struct LZLZRS {}
 
-impl LZ for LZLZSS {
+impl LZ for LZLZRS {
     fn decompress_internal(
         self: &Self,
         compressed_buffer: &Vec<u8>,
         decompressed_buffer: &mut Vec<u8>,
     ) -> Result<(), io::Error> {
         let decompressed_buffer_len = decompressed_buffer.len();
-        match lzss_decompress(
+        match lzrs_decompress(
             &compressed_buffer[..],
             compressed_buffer.len(),
             &mut decompressed_buffer[..],
@@ -881,7 +600,7 @@ impl LZ for LZLZSS {
             let compressed_buffer_len = compressed_buffer.len();
             let decompressed_buffer_len = decompressed_buffer.len();
             decompressed_buffer.resize(decompressed_buffer_len + 2, 0);
-            match lzss_compress(
+            match lzrs_compress(
                 &decompressed_buffer[..],
                 decompressed_buffer_len,
                 &mut compressed_buffer[..],
@@ -947,7 +666,7 @@ mod test {
     use crate::lz;
 
     #[test_resources("data/*.in")]
-    fn test_lzss_optimized(path: &str) {
+    fn test_lzrs_optimized(path: &str) {
         let mut compressed_file = File::open(path).unwrap();
 
         let decompressed_buffer_len = compressed_file.read_u32::<LittleEndian>().unwrap();
@@ -958,7 +677,7 @@ mod test {
 
         let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
 
-        lz::lzss_decompress(
+        lz::lzrs_decompress(
             &compressed_buffer[..],
             compressed_buffer_len as usize,
             &mut decompressed_buffer[..],
@@ -984,14 +703,14 @@ mod test {
 
         let mut recompressed_buffer = vec![0; decompressed_buffer_len as usize * 2];
 
-        let recompressed_size = lz::lzss_compress_optimized(
+        let recompressed_size = lz::lzrs_compress_optimized(
             &decompressed_buffer[..],
             decompressed_buffer_len as usize,
             &mut recompressed_buffer[..],
             decompressed_buffer_len as usize * 2,
         )
         .unwrap();
-        lz::lzss_decompress(
+        lz::lzrs_decompress(
             &recompressed_buffer[..],
             recompressed_size,
             &mut decompressed_buffer[..],
@@ -1018,7 +737,7 @@ impl LZSubCommand<'_> {
     pub fn new<'a>() -> LZSubCommand<'a> {
         let mut algorithms: HashMap<&str, &dyn LZ> = HashMap::new();
 
-        algorithms.insert("lzss", &LZLZSS {});
+        algorithms.insert("lzrs", &LZLZRS {});
         algorithms.insert("lz4", &LZLZ4 {});
 
         LZSubCommand { algorithms }
@@ -1059,7 +778,7 @@ impl LZSubCommand<'_> {
                     .conflicts_with("COMPRESS")
                     .help("decompress the file"),
             )
-            .after_help("EXAMPLES:\n    lz -ac lzss -i raw.dat\n    lz -ad lz4 -i raw.dat")
+            .after_help("EXAMPLES:\n    lz -ac lzrs -i raw.dat\n    lz -ad lz4 -i raw.dat")
             .settings(&[AppSettings::ArgRequiredElseHelp])
     }
 
@@ -1101,7 +820,7 @@ impl LZSubCommand<'_> {
 
 #[cfg(test)]
 mod test_lz {
-    use crate::lz::{LZ, LZLZSS};
+    use crate::lz::{LZ, LZLZRS};
     use checksums::{hash_file, Algorithm};
     use std::path::Path;
     use test_generator::test_resources;
@@ -1111,8 +830,8 @@ mod test_lz {
         let uncompressed_path = Path::new(path);
         let compressed_path = uncompressed_path.with_extension("out.uncomp");
 
-        let lzss = LZLZSS {};
-        lzss.compress(uncompressed_path, compressed_path.as_path())
+        let lzrs = LZLZRS {};
+        lzrs.compress(uncompressed_path, compressed_path.as_path())
             .unwrap();
 
         assert_eq!(
