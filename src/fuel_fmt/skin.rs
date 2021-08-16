@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, ObjectZ, PascalArray};
+use crate::fuel_fmt::common::{FUELObjectFormat, ObjectZ, PascalArray, CRC32Reference};
 
 static mut SKIN_DATA_COUNT: u32 = 0;
 
@@ -23,7 +23,7 @@ struct SkinZSkinSubsection {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct SkinZ {
-    mesh_crc32s: PascalArray<u32>,
+    mesh_crc32s: PascalArray<CRC32Reference>,
     u0: u32,
     u1: u32,
     u2: u32,

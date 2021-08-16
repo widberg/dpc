@@ -46,7 +46,7 @@ mod binary;
 mod bitmap;
 mod camera;
 mod collisionvol;
-mod common;
+pub(crate) mod common;
 mod fonts;
 mod gameobj;
 mod genworld;

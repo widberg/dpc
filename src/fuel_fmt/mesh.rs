@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Quat, Vec3f, Vec4f, PascalStringNULL};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Quat, Vec3f, Vec4f, PascalStringNULL, CRC32Reference};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -189,7 +189,7 @@ pub struct MeshZ {
     //     PascalArray<std::uint32_t> unknown3s;
     // }
     unknown4s: PascalArray<MeshZUnknown4>,
-    material_crc32s: PascalArray<u32>,
+    material_crc32s: PascalArray<CRC32Reference>,
     unknown6s: PascalArray<MeshZUnknown6>,
     unknown7s: PascalArray<MeshZUnknown7>,
     unknown8s: PascalArray<MeshZUnknown6>,
@@ -337,13 +337,13 @@ struct MeshZHeaderUnknown4 {
 #[nom(Exact)]
 pub struct MeshZHeader {
     friendly_name_crc32: u32,
-    crc32_or_zero: u32,
+    crc32_or_zero: CRC32Reference,
     rot: Quat,
     transform: Mat4f,
     unknown3: f32,
     unknown4: f32,
     unknown5: u16,
-    crc32s: PascalArray<u32>,
+    crc32s: PascalArray<CRC32Reference>,
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,

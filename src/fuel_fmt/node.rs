@@ -2,22 +2,22 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ResourceObjectZ};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ResourceObjectZ, CRC32Reference};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct NodeZ {
-    parent_crc32: u32,
-    some_node_crc320: u32,
-    some_node_crc321: u32,
-    some_node_crc322: u32,
-    lod_crc32: u32,
-    lod_data_crc32: u32,
-    unknown6: u32,
-    unknown7: u32,
-    unknown8: u32,
+    parent_crc32: CRC32Reference,
+    some_node_crc320: CRC32Reference,
+    some_node_crc321: CRC32Reference,
+    some_node_crc322: CRC32Reference,
+    lod_crc32: CRC32Reference,
+    lod_data_crc32: CRC32Reference,
+    unknown6: CRC32Reference,
+    unknown7: CRC32Reference,
+    unknown8: CRC32Reference,
     unknown9: f32,
     unknown10s: FixedVec<u8, 32>,
     mat0: Mat4f,

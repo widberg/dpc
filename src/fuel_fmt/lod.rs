@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormat, Mat4f, ObjectZ, PascalArray};
+use crate::fuel_fmt::common::{write_option, FUELObjectFormat, Mat4f, ObjectZ, PascalArray, CRC32Reference};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -30,7 +30,7 @@ struct LodZUnknown1 {
 #[derive(Serialize, Deserialize, NomLE)]
 struct LodZSoundEntry {
     id: u32,
-    sound_crc32: u32,
+    sound_crc32: CRC32Reference,
 }
 
 #[derive(BinWrite)]
@@ -51,7 +51,7 @@ pub struct LodZ {
     unknown2: u32,
     unknown3: u32,
     u0: f32,
-    skin_crc32s: PascalArray<u32>,
+    skin_crc32s: PascalArray<CRC32Reference>,
     u1: u32,
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]

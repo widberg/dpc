@@ -248,6 +248,33 @@ where
 
 #[derive(BinWrite)]
 #[binwrite(little)]
+#[derive(NomLE)]
+pub struct CRC32Reference {
+    crc32 : u32,
+}
+
+impl Serialize for CRC32Reference {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        self.crc32.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CRC32Reference {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        Ok(CRC32Reference {
+            crc32: u32::deserialize(deserializer)?,
+        })
+    }
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ObjectZ {

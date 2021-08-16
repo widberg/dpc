@@ -2,13 +2,13 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, ResourceObjectZ};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, ResourceObjectZ, CRC32Reference};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct SkelZBone {
-    unknown0: u32,
+    unknown0: CRC32Reference,
     data0: FixedVec<u8, 136>,
     transformation: FixedVec<u32, 16>,
     unknown1: u32,
@@ -55,8 +55,8 @@ pub struct SkelZ {
     u3: f32,
     u4: f32,
     bones: PascalArray<SkelZBone>,
-    material_crc32s: PascalArray<u32>,
-    mesh_data_crc32s: PascalArray<u32>,
+    material_crc32s: PascalArray<CRC32Reference>,
+    mesh_data_crc32s: PascalArray<CRC32Reference>,
     unknown5s: PascalArray<PascalArray<u32>>,
     unknown3: PascalArray<u32>,
     unknown4s: PascalArray<SkelZUnknown4>,
