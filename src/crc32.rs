@@ -17,18 +17,24 @@ pub trait CRC32 {
         output: &mut dyn Write,
         flush: bool,
         unsigned_option: bool,
+        literal_option: bool,
     ) -> Result<(), Error> {
         let input_buffer = BufReader::new(input);
         let mut output_buffer = BufWriter::new(output);
         for line in input_buffer.lines() {
             let name = line?;
+            let mut name_str = name.as_str();
+            if !literal_option {
+                name_str = name.trim();
+            }
+
             if unsigned_option {
                 output_buffer.write(
-                    format!("{:?} \"{}\"\n", self.hash(name.as_bytes()) as u32, name).as_bytes(),
+                    format!("{:?} \"{}\"\n", self.hash(name_str.as_bytes()) as u32, name_str).as_bytes(),
                 )?;
             } else {
                 output_buffer.write(
-                    format!("{:?} \"{}\"\n", self.hash(name.as_bytes()) as i32, name).as_bytes(),
+                    format!("{:?} \"{}\"\n", self.hash(name_str.as_bytes()) as i32, name_str).as_bytes(),
                 )?;
             }
             if flush {
@@ -159,6 +165,12 @@ impl CRC32SubCommand<'_> {
                     .help("Run the command in interactive mode"),
             )
             .arg(
+                Arg::with_name("LITERAL")
+                    .short("L")
+                    .long("literal")
+                    .help("Don't trim whitespace"),
+            )
+            .arg(
                 Arg::with_name("ALGORITHM")
                     .short("a")
                     .long("algorithm")
@@ -188,6 +200,7 @@ impl CRC32SubCommand<'_> {
         subcommand_matches: &ArgMatches,
     ) -> Result<(), io::Error> {
         let unsigned_option = subcommand_matches.is_present("UNSIGNED");
+        let literal_option = subcommand_matches.is_present("LITERAL");
         let interactive_option = subcommand_matches.is_present("INTERACTIVE");
 
         let (mut input, mut output): (Box<dyn Read>, Box<dyn Write>) = if interactive_option {
@@ -214,6 +227,7 @@ impl CRC32SubCommand<'_> {
                         output.as_mut(),
                         interactive_option,
                         unsigned_option,
+                        literal_option,
                     )?;
                 } else {
                     panic!("bad algorithm")
