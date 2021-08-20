@@ -1589,6 +1589,8 @@ impl DPC for FuelDPC {
             Err(error) => panic!("{}", error),
         };
 
+        println!("{}", &object_header.crc32);
+
         if let Some(fuel_object_format) =
             fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32)
         {
@@ -1785,7 +1787,8 @@ mod test {
     }
 
     #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/**/*.DPC")]
-    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/WORLD/USA1_HUB_MOUNTAIN1_3A578755.DPC")]
+    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/WORLD/USA1.DPC")]
+    // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/RTC/TELE_01.DPC")]
     // #[test_resources("D:/SteamLibrary/steamapps/common/FUEL/DATAS/VEH.DPC")]
     fn test_fuel_dpc_recursive(path: &str) {
         let mut dpc = FuelDPC::new(

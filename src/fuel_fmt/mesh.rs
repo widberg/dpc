@@ -318,8 +318,8 @@ struct MeshZHeaderUnknown3 {
     unknown1: u32,
     unknown2: u32,
     unknown3: u32,
-    unknown4: u32,
-    unknown5: u32,
+    unknown: u32,
+    name_crc32: u32,
 }
 
 #[derive(BinWrite)]
@@ -327,8 +327,8 @@ struct MeshZHeaderUnknown3 {
 #[derive(Serialize, Deserialize, NomLE)]
 struct MeshZHeaderUnknown4 {
     unknown0s: FixedVec<u8, 64>,
-    unknown1: u32,
-    unknown2: u32,
+    unknown: u32,
+    name_crc32: u32,
 }
 
 #[derive(BinWrite)]

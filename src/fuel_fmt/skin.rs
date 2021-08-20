@@ -28,8 +28,10 @@ pub struct SkinZ {
     u1: u32,
     u2: u32,
     u3: u32,
+    #[nom(Verify(*one_and_a_half == 1.5))]
     one_and_a_half: f32,
     #[nom(PostExec(unsafe { SKIN_DATA_COUNT = data_count }))]
+    #[nom(Verify(*data_count == 21))]
     data_count: u32,
     skin_sections: PascalArray<PascalArray<SkinZSkinSubsection>>,
 }

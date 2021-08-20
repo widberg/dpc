@@ -48,8 +48,8 @@ struct LodZUnknown4 {
 pub struct LodZ {
     unknown0s: PascalArray<LodZUnknown0>,
     unknown1s: PascalArray<LodZUnknown1>,
-    unknown2: u32,
-    unknown3: u32,
+    unknown2: f32,
+    unknown3: f32,
     u0: f32,
     skin_crc32s: PascalArray<CRC32Reference>,
     u1: u32,
