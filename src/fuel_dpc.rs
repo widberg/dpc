@@ -280,7 +280,7 @@ impl DPC for FuelDPC {
             unoptimized_pool: matches.is_present("UNOPTIMIZED-POOL"),
             no_pool: matches.is_present("NO-POOL"),
             version_lookup: version_lookup,
-            version: String::new(),
+            version: String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"),
         }
     }
 
