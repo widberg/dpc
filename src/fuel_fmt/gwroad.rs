@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec2f};
+use crate::fuel_fmt::common::{FUELObjectFormat, HasReferences, ResourceObjectZ, Vec2f};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -54,6 +54,16 @@ pub struct GwRoadZ {
     #[nom(Count(unknown5_count))]
     unknown5s: Vec<GwRoadZUnknown5>,
     unknown_crc32: u32,
+}
+
+impl HasReferences for GwRoadZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type GwRoadObjectFormat = FUELObjectFormat<ResourceObjectZ, GwRoadZ>;

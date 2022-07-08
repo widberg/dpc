@@ -6,7 +6,9 @@ build = "build.rs"
 edition = "2018"
 
 [dependencies]
+arcode = "0.2.3"
 binwrite = "0.2.1"
+bitbit = "0.2.0"
 byteorder = "1.4.3"
 checksumdir = "0.3.0"
 checksums = "0.7.1"

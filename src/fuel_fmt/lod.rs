@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormat, Mat4f, ObjectZ, PascalArray, CRC32Reference};
+use crate::fuel_fmt::common::{
+    write_option, FUELObjectFormat, HasReferences, Mat4f, ObjectZ, PascalArray,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -30,7 +32,7 @@ struct LodZUnknown1 {
 #[derive(Serialize, Deserialize, NomLE)]
 struct LodZSoundEntry {
     id: u32,
-    sound_crc32: CRC32Reference,
+    sound_crc32: u32,
 }
 
 #[derive(BinWrite)]
@@ -51,7 +53,7 @@ pub struct LodZ {
     unknown2: f32,
     unknown3: f32,
     u0: f32,
-    skin_crc32s: PascalArray<CRC32Reference>,
+    skin_crc32s: PascalArray<u32>,
     u1: u32,
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -164,6 +166,36 @@ pub struct LodZAltAlt {
     #[binwrite(with(write_option))]
     unknown4s: Option<PascalArray<LodZUnknown4>>,
     unknown5: u32,
+}
+
+impl HasReferences for LodZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for LodZAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for LodZAltAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type LodObjectFormat = FUELObjectFormat<ObjectZ, LodZ>;

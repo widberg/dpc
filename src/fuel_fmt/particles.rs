@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ObjectZ, PascalArray};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, Mat4f, ObjectZ, PascalArray,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -106,6 +108,26 @@ pub struct ParticlesZAlt {
     mats: PascalArray<FixedVec<u32, 16>>,
     unknown2: u32,
     unknown3: u16,
+}
+
+impl HasReferences for ParticlesZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for ParticlesZAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type ParticlesObjectFormat = FUELObjectFormat<ObjectZ, ParticlesZ>;

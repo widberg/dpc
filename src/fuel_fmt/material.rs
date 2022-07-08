@@ -3,7 +3,7 @@ use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
 use crate::fuel_fmt::common::{
-    write_option, FUELObjectFormat, FixedVec, ResourceObjectZ, Vec3f, Vec4f,
+    write_option, FUELObjectFormat, FixedVec, HasReferences, ResourceObjectZ, Vec3f, Vec4f,
 };
 
 #[derive(BinWrite)]
@@ -73,6 +73,46 @@ pub struct MaterialZAltAlt {
     #[binwrite(with(write_option))]
     unknown_crc321: Option<u32>,
     bitmap_crc32s: FixedVec<u32, 6>,
+}
+
+impl HasReferences for MaterialZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![
+            self.diffuse_bitmap_crc32,
+            self.unknown_bitmap_crc320,
+            self.metal_bitmap_crc32,
+            self.unknown_bitmap_crc321,
+            self.grey_bitmap_crc32,
+            self.normal_bitmap_crc32,
+            self.dirt_bitmap_crc32,
+            self.unknown_bitmap_crc322,
+            self.unknown_bitmap_crc323,
+        ]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for MaterialZAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        self.bitmap_crc32s.data.iter().copied().rev().collect()
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for MaterialZAltAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        self.bitmap_crc32s.data.iter().copied().rev().collect()
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type MaterialObjectFormat = FUELObjectFormat<ResourceObjectZ, MaterialZ>;

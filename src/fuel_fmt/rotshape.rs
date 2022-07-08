@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, ObjectZ, PascalArray, Vec2f, Vec3f};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, HasReferences, ObjectZ, PascalArray, Vec2f, Vec3f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -17,6 +19,16 @@ pub struct RotShapeZ {
     material_crc32s: PascalArray<u32>,
     scale: f32,
     billboard_mode: u16,
+}
+
+impl HasReferences for RotShapeZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type RotShapeObjectFormat = FUELObjectFormat<ObjectZ, RotShapeZ>;

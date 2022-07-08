@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec2f, Vec3f};
+use crate::fuel_fmt::common::{FUELObjectFormat, HasReferences, ResourceObjectZ, Vec2f, Vec3f};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -17,6 +17,16 @@ pub struct WarpZ {
     radius: f32,
     #[nom(Count(4))]
     texcoords: Vec<Vec2f>,
+}
+
+impl HasReferences for WarpZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type WarpObjectFormat = FUELObjectFormat<ResourceObjectZ, WarpZ>;

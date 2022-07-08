@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{Error, ErrorKind, Write};
 use std::marker::PhantomData;
 use std::path::Path;
+use std::vec::Vec;
 
 use binwrite::{BinWrite, WriterOption};
 pub use nom::number::complete::*;
@@ -9,6 +10,11 @@ pub use nom::*;
 pub use nom_derive::NomLE;
 use nom_derive::Parse;
 pub use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+pub trait HasReferences {
+    fn hard_links(&self) -> Vec<u32>;
+    fn soft_links(&self) -> Vec<u32>;
+}
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -22,57 +28,71 @@ pub struct ResourceObjectZ {
     pub crc32s: Option<PascalArray<u32>>,
 }
 
+impl HasReferences for ResourceObjectZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        if let Some(crc32s) = &self.crc32s {
+            crc32s.data.clone()
+        } else {
+            vec![]
+        }
+    }
+}
+
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
 pub struct Vec3f {
-    x: f32,
-    z: f32,
-    y: f32,
+    pub x: f32,
+    pub z: f32,
+    pub y: f32,
 }
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
 pub struct Vec4f {
-    x: f32,
-    z: f32,
-    y: f32,
-    w: f32,
+    pub x: f32,
+    pub z: f32,
+    pub y: f32,
+    pub w: f32,
 }
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
 pub struct Vec3i32 {
-    x: i32,
-    z: i32,
-    y: i32,
+    pub x: i32,
+    pub z: i32,
+    pub y: i32,
 }
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
 pub struct Vec2f {
-    x: f32,
-    y: f32,
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
 pub struct Mat4f {
     data: FixedVec<f32, 16>,
 }
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
 pub struct Quat {
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
 }
 
 pub fn write_option<W, T>(
@@ -94,7 +114,7 @@ where
 #[derive(NomLE)]
 pub struct PascalArray<T> {
     #[nom(LengthCount(le_u32))]
-    data: Vec<T>,
+    pub data: Vec<T>,
 }
 
 impl<T> BinWrite for PascalArray<T>
@@ -214,10 +234,10 @@ impl<'de> Deserialize<'de> for PascalStringNULL {
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(NomLE)]
+#[derive(PartialEq, NomLE)]
 pub struct FixedVec<T: BinWrite, const U: usize> {
     #[nom(Count(U))]
-    data: Vec<T>,
+    pub data: Vec<T>,
 }
 
 impl<T: BinWrite, const U: usize> Serialize for FixedVec<T, U>
@@ -248,33 +268,6 @@ where
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(NomLE)]
-pub struct CRC32Reference {
-    crc32 : u32,
-}
-
-impl Serialize for CRC32Reference {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-    {
-        self.crc32.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for CRC32Reference {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-    {
-        Ok(CRC32Reference {
-            crc32: u32::deserialize(deserializer)?,
-        })
-    }
-}
-
-#[derive(BinWrite)]
-#[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ObjectZ {
@@ -291,14 +284,33 @@ pub struct ObjectZ {
     unknown1: u16,
 }
 
+impl HasReferences for ObjectZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        if let Some(crc32s) = &self.crc32s {
+            crc32s.clone()
+        } else {
+            vec![self.crc32_or_zero]
+        }
+    }
+}
+
 pub trait FUELObjectFormatTrait {
     fn pack(
         self: &Self,
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error>;
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error>;
+    ) -> Result<(Vec<u32>, Vec<u32>), Error>;
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error>;
 }
 
 pub struct FUELObjectFormat<T, U> {
@@ -317,15 +329,15 @@ impl<T, U> FUELObjectFormat<T, U> {
 
 impl<T, U> FUELObjectFormatTrait for FUELObjectFormat<T, U>
 where
-    for<'a> T: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
-    for<'a> U: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite,
+    for<'a> T: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite + HasReferences,
+    for<'a> U: Parse<&'a [u8]> + Serialize + Deserialize<'a> + BinWrite + HasReferences,
 {
     fn pack(
         self: &Self,
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -340,10 +352,26 @@ where
         object.header.write(header)?;
         object.body.write(body)?;
 
-        Ok(())
+        let soft_links = [
+            &object.header.soft_links()[..],
+            &object.body.soft_links()[..],
+        ]
+        .concat();
+        let hard_links = [
+            &object.header.hard_links()[..],
+            &object.body.hard_links()[..],
+        ]
+        .concat();
+
+        Ok((hard_links, soft_links))
     }
 
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -367,6 +395,17 @@ where
 
         output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
-        Ok(())
+        let soft_links = [
+            &object.header.soft_links()[..],
+            &object.body.soft_links()[..],
+        ]
+        .concat();
+        let hard_links = [
+            &object.header.hard_links()[..],
+            &object.body.hard_links()[..],
+        ]
+        .concat();
+
+        Ok((hard_links, soft_links))
     }
 }

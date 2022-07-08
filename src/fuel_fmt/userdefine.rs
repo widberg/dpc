@@ -2,12 +2,14 @@ use binwrite::BinWrite;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{PascalString, ResourceObjectZ, FUELObjectFormatTrait};
+use crate::fuel_fmt::common::{
+    FUELObjectFormatTrait, HasReferences, PascalString, ResourceObjectZ,
+};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
-use std::path::Path;
-use std::io::{Error, ErrorKind, Write, Cursor, Read};
 use std::fs::File;
-use byteorder::{ReadBytesExt, LittleEndian, WriteBytesExt};
+use std::io::{Cursor, Error, ErrorKind, Read, Write};
+use std::path::Path;
 use zerocopy::AsBytes;
 
 #[derive(BinWrite)]
@@ -32,7 +34,7 @@ impl FUELObjectFormatTrait for UserDefineObjectFormat {
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -52,10 +54,18 @@ impl FUELObjectFormatTrait for UserDefineObjectFormat {
         body_cursor.write_u32::<LittleEndian>(metadata.len() as u32)?;
         body_cursor.write(fs::read(txt_path).unwrap().as_bytes())?;
 
-        Ok(())
+        Ok((
+            object.resource_object.hard_links(),
+            object.resource_object.soft_links(),
+        ))
     }
 
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -83,7 +93,9 @@ impl FUELObjectFormatTrait for UserDefineObjectFormat {
         body_cursor.read(&mut text_vec[..])?;
         output_txt_file.write(&text_vec)?;
 
-        Ok(())
+        Ok((
+            object.resource_object.hard_links(),
+            object.resource_object.soft_links(),
+        ))
     }
 }
-

@@ -3,7 +3,7 @@ use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
 use crate::fuel_fmt::common::{
-    write_option, FUELObjectFormat, FixedVec, PascalArray, ResourceObjectZ,
+    write_option, FUELObjectFormat, FixedVec, HasReferences, PascalArray, ResourceObjectZ,
 };
 
 #[derive(BinWrite)]
@@ -95,6 +95,16 @@ pub struct LodDataZ {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     zero11: Option<u32>,
+}
+
+impl HasReferences for LodDataZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type LodDataObjectFormat = FUELObjectFormat<ResourceObjectZ, LodDataZ>;

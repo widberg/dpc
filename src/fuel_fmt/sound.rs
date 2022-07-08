@@ -7,7 +7,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait};
+use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait, HasReferences};
 use crate::File;
 
 #[derive(BinWrite)]
@@ -24,11 +24,22 @@ struct SoundZHeader {
     #[nom(Cond = "sample_rate != 0")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
+    #[nom(Verify(*sound_type == 1 || *sound_type == 3 || *sound_type == 5 || *sound_type == 7))]
     sound_type: Option<u16>,
     #[nom(Cond = "sample_rate != 0 && i.len() == 2")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     zero: Option<u16>,
+}
+
+impl HasReferences for SoundZHeader {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub struct SoundObjectFormat;
@@ -45,7 +56,7 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -65,10 +76,18 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
             body.write_i16::<LittleEndian>(sample.unwrap())?;
         }
 
-        Ok(())
+        Ok((
+            object.sound_header.hard_links(),
+            object.sound_header.soft_links(),
+        ))
     }
 
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -112,6 +131,9 @@ impl FUELObjectFormatTrait for SoundObjectFormat {
 
         output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
-        Ok(())
+        Ok((
+            object.sound_header.hard_links(),
+            object.sound_header.soft_links(),
+        ))
     }
 }

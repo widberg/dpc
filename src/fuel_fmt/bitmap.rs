@@ -7,7 +7,7 @@ use byteorder::LittleEndian;
 use nom_derive::{NomLE, Parse};
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait};
+use crate::fuel_fmt::common::{write_option, FUELObjectFormatTrait, HasReferences};
 use crate::File;
 use ddsfile::{D3DFormat, Dds};
 
@@ -38,9 +38,29 @@ struct BitmapZHeader {
     u4: u8,
 }
 
+impl HasReferences for BitmapZHeader {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct BitmapObject {
     bitmap_header: BitmapZHeader,
+}
+
+impl HasReferences for BitmapObject {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 // alternate
@@ -56,6 +76,16 @@ struct BitmapZHeaderAlternate {
     dxt_version0: u8,
     unknown1: u8,
     zero1: u16,
+}
+
+impl HasReferences for BitmapZHeaderAlternate {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 #[derive(BinWrite)]
@@ -80,6 +110,16 @@ struct BitmapZAlternate {
     data: Vec<u8>,
 }
 
+impl HasReferences for BitmapZAlternate {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct BitmapObjectAlternate {
     bitmap_header: BitmapZHeaderAlternate,
@@ -100,7 +140,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -115,10 +155,18 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
         object.bitmap_header.write(header)?;
         dds.data.write(body)?;
 
-        Ok(())
+        Ok((
+            object.bitmap_header.hard_links(),
+            object.bitmap_header.soft_links(),
+        ))
     }
 
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -134,7 +182,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
             bitmap_header.height,
             bitmap_header.width,
             None,
-            if bitmap_header.dxt_version0 == 14 {
+            if bitmap_header.dxt_version1 == 14 {
                 D3DFormat::DXT1
             } else {
                 D3DFormat::DXT5
@@ -152,7 +200,10 @@ impl FUELObjectFormatTrait for BitmapObjectFormat {
 
         output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
-        Ok(())
+        Ok((
+            object.bitmap_header.hard_links(),
+            object.bitmap_header.soft_links(),
+        ))
     }
 }
 
@@ -170,7 +221,7 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -191,10 +242,18 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
 
         dds.data.write(body).unwrap();
 
-        Ok(())
+        Ok((
+            object.bitmap_header.hard_links(),
+            object.bitmap_header.soft_links(),
+        ))
     }
 
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -238,6 +297,9 @@ impl FUELObjectFormatTrait for BitmapObjectFormatAlt {
 
         output_file.write(serde_json::to_string_pretty(&object)?.as_bytes())?;
 
-        Ok(())
+        Ok((
+            object.bitmap_header.hard_links(),
+            object.bitmap_header.soft_links(),
+        ))
     }
 }

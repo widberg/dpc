@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, PascalArray, ResourceObjectZ, Vec3i32};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, PascalArray, ResourceObjectZ, Vec3i32,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -101,6 +103,16 @@ pub struct AnimationZ {
     unknown13s: PascalArray<AnimationZUnknown12>,
     unknown14s: PascalArray<AnimationZUnknown5>,
     unknown15s: PascalArray<AnimationZUnknown5>,
+}
+
+impl HasReferences for AnimationZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type AnimationObjectFormat = FUELObjectFormat<ResourceObjectZ, AnimationZ>;

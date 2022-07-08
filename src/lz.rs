@@ -7,6 +7,10 @@ use std::io::SeekFrom;
 use std::path::Path;
 use std::path::PathBuf;
 
+use arcode::bitbit::{BitReader, BitWriter, LSB};
+use arcode::decode::decoder::ArithmeticDecoder;
+use arcode::encode::encoder::ArithmeticEncoder;
+use arcode::util::source_model_builder::{EOFKind, SourceModelBuilder};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use itertools::Itertools;
@@ -617,6 +621,108 @@ impl LZ for LZLZRS {
     }
 }
 
+pub struct ARITH {}
+
+impl LZ for ARITH {
+    fn decompress_internal(
+        self: &Self,
+        compressed_buffer: &Vec<u8>,
+        decompressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error> {
+        let mut model = SourceModelBuilder::new()
+            .num_symbols(256)
+            .eof(EOFKind::EndAddOne)
+            .build();
+
+        let mut input_reader = BitReader::<_, LSB>::new(&compressed_buffer[..]);
+        let mut decoder = ArithmeticDecoder::new(61);
+
+        let mut decompressed_buffer_cursor = Cursor::new(&mut decompressed_buffer[..]);
+
+        while !decoder.finished() {
+            let sym = decoder.decode(&model, &mut input_reader)?;
+            model.update_symbol(sym);
+            decompressed_buffer_cursor.write_u8(sym as u8)?;
+        }
+
+        Ok(())
+    }
+
+    fn compress_internal(
+        self: &Self,
+        decompressed_buffer: &mut Vec<u8>,
+        compressed_buffer: &mut Vec<u8>,
+    ) -> Result<(), io::Error> {
+        let mut model = SourceModelBuilder::new()
+            .num_bits(8)
+            .eof(EOFKind::EndAddOne)
+            .build();
+
+        let compressed = Cursor::new(compressed_buffer);
+        let mut compressed_writer = BitWriter::new(compressed);
+
+        let mut encoder = ArithmeticEncoder::new(61);
+
+        for &mut sym in decompressed_buffer {
+            encoder.encode(sym as u32, &model, &mut compressed_writer)?;
+            model.update_symbol(sym as u32);
+        }
+
+        encoder.encode(model.eof(), &model, &mut compressed_writer)?;
+        encoder.finish_encode(&mut compressed_writer)?;
+        compressed_writer.pad_to_byte()?;
+
+        Ok(())
+    }
+
+    fn decompress(
+        self: &Self,
+        compressed_path: &Path,
+        decompressed_path: &Path,
+    ) -> Result<(), io::Error> {
+        let mut compressed_file = File::open(compressed_path)?;
+        let mut decompressed_file = File::create(decompressed_path)?;
+
+        let compressed_len = compressed_file.read_u32::<LittleEndian>()? as usize - 8;
+        let decompressed_len = compressed_file.read_u32::<LittleEndian>()? as usize;
+
+        let mut decompressed_buffer = vec![0; decompressed_len];
+        let mut compressed_buffer = vec![0; compressed_len];
+
+        compressed_file.read(&mut compressed_buffer)?;
+
+        self.decompress_internal(&mut compressed_buffer, &mut decompressed_buffer)?;
+
+        decompressed_file.write(&decompressed_buffer)?;
+
+        Ok(())
+    }
+
+    fn compress(
+        self: &Self,
+        decompressed_path: &Path,
+        compressed_path: &Path,
+    ) -> Result<(), io::Error> {
+        let mut decompressed_file = File::open(decompressed_path)?;
+        let mut compressed_file = File::create(compressed_path)?;
+
+        let mut decompressed_buffer = vec![];
+
+        decompressed_file.read_to_end(&mut decompressed_buffer)?;
+
+        let mut compressed_buffer = vec![0; decompressed_buffer.len() * 2];
+
+        self.compress_internal(&mut decompressed_buffer, &mut compressed_buffer)?;
+
+        compressed_file.write_u32::<LittleEndian>(compressed_buffer.len() as u32 + 8)?;
+        compressed_file.write_u32::<LittleEndian>(decompressed_buffer.len() as u32)?;
+
+        compressed_file.write(&compressed_buffer)?;
+
+        Ok(())
+    }
+}
+
 pub struct LZLZ4 {}
 
 impl LZ for LZLZ4 {
@@ -739,6 +845,7 @@ impl LZSubCommand<'_> {
 
         algorithms.insert("lzrs", &LZLZRS {});
         algorithms.insert("lz4", &LZLZ4 {});
+        algorithms.insert("arith", &ARITH {});
 
         LZSubCommand { algorithms }
     }
@@ -778,7 +885,7 @@ impl LZSubCommand<'_> {
                     .conflicts_with("COMPRESS")
                     .help("decompress the file"),
             )
-            .after_help("EXAMPLES:\n    lz -ac lzrs -i raw.dat\n    lz -ad lz4 -i raw.dat")
+            .after_help("EXAMPLES:\n    lz -ca lzrs -i raw.dat\n    lz -da lz4 -i raw.dat")
             .settings(&[AppSettings::ArgRequiredElseHelp])
     }
 

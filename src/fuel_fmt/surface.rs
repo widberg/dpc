@@ -2,7 +2,10 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormat, FixedVec, ObjectZ, PascalArray, Quat, Vec3f, Vec2f};
+use crate::fuel_fmt::common::{
+    write_option, FUELObjectFormat, FixedVec, HasReferences, ObjectZ, PascalArray, Quat, Vec2f,
+    Vec3f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -82,6 +85,16 @@ pub struct SurfaceZ {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     surface_count1: Option<u32>,
+}
+
+impl HasReferences for SurfaceZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type SurfaceObjectFormat = FUELObjectFormat<ObjectZ, SurfaceZ>;

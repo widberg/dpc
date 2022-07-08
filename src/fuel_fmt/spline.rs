@@ -2,13 +2,14 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, ObjectZ, PascalArray, Vec3f};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, ObjectZ, PascalArray, Vec3f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
-struct SplineZSubsection
-{
+struct SplineZSubsection {
     point1: Vec3f,
     point2: Vec3f,
     length: f32,
@@ -39,6 +40,16 @@ pub struct SplineZ {
     unknown4: f32,
     unknown5: f32,
     length: f32,
+}
+
+impl HasReferences for SplineZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type SplineObjectFormat = FUELObjectFormat<ObjectZ, SplineZ>;

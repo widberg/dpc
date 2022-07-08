@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, PascalArray, ResourceObjectZ};
+use crate::fuel_fmt::common::{FUELObjectFormat, HasReferences, PascalArray, ResourceObjectZ};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -24,6 +24,16 @@ struct FontsZCharacter {
 pub struct FontsZ {
     characters: PascalArray<FontsZCharacter>,
     material_crc32s: PascalArray<u32>,
+}
+
+impl HasReferences for FontsZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type FontsObjectFormat = FUELObjectFormat<ResourceObjectZ, FontsZ>;

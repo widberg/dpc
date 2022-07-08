@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, BufWriter, Error, Read, Write};
+use std::option::Option;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -28,18 +29,42 @@ pub trait CRC32 {
                 name_str = name.trim();
             }
 
+            let hash = self.hash(name_str.as_bytes());
+
             if unsigned_option {
-                output_buffer.write(
-                    format!("{:?} \"{}\"\n", self.hash(name_str.as_bytes()) as u32, name_str).as_bytes(),
-                )?;
+                output_buffer.write(format!("{:?} \"{}\"\n", hash as u32, name_str).as_bytes())?;
             } else {
-                output_buffer.write(
-                    format!("{:?} \"{}\"\n", self.hash(name_str.as_bytes()) as i32, name_str).as_bytes(),
-                )?;
+                output_buffer.write(format!("{:?} \"{}\"\n", hash as i32, name_str).as_bytes())?;
             }
+
             if flush {
                 output_buffer.flush()?;
             }
+        }
+
+        Ok(())
+    }
+
+    fn generate_binary(
+        self: &Self,
+        input: &mut dyn Read,
+        output: &mut dyn Write,
+        unsigned_option: bool,
+        offset: Option<usize>,
+        length: Option<usize>,
+    ) -> Result<(), Error> {
+        let mut data: Vec<u8> = Vec::new();
+        input.read_to_end(&mut data)?;
+
+        let start = offset.unwrap_or(0);
+        let end = length.unwrap_or(data.len());
+
+        let hash = self.hash(&data[start..end]);
+
+        if unsigned_option {
+            output.write(format!("{:?}\n", hash as u32).as_bytes())?;
+        } else {
+            output.write(format!("{:?}\n", hash as i32).as_bytes())?;
         }
 
         Ok(())
@@ -130,6 +155,21 @@ impl CRC32 for AsoboCRC32 {
     }
 }
 
+pub struct AsoboCRC32Alt {}
+
+impl CRC32 for AsoboCRC32Alt {
+    fn hash(self: &Self, name: &[u8]) -> u32 {
+        let mut hash: u32 = 0;
+
+        for c in name {
+            hash = (hash << 8)
+                ^ CRC32_TABLE[((c.to_ascii_lowercase() as u32 ^ (hash >> 0x18)) & 0xff) as usize];
+        }
+
+        hash
+    }
+}
+
 pub struct IEEECRC32 {}
 
 impl CRC32 for IEEECRC32 {
@@ -149,6 +189,7 @@ impl CRC32SubCommand<'_> {
         let mut algorithms: HashMap<&str, &dyn CRC32> = HashMap::new();
 
         algorithms.insert("asobo", &AsoboCRC32 {});
+        algorithms.insert("asobo_alt", &AsoboCRC32Alt {});
         algorithms.insert("ieee", &IEEECRC32 {});
 
         CRC32SubCommand { algorithms }
@@ -157,6 +198,29 @@ impl CRC32SubCommand<'_> {
     pub fn subcommand(self: &Self) -> App {
         SubCommand::with_name("crc32")
             .about("generate name files")
+            .arg(
+                Arg::with_name("BINARY")
+                    .short("b")
+                    .long("binary")
+                    .conflicts_with("LITERAL")
+                    .help("Treat the input as a a binary blob"),
+            )
+            .arg(
+                Arg::with_name("OFFSET")
+                    .short("s")
+                    .long("offset")
+                    .takes_value(true)
+                    .requires("BINARY")
+                    .help("Position to start hashing at"),
+            )
+            .arg(
+                Arg::with_name("LENGTH")
+                    .short("h")
+                    .long("length")
+                    .takes_value(true)
+                    .requires("BINARY")
+                    .help("Length of data to hash"),
+            )
             .arg(
                 Arg::with_name("INTERACTIVE")
                     .short("I")
@@ -199,36 +263,58 @@ impl CRC32SubCommand<'_> {
         matches: &ArgMatches,
         subcommand_matches: &ArgMatches,
     ) -> Result<(), io::Error> {
+        let binary_option = subcommand_matches.is_present("BINARY");
         let unsigned_option = subcommand_matches.is_present("UNSIGNED");
         let literal_option = subcommand_matches.is_present("LITERAL");
-        let interactive_option = subcommand_matches.is_present("INTERACTIVE");
+        let mut interactive_option = subcommand_matches.is_present("INTERACTIVE");
 
         let (mut input, mut output): (Box<dyn Read>, Box<dyn Write>) = if interactive_option {
             (Box::new(io::stdin()), Box::new(io::stdout()))
         } else {
             let input_path_string = matches.value_of_os("INPUT").unwrap();
             let input_path = Path::new(input_path_string);
-            let output_path = match matches.value_of_os("OUTPUT") {
-                Some(output_path_string) => PathBuf::from(output_path_string),
-                None => input_path.with_extension("NPC"),
+            let output_writer: Box<dyn Write> = match matches.value_of_os("OUTPUT") {
+                Some(output_path_string) => {
+                    Box::new(File::create(PathBuf::from(output_path_string))?)
+                }
+                None => {
+                    interactive_option = true;
+                    Box::new(io::stdout())
+                }
             };
-            (
-                Box::new(File::open(input_path)?),
-                Box::new(File::create(output_path)?),
-            )
+            (Box::new(File::open(input_path)?), output_writer)
         };
 
         match subcommand_matches.value_of("ALGORITHM") {
             None => panic!("Algorithm is required"),
             Some(algorithm) => {
                 if let Some(crc32_implementation) = self.algorithms.get(algorithm) {
-                    crc32_implementation.generate_names(
-                        input.as_mut(),
-                        output.as_mut(),
-                        interactive_option,
-                        unsigned_option,
-                        literal_option,
-                    )?;
+                    if binary_option {
+                        let offset = match subcommand_matches.value_of("OFFSET") {
+                            None => None,
+                            Some(off) => Some(off.parse::<usize>().unwrap()),
+                        };
+                        let length = match subcommand_matches.value_of("LENGTH") {
+                            None => None,
+                            Some(len) => Some(len.parse::<usize>().unwrap()),
+                        };
+
+                        crc32_implementation.generate_binary(
+                            input.as_mut(),
+                            output.as_mut(),
+                            interactive_option,
+                            offset,
+                            length,
+                        )?;
+                    } else {
+                        crc32_implementation.generate_names(
+                            input.as_mut(),
+                            output.as_mut(),
+                            interactive_option,
+                            unsigned_option,
+                            literal_option,
+                        )?;
+                    }
                 } else {
                     panic!("bad algorithm")
                 }
@@ -238,3 +324,6 @@ impl CRC32SubCommand<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {}

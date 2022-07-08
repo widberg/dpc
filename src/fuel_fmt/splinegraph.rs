@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, ObjectZ, PascalArray, Vec3f};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, ObjectZ, PascalArray, Vec3f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -33,6 +35,16 @@ pub struct SplineGraphZ {
     unknown7s: PascalArray<u32>,
     unknown8s: PascalArray<PascalArray<u8>>,
     unknown9s: PascalArray<PascalArray<u8>>,
+}
+
+impl HasReferences for SplineGraphZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type SplineGraphObjectFormat = FUELObjectFormat<ObjectZ, SplineGraphZ>;

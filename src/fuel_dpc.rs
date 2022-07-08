@@ -238,6 +238,10 @@ impl DPC for FuelDPC {
 
         let mut version_lookup: HashMap<String, (u32, u32, u32)> = HashMap::new();
         version_lookup.insert(
+            String::from("v1.530.62.09 - Asobo Studio - Internal Cross Technology"),
+            (290, 529, 150),
+        );
+        version_lookup.insert(
             String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"),
             (272, 380, 253),
         );
@@ -314,6 +318,7 @@ impl DPC for FuelDPC {
 
         let mut global_objects: HashMap<u32, ObjectDescription> = HashMap::new();
         let mut global_object_headers: HashMap<u32, ObjectHeader> = HashMap::new();
+        let mut global_object_references: HashMap<u32, (Vec<u32>, Vec<u32>)> = HashMap::new();
 
         let mut input_file = File::open(input_path.as_ref()).unwrap_or_else(|why| {
             panic!("Problem opening the input file: {:?}", why.kind());
@@ -367,17 +372,13 @@ impl DPC for FuelDPC {
 
         let mut buffer = [0; 2048];
         input_file.read(&mut buffer)?;
-        let mut header = match PrimaryHeader::parse(&buffer) {
+        let header = match PrimaryHeader::parse(&buffer) {
             Ok((_, h)) => h,
             Err(error) => panic!("{}", error),
         };
 
         if !self.version_lookup.contains_key(header.version_string) && !self.options.is_unsafe {
             panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and extract the dpc anyway (This will probably fail).");
-        }
-
-        if !self.version_lookup.contains_key(header.version_string) {
-            header.version_string = "v1.381.67.09 - Asobo Studio - Internal Cross Technology";
         }
 
         self.version = String::from(header.version_string);
@@ -464,11 +465,8 @@ impl DPC for FuelDPC {
                     } else {
                         x = object.header.class_crc32.to_string().clone();
                     }
-                    let object_file_path = objects_path.join(format!(
-                        "{}.{}",
-                        object.header.crc32,
-                        x.as_str()
-                    ));
+                    let object_file_path =
+                        objects_path.join(format!("{}.{}", object.header.crc32, x.as_str()));
                     let mut object_file = File::create(&object_file_path)?;
                     let mut oh = object.header;
                     if self.options.is_lz && object.header.compressed_size != 0 {
@@ -513,7 +511,9 @@ impl DPC for FuelDPC {
                         t.push(object_file_path.as_os_str());
                         t.push(".d");
                         match self.fmt_extract(&object_file_path, &PathBuf::from(&t)) {
-                            Ok(_) => (),
+                            Ok(x) => {
+                                global_object_references.insert(oh.crc32, x);
+                            }
                             Err(ref e) => {
                                 if e.kind() != ErrorKind::Other {
                                     panic!("{}: {}", oh.crc32, e);
@@ -602,18 +602,14 @@ impl DPC for FuelDPC {
             for pool_object in pool_objects.iter() {
                 pb.println(format!("Processing {}", pool_object.header.crc32));
 
-
                 let x: String;
                 if let Some(v) = class_names.get(&pool_object.header.class_crc32) {
                     x = String::from(*v)
                 } else {
                     x = pool_object.header.class_crc32.to_string().clone();
                 }
-                let object_file_path = objects_path.join(format!(
-                    "{}.{}",
-                    pool_object.header.crc32,
-                    x.as_str()
-                ));
+                let object_file_path =
+                    objects_path.join(format!("{}.{}", pool_object.header.crc32, x.as_str()));
 
                 let mut object_file = OpenOptions::new()
                     .read(true)
@@ -679,7 +675,8 @@ impl DPC for FuelDPC {
                     let mut t = OsString::new();
                     t.push(object_file_path.as_os_str());
                     t.push(".d");
-                    self.fmt_extract(&object_file_path, &PathBuf::from(&t))?;
+                    let x = self.fmt_extract(&object_file_path, &PathBuf::from(&t))?;
+                    global_object_references.insert(oh.crc32, x);
                 }
 
                 pb.inc(1);
@@ -702,6 +699,11 @@ impl DPC for FuelDPC {
             .unwrap_or_else(|why| {
                 panic!("Problem writing the manifest file: {:?}", why.kind());
             });
+
+        let mut references_file = File::create(output_path.as_ref().join("references.txt"))?;
+        for (crc32, x) in &global_object_references {
+            references_file.write(format!("{} > {:?} & {:?}\n", crc32, x.0, x.1).as_ref())?;
+        }
 
         Ok(())
     }
@@ -754,7 +756,9 @@ impl DPC for FuelDPC {
                     let res = self.fmt_create(&path, &path.with_extension(""));
                     if res.is_err() {
                         if !self.options.is_unsafe {
-                            panic!("Object parser failed. run again with -u/--unsafe to skip errors.");
+                            panic!(
+                                "Object parser failed. run again with -u/--unsafe to skip errors."
+                            );
                         }
 
                         if !self.options.is_quiet {
@@ -1418,7 +1422,7 @@ impl DPC for FuelDPC {
 
         named_args!(parse_dpcblock(padding_size: usize, object_count: usize)<DPCBlock>, do_parse!(
             objects: count!(DPCObjectHeader::parse, object_count) >>
-            padding: take!(padding_size) >>
+            take!(padding_size) >>
             (DPCBlock { objects: objects })
         ));
 
@@ -1576,7 +1580,11 @@ impl DPC for FuelDPC {
         Ok(())
     }
 
-    fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
+    fn fmt_extract<P: AsRef<Path>>(
+        &self,
+        input_path: &P,
+        output_path: &P,
+    ) -> Result<(Vec<u32>, Vec<u32>)> {
         fs::create_dir_all(output_path)?;
 
         let mut input_file = File::open(input_path)?;
@@ -1613,12 +1621,10 @@ impl DPC for FuelDPC {
                 input_file.read(&mut data)?;
             }
 
-            fuel_object_format.unpack(&header[..], &data[..], output_path.as_ref())?;
-        } else {
-            return Err(Error::new(ErrorKind::Other, "unsupported format"));
+            return fuel_object_format.unpack(&header[..], &data[..], output_path.as_ref());
         }
 
-        Ok(())
+        return Err(Error::new(ErrorKind::Other, "unsupported format"));
     }
 
     fn fmt_create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
@@ -1671,7 +1677,6 @@ impl DPC for FuelDPC {
         class_names.insert("GameObj_Z", 4096629181);
         class_names.insert("Camera_Z", 4240844041);
 
-
         let class_crc32: u32;
         if let Some(v) = class_names.get(class_name) {
             class_crc32 = *v
@@ -1685,11 +1690,14 @@ impl DPC for FuelDPC {
             let res = fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body);
             if res.is_err() {
                 if !self.options.is_unsafe {
-                    panic!("Object parser failed. run again with -u/--unsafe to skip errors.");
+                    panic!(
+                        "Object parser failed. run again with -u/--unsafe to skip errors. {}",
+                        crc32
+                    );
                 }
 
                 if !self.options.is_quiet {
-                    println!("Warn: object parser failed");
+                    println!("Warn: object parser failed {}", crc32);
                 }
             }
 

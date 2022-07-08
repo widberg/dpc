@@ -36,6 +36,10 @@ pub trait DPC {
     fn compress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
     fn decompress_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
     fn split_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
-    fn fmt_extract<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
+    fn fmt_extract<P: AsRef<Path>>(
+        &self,
+        input_path: &P,
+        output_path: &P,
+    ) -> Result<(Vec<u32>, Vec<u32>)>;
     fn fmt_create<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()>;
 }

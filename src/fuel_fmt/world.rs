@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, Mat4f, PascalArray, ResourceObjectZ};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, HasReferences, Mat4f, PascalArray, ResourceObjectZ,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -43,6 +45,16 @@ pub struct WorldZ {
     spline_graph_crc32: PascalArray<u32>,
     unused12s: PascalArray<u32>,
     material_anim_crc32: PascalArray<u32>,
+}
+
+impl HasReferences for WorldZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type WorldObjectFormat = FUELObjectFormat<ResourceObjectZ, WorldZ>;

@@ -2,7 +2,10 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, ObjectZ, PascalArray, Vec2f, PascalStringNULL};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, Mat4f, ObjectZ, PascalArray, PascalStringNULL, Quat,
+    Vec2f, Vec3f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -16,8 +19,20 @@ struct Category {
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct GenWorldZUnknown8 {
-    unknown0: u32,
-    data: FixedVec<u8, 127>,
+    zero: u32,
+    mat: Mat4f,
+    quat: Quat,
+    vec: Vec3f,
+    unknown1: f32,
+    unknown3: i32,
+    unknown5: i32,
+    unknown6: i32,
+    unknown7: i32,
+    unknown8: i32,
+    unknown9: i32,
+    unknown4: i16,
+    unknown10: i32,
+    unknown2: i8,
 }
 
 #[derive(BinWrite)]
@@ -66,6 +81,16 @@ pub struct GenWorldZ {
     coords: PascalArray<Vec2f>,
     coords_line_segments: PascalArray<CoordsLineSegment>,
     regions: PascalArray<Region>,
+}
+
+impl HasReferences for GenWorldZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type GenWorldObjectFormat = FUELObjectFormat<ObjectZ, GenWorldZ>;

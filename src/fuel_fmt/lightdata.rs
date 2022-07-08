@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, ResourceObjectZ, Vec3f, Vec3i32};
+use crate::fuel_fmt::common::{FUELObjectFormat, HasReferences, ResourceObjectZ, Vec3f, Vec3i32};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -15,6 +15,16 @@ pub struct LightDataZ {
     unknown2: Vec3i32,
     unknown_flag: u32,
     unknown3: Vec3f,
+}
+
+impl HasReferences for LightDataZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type LightDataObjectFormat = FUELObjectFormat<ResourceObjectZ, LightDataZ>;

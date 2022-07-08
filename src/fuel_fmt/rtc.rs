@@ -2,7 +2,9 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, PascalArray, ResourceObjectZ};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, PascalArray, ResourceObjectZ,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -193,6 +195,16 @@ pub struct RtcZ {
     unknown10s: PascalArray<u32>,
     unknown11s: PascalArray<u32>,
     unknown12s: PascalArray<RtcZUnknown12>,
+}
+
+impl HasReferences for RtcZ {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type RtcObjectFormat = FUELObjectFormat<ResourceObjectZ, RtcZ>;

@@ -6,7 +6,7 @@ use binwrite::BinWrite;
 use nom_derive::Parse;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormatTrait, ResourceObjectZ};
+use crate::fuel_fmt::common::{FUELObjectFormatTrait, HasReferences, ResourceObjectZ};
 use std::fs;
 use zerocopy::AsBytes;
 
@@ -24,7 +24,7 @@ impl FUELObjectFormatTrait for BinaryObjectFormat {
         input_path: &Path,
         header: &mut Vec<u8>,
         body: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = input_path.join("object.json");
         let json_file = File::open(json_path)?;
 
@@ -44,10 +44,18 @@ impl FUELObjectFormatTrait for BinaryObjectFormat {
         body.resize(metadata.len() as usize, 0);
         bin_file.read(body.as_bytes_mut())?;
 
-        Ok(())
+        Ok((
+            object.resource_object.hard_links(),
+            object.resource_object.soft_links(),
+        ))
     }
 
-    fn unpack(self: &Self, header: &[u8], body: &[u8], output_path: &Path) -> Result<(), Error> {
+    fn unpack(
+        self: &Self,
+        header: &[u8],
+        body: &[u8],
+        output_path: &Path,
+    ) -> Result<(Vec<u32>, Vec<u32>), Error> {
         let json_path = output_path.join("object.json");
         let mut output_file = File::create(json_path)?;
 
@@ -70,6 +78,9 @@ impl FUELObjectFormatTrait for BinaryObjectFormat {
 
         output_bin_file.write(&body)?;
 
-        Ok(())
+        Ok((
+            object.resource_object.hard_links(),
+            object.resource_object.soft_links(),
+        ))
     }
 }

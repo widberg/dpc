@@ -2,7 +2,10 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, Mat4f, PascalArray, Quat, Vec3f, Vec4f, PascalStringNULL, CRC32Reference};
+use crate::fuel_fmt::common::{
+    FUELObjectFormat, FixedVec, HasReferences, Mat4f, PascalArray, PascalStringNULL, Quat, Vec3f,
+    Vec4f,
+};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -189,7 +192,7 @@ pub struct MeshZ {
     //     PascalArray<std::uint32_t> unknown3s;
     // }
     unknown4s: PascalArray<MeshZUnknown4>,
-    material_crc32s: PascalArray<CRC32Reference>,
+    material_crc32s: PascalArray<u32>,
     unknown6s: PascalArray<MeshZUnknown6>,
     unknown7s: PascalArray<MeshZUnknown7>,
     unknown8s: PascalArray<MeshZUnknown6>,
@@ -337,18 +340,30 @@ struct MeshZHeaderUnknown4 {
 #[nom(Exact)]
 pub struct MeshZHeader {
     friendly_name_crc32: u32,
-    crc32_or_zero: CRC32Reference,
+    crc32_or_zero: u32,
     rot: Quat,
     transform: Mat4f,
     unknown3: f32,
     unknown4: f32,
     unknown5: u16,
-    crc32s: PascalArray<CRC32Reference>,
+    crc32s: PascalArray<u32>,
     unknown0: u32,
     unknown1: u32,
     unknown2: u32,
     unknown3s: PascalArray<MeshZHeaderUnknown3>,
     unknown4s: PascalArray<MeshZHeaderUnknown4>,
+}
+
+impl HasReferences for MeshZHeader {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        let mut crc32s = self.crc32s.data.clone();
+        crc32s.push(self.crc32_or_zero);
+        crc32s
+    }
 }
 
 #[derive(BinWrite)]
@@ -370,6 +385,18 @@ pub struct MeshZHeaderAlt {
     unknown3s: PascalArray<MeshZHeaderUnknown3>,
     unknown4s: PascalArray<MeshZHeaderUnknown4>,
     zeros: FixedVec<u32, 4>,
+}
+
+impl HasReferences for MeshZHeaderAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        let mut crc32s = self.crc32s.data.clone();
+        crc32s.push(self.crc32_or_zero);
+        crc32s
+    }
 }
 
 #[derive(BinWrite)]
@@ -440,6 +467,60 @@ pub struct MeshZHeaderAltAlt {
     unknown6s: PascalArray<u32>,
     unknown7s: PascalArray<u16>,
     unknown8s: PascalArray<MeshZHeaderAltAltUnknown8>,
+}
+
+impl HasReferences for MeshZHeaderAltAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        vec![]
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        self.crc32s.data.clone()
+    }
+}
+
+impl HasReferences for MeshZ {
+    fn hard_links(&self) -> Vec<u32> {
+        self.material_crc32s.data.clone()
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for MeshZAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        self.material_crc32s.data.clone()
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for MeshZAltAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        self.material_crc32s.data.clone()
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
+}
+
+impl HasReferences for MeshZAltAltAlt {
+    fn hard_links(&self) -> Vec<u32> {
+        [
+            &self.material_crc32s0.data[..],
+            &self.material_crc32s1.data[..],
+        ]
+        .concat()
+    }
+
+    fn soft_links(&self) -> Vec<u32> {
+        vec![]
+    }
 }
 
 pub type MeshObjectFormat = FUELObjectFormat<MeshZHeader, MeshZ>;
