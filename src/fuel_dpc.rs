@@ -49,6 +49,9 @@ fn calculate_padding_size(unpadded_size: u32) -> u32 {
 #[derive(Serialize, Deserialize)]
 struct Header {
     version_string: String,
+    version_minor: Option<u32>,
+    version_patch: Option<u32>,
+    block_type: Option<u32>,
     is_rtc: bool,
     pool_manifest_unused: u32,
     incredi_builder_string: String,
@@ -98,6 +101,9 @@ impl Manifest {
         Manifest {
             header: Header {
                 version_string: String::from(""),
+                version_minor: None,
+                version_patch: None,
+                block_type: None,
                 is_rtc: false,
                 pool_manifest_unused: 0,
                 incredi_builder_string: String::from(""),
@@ -378,11 +384,18 @@ impl DPC for FuelDPC {
         };
 
         if !self.version_lookup.contains_key(header.version_string) && !self.options.is_unsafe {
-            panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and extract the dpc anyway (This will probably fail).");
+            panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and extract the dpc anyway.");
         }
 
         self.version = String::from(header.version_string);
         manifest_json.header.version_string = String::from(header.version_string);
+        if !self.version_lookup.contains_key(header.version_string) {
+            manifest_json.header.version_minor = Some(header.version_minor);
+            manifest_json.header.version_patch = Some(header.version_patch);
+            if header.block_descriptions.len() > 0 {
+                manifest_json.header.block_type = Some(header.block_descriptions[0].block_type);
+            }
+        }
         manifest_json.header.is_rtc = header.is_not_rtc == 0;
         manifest_json.header.pool_manifest_unused = header.pool_manifest_unused0;
         if header.block_sector_padding_size != 0xFFFFFFFF {
@@ -798,9 +811,13 @@ impl DPC for FuelDPC {
         let (version_patch, version_minor, mut block_type) = self
             .version_lookup
             .get(&manifest_json.header.version_string)
-            .unwrap_or_else(|| &(0, 0, 0));
+            .unwrap_or(
+                &(manifest_json.header.version_patch.unwrap_or(0),
+                  manifest_json.header.version_minor.unwrap_or(0),
+                  manifest_json.header.block_type.unwrap_or(0))
+            ).clone();
 
-        if *version_patch == 0 && !self.options.is_unsafe {
+        if version_patch == 0 && !self.options.is_unsafe {
             panic!("Invalid version string for fuel. Use -u/--unsafe to bypass this check and use the invalid string.");
         }
 
@@ -1303,8 +1320,8 @@ impl DPC for FuelDPC {
             block_working_buffer_capacity_even: block_working_buffer_capacity_even,
             block_working_buffer_capacity_odd: block_working_buffer_capacity_odd,
             padded_size: blocks_padded_size,
-            version_patch: *version_patch,
-            version_minor: *version_minor,
+            version_patch: version_patch,
+            version_minor: version_minor,
         };
 
         phpa.write(&mut dpc_file)?;
