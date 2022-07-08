@@ -21,6 +21,29 @@ All versions listed have full support. The bold versions are the version that th
 * Up (unstable)
 * Toy Story 3 (unstable)
 
+## Tutorial
+
+Since most people being pointed towards this tool don't even know how to run a command line utility, here is a quick rundown for the uninitiated.
+First, download the dpc program from the [releases tab](https://github.com/widberg/dpc/releases) of this repository. Download the latest file matching your operating system. Once downloaded, unzip it with 7-zip or a similar utility.
+Once it is unzipped, [open a command prompt](https://www.thewindowsclub.com/how-to-open-command-prompt-from-right-click-menu) in the folder you unzipped it to.
+Now we can begin using the tool.
+
+To extract a BigFile run the command
+```sh
+dpc -g fuel -eulf -i "path/to/BIGFILE.DPC" -o "path/to/BIGFILE.DPC.d"
+```
+where `path/to/BIGFILE.DPC` is the path of the bigfile on disk. This will create a directory `path/to/BIGFILE.DPC.d` next to the BigFile you extracted containing the extracted data.
+
+When you are done messing around with the extracted data you may want to turn it back into a BigFile. This can be done with the command.
+```sh
+dpc -g fuel -culf -i "path/to/BIGFILE.DPC.d" -o "path/to/NEW_BIGFILE.DPC"
+```
+where `path/to/BIGFILE.DPC.d` is the path of the extracted folder on disk. This will create a BigFile `path/to/NEW_BIGFILE.DPC` next to the extracted folder.
+
+Note that while the command contains the name of the game FUEL, these commands will work with the other "unstable" games. This is because the formats are similar enough between these games that we can piggyback off the FUEL support even if each individual game has not been considered.
+
+This tutorial covers the most basic use case that 90% of people want this tool for; in actuality, the tool is far more powerful. To learn about the other options and subcommand, run the command `dpc --help` for more information.
+
 ## Help
 
 ```plaintext
