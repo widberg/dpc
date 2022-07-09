@@ -321,6 +321,15 @@ impl DPC for FuelDPC {
         class_names.insert(3845834591, "GwRoad_Z");
         class_names.insert(4096629181, "GameObj_Z");
         class_names.insert(4240844041, "Camera_Z");
+        class_names.insert(4117606081, "AnimFrame_Z");
+        class_names.insert(3979333606, "CameraZone_Z");
+        class_names.insert(72309972, "Occluder_Z");
+        class_names.insert(1390918523, "Graph_Z");
+        class_names.insert(1918499807, "Light_Z");
+        class_names.insert(3210467954, "HFogData_Z");
+        class_names.insert(2735949084, "HFog_Z");
+        class_names.insert(2203168663, "Flare_Z");
+        class_names.insert(1393846573, "FlareData_Z");
 
         let mut global_objects: HashMap<u32, ObjectDescription> = HashMap::new();
         let mut global_object_headers: HashMap<u32, ObjectHeader> = HashMap::new();
@@ -1693,6 +1702,15 @@ impl DPC for FuelDPC {
         class_names.insert("GwRoad_Z", 3845834591);
         class_names.insert("GameObj_Z", 4096629181);
         class_names.insert("Camera_Z", 4240844041);
+        class_names.insert("AnimFrame_Z", 4117606081);
+        class_names.insert("CameraZone_Z", 3979333606);
+        class_names.insert("Occluder_Z", 72309972);
+        class_names.insert("Graph_Z", 1390918523);
+        class_names.insert("Light_Z", 1918499807);
+        class_names.insert("HFogData_Z", 3210467954);
+        class_names.insert("HFog_Z", 2735949084);
+        class_names.insert("Flare_Z", 2203168663);
+        class_names.insert("FlareData_Z", 1393846573);
 
         let class_crc32: u32;
         if let Some(v) = class_names.get(class_name) {
