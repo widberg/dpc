@@ -1,8 +1,10 @@
 # DPC
 
-Tar analogous utility to work with the DPC file format from Asobo Studio games.
+Tar analogous utility to work with the BigFile format from Asobo Studio games.
 
 <sup>This repository is a relative of the main [FMTK repository](https://github.com/widberg/fmtk).</sup>
+
+While the tool is named DPC it works with BigFiles from other platforms too.
 
 ## Supported Games/Versions
 
@@ -47,13 +49,13 @@ This tutorial covers the most basic use case that 90% of people want this tool f
 ## Help
 
 ```plaintext
-dpc version 0.1.4;369485e4384bfdf0a3297e44a0d75dd4981ea590;x86_64-pc-windows-msvc
+dpc version 0.1.5;c12d4143e64e51f381196ac5c223d3ea326f2557;x86_64-pc-windows-msvc
 widberg <https://github.com/widberg>
 Work with DPC files
 
 USAGE:
-    dpc.exe [FLAGS] [OPTIONS] --game <GAME> [-- <CUSTOM_ARGS>]
-    dpc.exe <SUBCOMMAND>
+    dpc [FLAGS] [OPTIONS] --game <GAME> [-- <CUSTOM_ARGS>]
+    dpc <SUBCOMMAND>
 
 FLAGS:
     -c, --create          directory -> DPC
