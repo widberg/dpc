@@ -57,7 +57,7 @@ pub trait CRC32 {
         input.read_to_end(&mut data)?;
 
         let start = offset.unwrap_or(0);
-        let end = length.unwrap_or(data.len());
+        let end = length.unwrap_or(data.len() - start) + start;
 
         let hash = self.hash(&data[start..end]);
 
@@ -215,7 +215,7 @@ impl CRC32SubCommand<'_> {
             )
             .arg(
                 Arg::with_name("LENGTH")
-                    .short("h")
+                    .short("H")
                     .long("length")
                     .takes_value(true)
                     .requires("BINARY")
