@@ -19,14 +19,14 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use binwrite::BinWrite;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use clap::{App, AppSettings, Arg};
 use dialoguer::Select;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use nom::number::complete::*;
 use nom::*;
-use nom_derive::{Nom, NomLE, Parse};
+use nom_derive::{Nom, NomBE, Parse};
 use serde::Deserialize;
 use serde::Serialize;
 use tempdir::TempDir;
@@ -114,8 +114,8 @@ impl Manifest {
     }
 }
 
-#[derive(NomLE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
-#[binwrite(little)]
+#[derive(NomBE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
+#[binwrite(big)]
 struct ObjectHeader {
     data_size: u32,
     class_object_size: u32,
@@ -125,16 +125,16 @@ struct ObjectHeader {
     crc32: u32,
 }
 
-#[derive(Serialize, NomLE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
-#[binwrite(little)]
+#[derive(Serialize, NomBE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
+#[binwrite(big)]
 struct PoolManifestHeader {
     equals524288: u32,
     equals2048: u32,
     objects_crc32_count_sum: u32,
 }
 
-#[derive(Serialize, NomLE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
-#[binwrite(little)]
+#[derive(Serialize, NomBE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
+#[binwrite(big)]
 struct ReferenceRecord {
     start_chunk_index: u32,
     end_chunk_index: u32,
@@ -146,7 +146,7 @@ struct ReferenceRecord {
     placeholder_current_references_weak: u32,
 }
 
-#[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, NomBE, Clone, Debug, PartialEq, Eq)]
 struct PoolManifest {
     #[nom(Parse = "PoolManifestHeader::parse")]
     header: PoolManifestHeader,
@@ -164,8 +164,8 @@ struct PoolManifest {
     reference_records: Vec<ReferenceRecord>,
 }
 
-#[derive(Serialize, NomLE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
-#[binwrite(little)]
+#[derive(Serialize, NomBE, BinWrite, Clone, Copy, Debug, PartialEq, Eq)]
+#[binwrite(big)]
 struct BlockDescription {
     block_type: u32,
     object_count: u32,
@@ -182,7 +182,7 @@ named_args!(take_c_string_as_str(size: usize)<&str>, do_parse!(
 
 named!(take_nothing_as_str<&str>, do_parse!(("")));
 
-#[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, NomBE, Clone, Debug, PartialEq, Eq)]
 struct PrimaryHeader<'a> {
     #[nom(Parse = "{ |i| take_c_string_as_str(i, 256) }")]
     version_string: &'a str,
@@ -197,10 +197,10 @@ struct PrimaryHeader<'a> {
     #[nom(Count = "block_count", Parse = "BlockDescription::parse")]
     block_descriptions: Vec<BlockDescription>,
     #[nom(MoveAbs(0x720))]
-    #[nom(Map = "|x| x * 2048")]
-    pool_manifest_padded_size: u32,
-    #[nom(Map = "|x| x * 2048")]
-    pool_manifest_offset: u32,
+    #[nom(Map = "|x| if x != -1 { x * 2048 } else { 0 }")]
+    pool_manifest_padded_size: i32,
+    #[nom(Map = "|x| if x != -1 { x * 2048 } else { 0 }")]
+    pool_manifest_offset: i32,
     pool_manifest_unused0: u32,
     pool_manifest_unused1: u32,
     pool_object_decompression_buffer_capacity: u32,
@@ -367,7 +367,7 @@ impl DPC for FuelDPC {
 
         let mut manifest_json = Manifest::new();
 
-        #[derive(NomLE, Clone, Debug, PartialEq, Eq)]
+        #[derive(NomBE, Clone, Debug, PartialEq, Eq)]
         struct BlockObject {
             #[nom(Parse = "ObjectHeader::parse")]
             header: ObjectHeader,
@@ -377,7 +377,7 @@ impl DPC for FuelDPC {
             data: Vec<u8>,
         }
 
-        #[derive(NomLE, Clone, Debug, PartialEq, Eq)]
+        #[derive(NomBE, Clone, Debug, PartialEq, Eq)]
         struct PoolObject {
             #[nom(Parse = "ObjectHeader::parse")]
             header: ObjectHeader,
@@ -646,8 +646,8 @@ impl DPC for FuelDPC {
                 if self.options.is_lz && (pool_object.header.compressed_size != 0) {
                     pb.println(format!("Decompressing {}", pool_object.header.crc32));
                     let mut data_cursor = Cursor::new(&pool_object.data);
-                    let decompressed_buffer_len = data_cursor.read_u32::<LittleEndian>()?;
-                    let compressed_buffer_len = data_cursor.read_u32::<LittleEndian>()? - 8;
+                    let decompressed_buffer_len = data_cursor.read_u32::<BigEndian>()?;
+                    let compressed_buffer_len = data_cursor.read_u32::<BigEndian>()? - 8;
                     let mut decompressed_buffer = vec![0; decompressed_buffer_len as usize];
                     lz::lzrs_decompress(
                         &pool_object.data[8..],
@@ -899,8 +899,8 @@ impl DPC for FuelDPC {
 
                         oh.write(&mut dpc_file)?;
                         dpc_file.write(&class_object_data)?;
-                        dpc_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
-                        dpc_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+                        dpc_file.write_u32::<BigEndian>(oh.decompressed_size)?;
+                        dpc_file.write_u32::<BigEndian>(oh.compressed_size)?;
                         dpc_file.write(&compressed_buffer[0..compressed_buffer_len])?;
                     } else if object.compress
                         && oh.compressed_size == 0
@@ -926,8 +926,8 @@ impl DPC for FuelDPC {
 
                             oh.write(&mut dpc_file)?;
                             dpc_file.write(&class_object_data)?;
-                            dpc_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
-                            dpc_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+                            dpc_file.write_u32::<BigEndian>(oh.decompressed_size)?;
+                            dpc_file.write_u32::<BigEndian>(oh.compressed_size)?;
                             dpc_file.write(&compressed_buffer[0..compressed_buffer_len])?;
                         }
                     } else {
@@ -975,8 +975,8 @@ impl DPC for FuelDPC {
                             oh.class_object_size = 0;
 
                             oh.write(&mut compressed_file)?;
-                            compressed_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
-                            compressed_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+                            compressed_file.write_u32::<BigEndian>(oh.decompressed_size)?;
+                            compressed_file.write_u32::<BigEndian>(oh.compressed_size)?;
                             compressed_file.write(&compressed_buffer[0..compressed_buffer_len])?;
                         } else if object.compress
                             && oh.compressed_size == 0
@@ -1006,8 +1006,8 @@ impl DPC for FuelDPC {
                                 oh.class_object_size = 0;
 
                                 oh.write(&mut compressed_file)?;
-                                compressed_file.write_u32::<LittleEndian>(oh.decompressed_size)?;
-                                compressed_file.write_u32::<LittleEndian>(oh.compressed_size)?;
+                                compressed_file.write_u32::<BigEndian>(oh.decompressed_size)?;
+                                compressed_file.write_u32::<BigEndian>(oh.compressed_size)?;
                                 compressed_file
                                     .write(&compressed_buffer[0..compressed_buffer_len])?;
                             }
@@ -1109,7 +1109,7 @@ impl DPC for FuelDPC {
             //
 
             #[derive(BinWrite)]
-            #[binwrite(little)]
+            #[binwrite(big)]
             struct PascalArrayU32 {
                 len: u32,
                 data: Vec<u32>,
@@ -1173,7 +1173,7 @@ impl DPC for FuelDPC {
             reference_records_indices.write(&mut dpc_file)?;
 
             #[derive(BinWrite)]
-            #[binwrite(little)]
+            #[binwrite(big)]
             struct PascalArrayReferenceRecord {
                 len: u32,
                 data: Vec<ReferenceRecord>,
@@ -1291,7 +1291,7 @@ impl DPC for FuelDPC {
         dpc_file.seek(SeekFrom::Start(0))?;
 
         #[derive(BinWrite, Clone, Debug, PartialEq, Eq)]
-        #[binwrite(little)]
+        #[binwrite(big)]
         struct PrimaryHeaderPartA {
             is_not_rtc: u32,
             block_count: u32,
@@ -1344,7 +1344,7 @@ impl DPC for FuelDPC {
         dpc_file.seek(SeekFrom::Start(0x720))?;
 
         #[derive(BinWrite, Clone, Debug, PartialEq, Eq)]
-        #[binwrite(little)]
+        #[binwrite(big)]
         struct PrimaryHeaderPartB {
             pool_manifest_padded_size: u32,
             pool_manifest_offset: u32,
@@ -1415,7 +1415,7 @@ impl DPC for FuelDPC {
         let mut primary_header_buffer = Vec::new();
         dpc_file.read_to_end(&mut primary_header_buffer)?;
 
-        #[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
+        #[derive(Serialize, NomBE, Clone, Debug, PartialEq, Eq)]
         struct DPCObjectHeader {
             data_size: u32,
             class_object_size: u32,
@@ -1429,7 +1429,7 @@ impl DPC for FuelDPC {
             crc32: u32,
         }
 
-        #[derive(Serialize, NomLE, Clone, Debug, PartialEq, Eq)]
+        #[derive(Serialize, NomBE, Clone, Debug, PartialEq, Eq)]
         struct DPCPoolObjectHeader {
             data_size: u32,
             class_object_size: u32,
@@ -1528,8 +1528,8 @@ impl DPC for FuelDPC {
 
         object_header.write(&mut output_file)?;
         output_file.write(&class_object_data)?;
-        output_file.write_u32::<LittleEndian>(object_header.decompressed_size)?;
-        output_file.write_u32::<LittleEndian>(object_header.compressed_size)?;
+        output_file.write_u32::<BigEndian>(object_header.decompressed_size)?;
+        output_file.write_u32::<BigEndian>(object_header.compressed_size)?;
         output_file.write(&compressed_buffer)?;
 
         Ok(())
@@ -2002,6 +2002,53 @@ mod test {
                 is_quiet: true,
                 is_force: true,
                 is_unsafe: false,
+                is_lz: false,
+                is_optimization: false,
+                is_recursive: false,
+            },
+            &vec![],
+        );
+
+        let tmp_dir = TempDir::new("dpc").expect("Failed to create temp_dir");
+
+        let dpc_file = Path::new(path);
+        let dpc_file_2 = tmp_dir.path().join("TEMP.DPC");
+        let dpc_directory = tmp_dir.path().join("TEMP");
+
+        dpc_extract
+            .extract(&dpc_file, &dpc_directory.as_path())
+            .unwrap();
+        let cx = checksumdir(dpc_directory.join("objects").as_os_str().to_str().unwrap()).unwrap();
+
+        dpc_create.create(&dpc_directory, &dpc_file_2).unwrap();
+
+        dpc_extract.extract(&dpc_file_2, &dpc_directory).unwrap();
+        let cy = checksumdir(dpc_directory.join("objects").as_os_str().to_str().unwrap()).unwrap();
+
+        assert_eq!(cx, cy);
+
+        tmp_dir.close().expect("Failed to delete temp_dir");
+    }
+
+    #[test_resources("D:/programming/widberg/dpc/data/CT.DGC")]
+    fn test_fuel_dpc_mixed_lazy_big_endian(path: &str) {
+        let mut dpc_extract = FuelDPC::new(
+            &Options {
+                is_quiet: true,
+                is_force: true,
+                is_unsafe: true,
+                is_lz: true,
+                is_optimization: false,
+                is_recursive: false,
+            },
+            &vec![],
+        );
+
+        let mut dpc_create = FuelDPC::new(
+            &Options {
+                is_quiet: true,
+                is_force: true,
+                is_unsafe: true,
                 is_lz: false,
                 is_optimization: false,
                 is_recursive: false,
