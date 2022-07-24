@@ -795,14 +795,16 @@ impl DPC for FuelDPC {
             let actual_os_path = path.unwrap().path();
             let actual_path: &Path = actual_os_path.as_path();
             if metadata(actual_path).unwrap().is_file() {
-                let crc32: u32 = Path::new(actual_path.file_name().unwrap())
+                let crc32: u32 = match Path::new(actual_path.file_name().unwrap())
                     .file_stem()
                     .unwrap()
                     .to_str()
                     .unwrap()
                     .to_string()
-                    .parse::<u32>()
-                    .unwrap();
+                    .parse::<u32>(){
+                    Err(_) => continue,
+                    Ok(x) => x
+                };
                 if index.contains_key(&crc32) {
                     panic!("Ambiguous files for crc32 = {}", crc32);
                 }
