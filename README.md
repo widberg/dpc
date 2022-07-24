@@ -30,6 +30,8 @@ First, download the dpc program from the [releases tab](https://github.com/widbe
 Once it is unzipped, [open a command prompt](https://www.thewindowsclub.com/how-to-open-command-prompt-from-right-click-menu) in the folder you unzipped it to.
 Now we can begin using the tool.
 
+### Extract/Create BigFiles
+
 To extract a BigFile run the command
 ```sh
 dpc -g fuel -eulf -i "path/to/BIGFILE.DPC" -o "path/to/BIGFILE.DPC.d"
@@ -43,6 +45,24 @@ dpc -g fuel -culf -i "path/to/BIGFILE.DPC.d" -o "path/to/NEW_BIGFILE.DPC"
 where `path/to/BIGFILE.DPC.d` is the path of the extracted folder on disk. This will create a BigFile `path/to/NEW_BIGFILE.DPC` next to the extracted folder.
 
 Note that while the command contains the name of the game FUEL, these commands will work with the other "unstable" games. This is because the formats are similar enough between these games that we can piggyback off the FUEL support even if each individual game has not been considered.
+
+### Extract/Create Objects
+
+Once the BigFile is extracted you may want to modify the objects inside of it. Modifying them with a hex editor may change the size information so it is best to use the dpc tool's capabilities to ensure that valid objects are created. Since the object formats vary much more than the BigFile format does between versions, this is only recommended for stable games.
+
+To extract an object run the command
+```sh
+dpc fmt -g fuel -e -i path/to/object.UserDefine_Z -o path/to/object.UserDefine_Z.d
+```
+where `path/to/object.UserDefine_Z` is the path of the object on disk. This will create a directory `path/to/object.UserDefine_Z.d` next to the object you extracted containing the extracted data. In the case of `UserDefine_Z` this directory will contain a `data.txt` file with the contents of the `UserDefine_Z`. This text file can be safely modified.
+
+When you are done messing around with the extracted data you may want to turn it back into an object. This can be done with the command.
+```sh
+dpc fmt -g fuel -c -i path/to/object.UserDefine_Z.d -o path/to/new_object.UserDefine_Z
+```
+where `path/to/object.UserDefine_Z.d` is the path of the extracted folder on disk. This will create an object `path/to/new_object.UserDefine_Z` next to the extracted folder.
+
+### Final Note
 
 This tutorial covers the most basic use case that 90% of people want this tool for; in actuality, the tool is far more powerful. To learn about the other options and subcommand, run the command `dpc --help` for more information.
 
