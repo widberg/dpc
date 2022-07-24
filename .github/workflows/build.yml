@@ -13,13 +13,10 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
-            executable_name: dpc
           - name: windows
             os: windows-latest
-            executable_name: dpc.exe
           - name: macos
             os: macos-latest
-            executable_name: dpc
 
     steps:
     - uses: actions/checkout@v1
