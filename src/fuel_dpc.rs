@@ -1579,11 +1579,11 @@ impl DPC for FuelDPC {
 
     fn split_object<P: AsRef<Path>>(&self, input_path: &P, output_path: &P) -> Result<()> {
         let mut header_path = output_path.as_ref().to_path_buf();
-        header_path.push(".header");
+        header_path.set_extension(header_path.extension().unwrap().to_str().unwrap().to_owned() + &".header".to_owned());
         let mut header_file = File::create(header_path)?;
 
         let mut data_path = output_path.as_ref().to_path_buf();
-        data_path.push(".data");
+        data_path.set_extension(data_path.extension().unwrap().to_str().unwrap().to_owned() + &".data".to_owned());
         let mut data_file = File::create(data_path)?;
 
         let mut input_file = File::open(input_path)?;
