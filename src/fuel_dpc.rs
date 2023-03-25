@@ -22,6 +22,7 @@ use binwrite::BinWrite;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use clap::{App, AppSettings, Arg};
 use dialoguer::Select;
+use glob::{glob, GlobResult};
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use nom::number::complete::*;
@@ -487,8 +488,22 @@ impl DPC for FuelDPC {
                     } else {
                         x = object.header.class_crc32.to_string().clone();
                     }
-                    let object_file_path =
+                    let default_object_file_path =
                         objects_path.join(format!("{}.{}", object.header.crc32, x.as_str()));
+
+                    let object_file_path = if !default_object_file_path.is_file() {
+                        let paths: Vec<GlobResult> = glob(objects_path.join(format!("{}_*.{}", object.header.crc32, x.as_str())).to_str().unwrap()).expect("Failed to read glob pattern").collect();
+                        if paths.len() > 1 {
+                            panic!("More than one named object for crc32: {}", object.header.crc32);
+                        }
+                        if paths.len() == 1 {
+                            paths[0].as_ref().unwrap().clone()
+                        } else {
+                            default_object_file_path
+                        }
+                    } else {
+                        default_object_file_path
+                    };
                     let mut object_file = File::create(&object_file_path)?;
                     let mut oh = object.header;
                     if self.options.is_lz && object.header.compressed_size != 0 {
@@ -630,9 +645,22 @@ impl DPC for FuelDPC {
                 } else {
                     x = pool_object.header.class_crc32.to_string().clone();
                 }
-                let object_file_path =
+                let default_object_file_path =
                     objects_path.join(format!("{}.{}", pool_object.header.crc32, x.as_str()));
 
+                let object_file_path = if !default_object_file_path.is_file() {
+                    let paths: Vec<GlobResult> = glob(objects_path.join(format!("{}_*.{}", pool_object.header.crc32, x.as_str())).to_str().unwrap()).expect("Failed to read glob pattern").collect();
+                    if paths.len() > 1 {
+                        panic!("More than one named object for crc32: {}", pool_object.header.crc32);
+                    }
+                    if paths.len() == 1 {
+                        paths[0].as_ref().unwrap().clone()
+                    } else {
+                        default_object_file_path
+                    }
+                } else {
+                    default_object_file_path
+                };
                 let mut object_file = OpenOptions::new()
                     .read(true)
                     .write(true)
@@ -801,6 +829,9 @@ impl DPC for FuelDPC {
                     .to_str()
                     .unwrap()
                     .to_string()
+                    .split('_')
+                    .next()
+                    .unwrap()
                     .parse::<u32>(){
                     Err(_) => continue,
                     Ok(x) => x
@@ -868,6 +899,9 @@ impl DPC for FuelDPC {
             let start_pos = dpc_file.stream_position()?;
 
             for object in block.objects.iter() {
+                if index.get(&object.crc32).is_none() {
+                    panic!("No object for crc32: {}", &object.crc32);
+                }
                 let mut object_file = File::open(index.get(&object.crc32).unwrap().as_path())?;
                 let mut buffer: [u8; 24] = [0; 24];
                 object_file.read(&mut buffer)?;
@@ -1663,6 +1697,9 @@ impl DPC for FuelDPC {
             .file_stem()
             .unwrap()
             .to_str()
+            .unwrap()
+            .split('_')
+            .next()
             .unwrap()
             .parse::<u32>()
             .unwrap();

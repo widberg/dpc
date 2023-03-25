@@ -2,7 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, HasReferences, Mat4f, ResourceObjectZ};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, HasReferences, Mat4f, ResourceObjectZ, Vec3f, Quat, SphereZ, Color, Rect};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -10,19 +10,29 @@ use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, HasReferences, Mat4f, 
 #[nom(Exact)]
 pub struct NodeZ {
     parent_crc32: u32,
-    some_node_crc320: u32,
-    some_node_crc321: u32,
-    some_node_crc322: u32,
+    head_child_crc32: u32,
+    prev_node_crc32: u32,
+    next_node_crc32: u32,
     lod_crc32: u32,
     lod_data_crc32: u32,
     unknown6: u32,
     unknown7: u32,
     unknown8: u32,
     unknown9: f32,
-    unknown10s: FixedVec<u8, 32>,
-    mat0: Mat4f,
-    unknown11s: FixedVec<u16, 17>,
-    mat1: Mat4f,
+    rotation: Quat,
+    translation: Vec3f,
+    flags: u32,
+    rotation2: Quat,
+    scale: f32,
+    scale2: f32,
+    reciprocal_scale: f32,
+    unknown10: f32,
+    color: Color,
+    sphere: SphereZ,
+    display_seeds_rect: Rect,
+    collide_seeds_rect: Rect,
+    negative_four: i16,
+    world_transform: Mat4f,
 }
 
 #[derive(BinWrite)]

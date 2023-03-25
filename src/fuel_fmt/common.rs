@@ -95,6 +95,34 @@ pub struct Quat {
     pub w: f32,
 }
 
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
+pub struct Rect {
+    pub x1: i32,
+    pub y1: i32,
+    pub x2: i32,
+    pub y2: i32,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
+pub struct SphereZ {
+    pub center: Vec3f,
+    pub radius: f32,
+}
+
 pub fn write_option<W, T>(
     option: &Option<T>,
     writer: &mut W,
@@ -271,17 +299,17 @@ where
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct ObjectZ {
-    friendly_name_crc32: u32,
-    crc32_or_zero: u32,
-    #[nom(Cond = "i.len() != 90", Count = "crc32_or_zero as usize + 1")]
+    link_crc32: u32,
+    data_crc32: u32,
+    #[nom(Cond = "i.len() != 90", Count = "data_crc32 as usize + 1")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
     crc32s: Option<Vec<u32>>,
     rot: Quat,
     transform: Mat4f,
-    unknown2: f32,
-    unknown0: f32,
-    unknown1: u16,
+    radius: f32,
+    flags: f32,
+    object_type: u16,
 }
 
 impl HasReferences for ObjectZ {
@@ -293,7 +321,7 @@ impl HasReferences for ObjectZ {
         if let Some(crc32s) = &self.crc32s {
             crc32s.clone()
         } else {
-            vec![self.crc32_or_zero]
+            vec![self.data_crc32]
         }
     }
 }
