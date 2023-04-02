@@ -289,7 +289,11 @@ fn main() -> Result<()> {
         } else if matches.is_present("CREATE") {
             let output_path = match matches.value_of_os("OUTPUT") {
                 Some(output_path_string) => PathBuf::from(output_path_string),
-                None => input_path.with_extension("DPC"),
+                None => if input_path.extension() == "d" {
+                    input_path.with_extension("").with_extension("DPC")
+                } else {
+                    input_path.with_extension("DPC")
+                },
             };
 
             match dpc.create(&input_path, &output_path.as_path()) {
