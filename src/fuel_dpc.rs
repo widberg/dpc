@@ -218,6 +218,8 @@ pub struct FuelDPC {
     options: Options,
     unoptimized_pool: bool,
     no_pool: bool,
+    sound_sample_rate: u32,
+    effective_version_string: String,
     version_lookup: HashMap<String, (u32, u32, u32)>,
     version: String,
 }
@@ -239,6 +241,18 @@ impl DPC for FuelDPC {
                     .short("n")
                     .long("no-pool")
                     .help("Don't use a pool"),
+            )
+            .arg(
+                Arg::with_name("SOUND-SAMPLE-RATE")
+                    .short("s")
+                    .long("sound-sample-rate")
+                    .help("Default sample rate to use for sounds"),
+            )
+            .arg(
+                Arg::with_name("EFFECTIVE-VERSION-STRING")
+                    .short("T")
+                    .long("effective-version-string")
+                    .help("Version string to compare against"),
             )
             .settings(&[AppSettings::NoBinaryName])
             .get_matches_from(custom_args);
@@ -280,6 +294,8 @@ impl DPC for FuelDPC {
             options: *options,
             unoptimized_pool: matches.is_present("UNOPTIMIZED-POOL"),
             no_pool: matches.is_present("NO-POOL"),
+            sound_sample_rate: matches.value_of("SOUND-SAMPLE-RATE").unwrap_or("44100").parse::<u32>().unwrap_or(44100),
+            effective_version_string: matches.value_of("EFFECTIVE-VERSION-STRING").unwrap_or("v1.381.67.09 - Asobo Studio - Internal Cross Technology").to_string(),
             version_lookup: version_lookup,
             version: String::from("v1.381.67.09 - Asobo Studio - Internal Cross Technology"),
         }
@@ -807,7 +823,7 @@ impl DPC for FuelDPC {
                     if res.is_err() {
                         if !self.options.is_unsafe {
                             panic!(
-                                "Object parser failed. run again with -u/--unsafe to skip errors."
+                                "Object parser failed. run again with -u/--unsafe to skip errors. {}", res.err().unwrap()
                             );
                         }
 
@@ -1661,8 +1677,16 @@ impl DPC for FuelDPC {
 
         println!("{}", &object_header.crc32);
 
+        let use_version = if self.version_lookup.contains_key(&self.version) {
+            &self.version
+        } else if self.options.is_unsafe {
+            &self.effective_version_string
+        } else {
+            panic!("Recursive option used with unsupported version. Use -u/--unsafe");
+        };
+
         if let Some(fuel_object_format) =
-            fuel_fmt::get_formats(&self.version).get(&object_header.class_crc32)
+            fuel_fmt::get_formats(use_version).get(&object_header.class_crc32)
         {
             let mut header = vec![0; object_header.class_object_size as usize];
             input_file.read(&mut header)?;
@@ -1758,7 +1782,15 @@ impl DPC for FuelDPC {
             class_crc32 = class_name.parse::<u32>().unwrap();
         }
 
-        if let Some(fuel_object_format) = fuel_fmt::get_formats(&self.version).get(&class_crc32) {
+        let use_version = if self.version_lookup.contains_key(&self.version) {
+            &self.version
+        } else if self.options.is_unsafe {
+            &self.effective_version_string
+        } else {
+            panic!("Recursive option used with unsupported version. Use -u/--unsafe");
+        };
+
+        if let Some(fuel_object_format) = fuel_fmt::get_formats(use_version).get(&class_crc32) {
             let mut header: Vec<u8> = Vec::new();
             let mut body: Vec<u8> = Vec::new();
             let res = fuel_object_format.pack(input_path.as_ref(), &mut header, &mut body);

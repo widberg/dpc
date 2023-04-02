@@ -28,7 +28,9 @@ pub struct FontsZ {
 
 impl HasReferences for FontsZ {
     fn hard_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        v.append(&mut self.material_crc32s.data.clone());
+        v
     }
 
     fn soft_links(&self) -> Vec<u32> {

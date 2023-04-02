@@ -29,7 +29,11 @@ impl HasReferences for GameObjZ {
     }
 
     fn soft_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        for child in self.children.data.iter() {
+            v.append(&mut child.crc32s.data.clone());
+        }
+        v
     }
 }
 

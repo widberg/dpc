@@ -57,7 +57,9 @@ impl HasReferences for SkinZ {
     }
 
     fn soft_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        v.append(&mut self.mesh_crc32s.data.clone());
+        v
     }
 }
 

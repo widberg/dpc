@@ -260,6 +260,42 @@ impl<'de> Deserialize<'de> for PascalStringNULL {
     }
 }
 
+#[derive(NomLE)]
+pub struct FixedStringNULL<const U: usize> {
+    #[nom(
+    Map = "|x: &[u8]| String::from_utf8_lossy(x.split_at(x.iter().position(|&r| r == 0u8).unwrap()).0).to_string()",
+    Take = "U"
+    )]
+    data: String,
+}
+
+impl<const U: usize> BinWrite for FixedStringNULL<U> {
+    fn write_options<W: Write>(&self, writer: &mut W, options: &WriterOption) -> Result<(), Error> {
+        BinWrite::write_options(&self.data, writer, options)?;
+        BinWrite::write_options(&vec![0u8; U - self.data.len()], writer, options)
+    }
+}
+
+impl<const U: usize> Serialize for FixedStringNULL<U> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        self.data.serialize(serializer)
+    }
+}
+
+impl<'de, const U: usize> Deserialize<'de> for FixedStringNULL<U> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        Ok(FixedStringNULL {
+            data: String::deserialize(deserializer)?,
+        })
+    }
+}
+
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(PartialEq, NomLE)]
@@ -308,7 +344,7 @@ pub struct ObjectZ {
     rot: Quat,
     transform: Mat4f,
     radius: f32,
-    flags: f32,
+    flags: u32,
     object_type: u16,
 }
 
@@ -320,8 +356,10 @@ impl HasReferences for ObjectZ {
     fn soft_links(&self) -> Vec<u32> {
         if let Some(crc32s) = &self.crc32s {
             crc32s.clone()
-        } else {
+        } else if self.data_crc32 != 0 {
             vec![self.data_crc32]
+        } else {
+            vec![]
         }
     }
 }

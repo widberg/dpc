@@ -2,10 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{
-    FUELObjectFormat, FixedVec, HasReferences, Mat4f, ObjectZ, PascalArray, PascalStringNULL, Quat,
-    Vec2f, Vec3f,
-};
+use crate::fuel_fmt::common::{FUELObjectFormat, FixedVec, HasReferences, Mat4f, ObjectZ, PascalArray, PascalStringNULL, Quat, Vec2f, Vec3f, FixedStringNULL};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -58,7 +55,8 @@ struct CoordsLineSegment {
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
 struct Region {
-    name: FixedVec<u8, 32>,
+    name: FixedStringNULL<31>,
+    always_255: u8,
     coords_line_segments_indices: PascalArray<u32>,
 }
 
@@ -73,7 +71,7 @@ pub struct GenWorldZ {
     binary_crc32s: PascalArray<u32>,
     bitmap_crc32s: PascalArray<u32>,
     material_crc32s: PascalArray<u32>,
-    unknown6: u32,
+    equals41: u32,
     categories: PascalArray<Category>,
     unknown8s: PascalArray<GenWorldZUnknown8>,
     mats: PascalArray<Mat4f>,
@@ -89,7 +87,14 @@ impl HasReferences for GenWorldZ {
     }
 
     fn soft_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        if self.node_crc32 != 0 { v.push(self.node_crc32) }
+        if self.user_define_crc32 != 0 { v.push(self.user_define_crc32) }
+        if self.gw_road_crc32 != 0 { v.push(self.gw_road_crc32) }
+        v.append(&mut self.binary_crc32s.data.clone());
+        v.append(&mut self.bitmap_crc32s.data.clone());
+        v.append(&mut self.material_crc32s.data.clone());
+        v
     }
 }
 

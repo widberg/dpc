@@ -15,10 +15,10 @@ pub struct NodeZ {
     next_node_crc32: u32,
     lod_crc32: u32,
     lod_data_crc32: u32,
-    unknown6: u32,
+    user_define_crc32: u32,
     unknown7: u32,
     unknown8: u32,
-    unknown9: f32,
+    unknown9: u32,
     rotation: Quat,
     translation: Vec3f,
     flags: u32,
@@ -65,7 +65,18 @@ impl HasReferences for NodeZ {
     }
 
     fn soft_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        if self.parent_crc32 != 0 { v.push(self.parent_crc32) }
+        if self.head_child_crc32 != 0 { v.push(self.head_child_crc32) }
+        if self.prev_node_crc32 != 0 { v.push(self.prev_node_crc32) }
+        if self.next_node_crc32 != 0 { v.push(self.next_node_crc32) }
+        if self.lod_crc32 != 0 { v.push(self.lod_crc32) }
+        if self.lod_data_crc32 != 0 { v.push(self.lod_data_crc32) }
+        if self.user_define_crc32 != 0 { v.push(self.user_define_crc32) }
+        if self.unknown7 != 0 { v.push(self.unknown7) }
+        if self.unknown8 != 0 { v.push(self.unknown8) }
+        if self.unknown9 != 0 { v.push(self.unknown9) }
+        v
     }
 }
 

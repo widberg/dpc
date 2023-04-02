@@ -77,17 +77,17 @@ pub struct MaterialZAltAlt {
 
 impl HasReferences for MaterialZ {
     fn hard_links(&self) -> Vec<u32> {
-        vec![
-            self.diffuse_bitmap_crc32,
-            self.unknown_bitmap_crc320,
-            self.metal_bitmap_crc32,
-            self.unknown_bitmap_crc321,
-            self.grey_bitmap_crc32,
-            self.normal_bitmap_crc32,
-            self.dirt_bitmap_crc32,
-            self.unknown_bitmap_crc322,
-            self.unknown_bitmap_crc323,
-        ]
+        let mut v = Vec::new();
+        if self.diffuse_bitmap_crc32 != 0 { v.push(self.diffuse_bitmap_crc32) }
+        if self.unknown_bitmap_crc320 != 0 { v.push(self.unknown_bitmap_crc320) }
+        if self.metal_bitmap_crc32 != 0 { v.push(self.metal_bitmap_crc32) }
+        if self.unknown_bitmap_crc321 != 0 { v.push(self.unknown_bitmap_crc321) }
+        if self.grey_bitmap_crc32 != 0 { v.push(self.grey_bitmap_crc32) }
+        if self.normal_bitmap_crc32 != 0 { v.push(self.normal_bitmap_crc32) }
+        if self.dirt_bitmap_crc32 != 0 { v.push(self.dirt_bitmap_crc32) }
+        if self.unknown_bitmap_crc322 != 0 { v.push(self.unknown_bitmap_crc322) }
+        if self.unknown_bitmap_crc323 != 0 { v.push(self.unknown_bitmap_crc323) }
+        v
     }
 
     fn soft_links(&self) -> Vec<u32> {

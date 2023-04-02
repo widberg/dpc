@@ -27,7 +27,7 @@ All versions listed have full support. The bold versions are the version that th
 
 Since most people being pointed towards this tool don't even know how to run a command line utility, here is a quick rundown for the uninitiated.
 First, download the dpc program from the [releases tab](https://github.com/widberg/dpc/releases) of this repository. Download the latest file matching your operating system. Once downloaded, unzip it with 7-zip or a similar utility.
-Once it is unzipped, [open a command prompt](https://www.thewindowsclub.com/how-to-open-command-prompt-from-right-click-menu) in the folder you unzipped it to.
+Once it is unzipped, [open a command prompt](https://www.thewindowsclub.com/how-to-open-command-prompt-from-right-click-menu) in the folder you unzipped it to. If you have never used a command line tool before, please read [How to Use the Command Line](https://github.com/widberg/fmtk/wiki/How-to-Use-the-Command-Line).
 Now we can begin using the tool.
 
 ### Extract/Create BigFiles

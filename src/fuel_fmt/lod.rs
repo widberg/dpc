@@ -2,29 +2,24 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{
-    write_option, FUELObjectFormat, HasReferences, Mat4f, ObjectZ, PascalArray,
-};
+use crate::fuel_fmt::common::{write_option, FUELObjectFormat, HasReferences, Mat4f, ObjectZ, PascalArray, SphereZ};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
-struct LodZUnknown0 {
-    a: f32,
-    b: f32,
-    c: f32,
-    d: f32,
-    e: u32,
-    f: f32,
+struct SphereColNode {
+    sphere: SphereZ,
+    flags: u32,
+    link_crc32: u32,
 }
 
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(Serialize, Deserialize, NomLE)]
-struct LodZUnknown1 {
+struct BoxCol {
     transformation: Mat4f,
-    q: u32,
-    r: f32,
+    flags: u32,
+    link_crc32: u32,
 }
 
 #[derive(BinWrite)]
@@ -48,13 +43,13 @@ struct LodZUnknown4 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct LodZ {
-    unknown0s: PascalArray<LodZUnknown0>,
-    unknown1s: PascalArray<LodZUnknown1>,
-    unknown2: f32,
-    unknown3: f32,
-    u0: f32,
+    sphere_col_nodes: PascalArray<SphereColNode>,
+    box_cols: PascalArray<BoxCol>,
+    close_x: f32,
+    close_y: f32,
+    close_z: f32,
     skin_crc32s: PascalArray<u32>,
-    u1: u32,
+    zero: u32,
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
     #[allow(dead_code)]
@@ -69,13 +64,13 @@ pub struct LodZ {
     #[serde(skip_deserializing)]
     #[allow(dead_code)]
     #[binwrite(ignore)]
-    unknown4_option: u32,
-    #[nom(Cond(unknown4_option != 0))]
+    sound_entries_option1: u32,
+    #[nom(Cond(sound_entries_option1 != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(postprocessor(|x: Vec<u8>| -> (u32, Vec<u8>) { if x.len() != 0 { (1u32, x) } else { (0u32, x) } }))]
     #[binwrite(with(write_option))]
-    unknown4s: Option<PascalArray<LodZUnknown4>>,
-    unknown5: u32,
+    sound_entries1: Option<PascalArray<LodZSoundEntry>>,
+    user_define_crc32: u32,
 }
 
 #[derive(BinWrite)]
@@ -91,9 +86,9 @@ pub struct LodZAlt {
     #[nom(Cond(x != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
-    unknown0_optional: Option<LodZUnknown0>,
-    unknown0s: PascalArray<LodZUnknown0>,
-    unknown1s: PascalArray<LodZUnknown1>,
+    sphere_col_node_optional: Option<SphereColNode>,
+    sphere_col_nodes: PascalArray<SphereColNode>,
+    box_cols: PascalArray<BoxCol>,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,
@@ -136,9 +131,9 @@ pub struct LodZAltAlt {
     #[nom(Cond(x != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
-    unknown0_optional: Option<LodZUnknown0>,
-    unknown0s: PascalArray<LodZUnknown0>,
-    unknown1s: PascalArray<LodZUnknown1>,
+    sphere_col_node_optional: Option<SphereColNode>,
+    sphere_col_nodes: PascalArray<SphereColNode>,
+    box_cols: PascalArray<BoxCol>,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,
@@ -174,7 +169,16 @@ impl HasReferences for LodZ {
     }
 
     fn soft_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        v.append(&mut self.skin_crc32s.data.clone());
+        if let Some(sound_entries) = &self.sound_entries {
+            v.append(&mut sound_entries.data.iter().map(|x| x.sound_crc32).collect());
+        }
+        if let Some(sound_entries1) = &self.sound_entries1 {
+            v.append(&mut sound_entries1.data.iter().map(|x| x.sound_crc32).collect());
+        }
+        if self.user_define_crc32 != 0 { v.push(self.user_define_crc32) }
+        v
     }
 }
 

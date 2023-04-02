@@ -86,7 +86,11 @@ impl HasReferences for SkelZ {
     }
 
     fn soft_links(&self) -> Vec<u32> {
-        vec![]
+        let mut v = Vec::new();
+        v.append(&mut self.bones.data.iter().map(|x| x.user_define_crc32).filter(|x| *x != 0).collect());
+        v.append(&mut self.material_crc32s.data.clone());
+        v.append(&mut self.mesh_data_crc32s.data.clone());
+        v
     }
 }
 
