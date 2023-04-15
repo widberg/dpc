@@ -2,25 +2,7 @@ use binwrite::BinWrite;
 use nom_derive::NomLE;
 use serde::{Deserialize, Serialize};
 
-use crate::fuel_fmt::common::{write_option, FUELObjectFormat, HasReferences, Mat4f, ObjectZ, PascalArray, SphereZ};
-
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
-struct SphereColNode {
-    sphere: SphereZ,
-    flags: u32,
-    link_crc32: u32,
-}
-
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(Serialize, Deserialize, NomLE)]
-struct BoxCol {
-    transformation: Mat4f,
-    flags: u32,
-    link_crc32: u32,
-}
+use crate::fuel_fmt::common::{write_option, FUELObjectFormat, HasReferences, ObjectZ, PascalArray, DynSphere, DynBox};
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -43,8 +25,8 @@ struct LodZUnknown4 {
 #[derive(Serialize, Deserialize, NomLE)]
 #[nom(Exact)]
 pub struct LodZ {
-    sphere_col_nodes: PascalArray<SphereColNode>,
-    box_cols: PascalArray<BoxCol>,
+    dyn_spheres: PascalArray<DynSphere>,
+    dyn_boxes: PascalArray<DynBox>,
     close_x: f32,
     close_y: f32,
     close_z: f32,
@@ -86,9 +68,9 @@ pub struct LodZAlt {
     #[nom(Cond(x != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
-    sphere_col_node_optional: Option<SphereColNode>,
-    sphere_col_nodes: PascalArray<SphereColNode>,
-    box_cols: PascalArray<BoxCol>,
+    sphere_col_node_optional: Option<DynSphere>,
+    sphere_col_nodes: PascalArray<DynSphere>,
+    box_cols: PascalArray<DynBox>,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,
@@ -131,9 +113,9 @@ pub struct LodZAltAlt {
     #[nom(Cond(x != 0))]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[binwrite(with(write_option))]
-    sphere_col_node_optional: Option<SphereColNode>,
-    sphere_col_nodes: PascalArray<SphereColNode>,
-    box_cols: PascalArray<BoxCol>,
+    sphere_col_node_optional: Option<DynSphere>,
+    sphere_col_nodes: PascalArray<DynSphere>,
+    box_cols: PascalArray<DynBox>,
     unknown2: u32,
     unknown3: u32,
     unknown4: u32,

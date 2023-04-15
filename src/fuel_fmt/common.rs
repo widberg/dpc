@@ -10,6 +10,7 @@ pub use nom::*;
 pub use nom_derive::NomLE;
 use nom_derive::Parse;
 pub use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use num_traits::{cast, NumCast};
 
 pub trait HasReferences {
     fn hard_links(&self) -> Vec<u32>;
@@ -44,56 +45,54 @@ impl HasReferences for ResourceObjectZ {
 
 #[derive(BinWrite)]
 #[binwrite(little)]
-#[derive(PartialEq, Serialize, Deserialize, NomLE)]
-pub struct Vec3f {
-    pub x: f32,
-    pub z: f32,
-    pub y: f32,
+#[derive(PartialEq, NomLE)]
+pub struct FixedVec<T: BinWrite, const U: usize> {
+    #[nom(Count(U))]
+    pub data: Vec<T>,
 }
 
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(PartialEq, Serialize, Deserialize, NomLE)]
-pub struct Vec4f {
-    pub x: f32,
-    pub z: f32,
-    pub y: f32,
-    pub w: f32,
+impl<T: BinWrite, const U: usize> Serialize for FixedVec<T, U>
+    where
+        T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        self.data.serialize(serializer)
+    }
 }
 
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(PartialEq, Serialize, Deserialize, NomLE)]
-pub struct Vec3i32 {
-    pub x: i32,
-    pub z: i32,
-    pub y: i32,
+impl<'de, T: BinWrite, const U: usize> Deserialize<'de> for FixedVec<T, U>
+    where
+        T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        let fv = FixedVec {
+            data: Vec::deserialize(deserializer)?,
+        };
+        if fv.data.len() != U {
+            panic!("FixedVec size does not match");
+        }
+        Ok(fv)
+    }
 }
 
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(PartialEq, Serialize, Deserialize, NomLE)]
-pub struct Vec2f {
-    pub x: f32,
-    pub y: f32,
-}
+pub type Vec2<T> = FixedVec<T, 2>;
+pub type Vec2f = Vec2<f32>;
 
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(PartialEq, Serialize, Deserialize, NomLE)]
-pub struct Mat4f {
-    data: FixedVec<f32, 16>,
-}
+pub type Vec3<T> = FixedVec<T, 3>;
+pub type Vec3f = Vec3<f32>;
+pub type Vec3i32 = Vec3<i32>;
 
-#[derive(BinWrite)]
-#[binwrite(little)]
-#[derive(PartialEq, Serialize, Deserialize, NomLE)]
-pub struct Quat {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
-}
+pub type Vec4<T> = FixedVec<T, 4>;
+pub type Vec4f = Vec4<f32>;
+pub type Quat = Vec4<f32>;
+
+pub type Mat4f = FixedVec<f32, 16>;
 
 #[derive(BinWrite)]
 #[binwrite(little)]
@@ -121,6 +120,31 @@ pub struct Color {
 pub struct SphereZ {
     pub center: Vec3f,
     pub radius: f32,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
+pub struct RangeBeginEnd<T: BinWrite = u16> {
+    pub begin: T,
+    pub end: T,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
+pub struct RangeBeginSize<T: BinWrite = u16> {
+    pub begin: T,
+    pub size: T,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, Serialize, Deserialize, NomLE)]
+pub struct FadeDistances {
+    pub x: f32,
+    pub y: f32,
+    pub fade_close: f32,
 }
 
 pub fn write_option<W, T>(
@@ -296,36 +320,68 @@ impl<'de, const U: usize> Deserialize<'de> for FixedStringNULL<U> {
     }
 }
 
+
 #[derive(BinWrite)]
 #[binwrite(little)]
 #[derive(PartialEq, NomLE)]
-pub struct FixedVec<T: BinWrite, const U: usize> {
-    #[nom(Count(U))]
-    pub data: Vec<T>,
+pub struct NumeratorFloat<T: BinWrite + NumCast + Copy, const U: usize> {
+    pub data: T,
 }
 
-impl<T: BinWrite, const U: usize> Serialize for FixedVec<T, U>
-where
-    T: Serialize,
+impl<T: BinWrite + NumCast + Copy, const U: usize> Serialize for NumeratorFloat<T, U>
+    where
+        T: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
-        self.data.serialize(serializer)
+        let converted: f32 = cast::<T, f32>(self.data).unwrap() / (U as f32);
+        converted.serialize(serializer)
     }
 }
 
-impl<'de, T: BinWrite, const U: usize> Deserialize<'de> for FixedVec<T, U>
-where
-    T: Deserialize<'de>,
+impl<'de, T: BinWrite + NumCast + Copy, const U: usize> Deserialize<'de> for NumeratorFloat<T, U>
+    where
+        T: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
-        Ok(FixedVec {
-            data: Vec::deserialize(deserializer)?,
+        let converted = f32::deserialize(deserializer)?;
+        Ok(NumeratorFloat {
+            data: cast::<f32, T>(converted * (U as f32)).unwrap(),
+        })
+    }
+}
+
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(PartialEq, NomLE)]
+pub struct VertexVectorComponent {
+    pub data: u8,
+}
+
+impl Serialize for VertexVectorComponent {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let converted: f32 = ((self.data as f32) / 255f32) * 2f32 - 1f32;
+        converted.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for VertexVectorComponent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        let converted = f32::deserialize(deserializer)?;
+        Ok(VertexVectorComponent {
+            data: (((converted + 1f32) / 2f32) * 255f32).round() as u8,
         })
     }
 }
@@ -474,4 +530,23 @@ where
 
         Ok((hard_links, soft_links))
     }
+}
+
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(Serialize, Deserialize, NomLE)]
+pub struct DynSphere {
+    sphere: SphereZ,
+    flags: u32,
+    dyn_sphere_name: u32,
+}
+
+#[derive(BinWrite)]
+#[binwrite(little)]
+#[derive(Serialize, Deserialize, NomLE)]
+pub struct DynBox {
+    mat: Mat4f,
+    flags: u32,
+    dyn_box_name: u32,
 }
