@@ -64,6 +64,6 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ needs.once.outputs.upload_url }}
-        asset_name: dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz
-        asset_path: dpc-${{ matrix.name }}-${{ github.sha }}.tar.gz
-        asset_content_type: application/gzip
+        asset_name: dpc-${{ matrix.name }}-${{ github.sha }}.zip
+        asset_path: dpc-${{ matrix.name }}-${{ github.sha }}.zip
+        asset_content_type: application/zip
