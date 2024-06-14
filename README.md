@@ -1,3 +1,5 @@
+ ❗ All new developments are happening in https://github.com/widberg/bff
+
 # DPC
 
 Tar analogous utility to work with the BigFile format from Asobo Studio games.
